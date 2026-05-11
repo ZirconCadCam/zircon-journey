@@ -190,31 +190,58 @@ export type Database = {
       }
       doctor_messages: {
         Row: {
+          attachment_mime: string | null
+          attachment_name: string | null
+          attachment_size: number | null
+          attachment_url: string | null
           content: string
           created_at: string
           doctor_slot: number
           id: string
+          message_type: string
+          read_by_admin: boolean
           read_by_designer: boolean
           read_by_doctor: boolean
+          read_by_secretary: boolean
+          read_by_technician: boolean
           sender: string
+          sender_name: string | null
         }
         Insert: {
+          attachment_mime?: string | null
+          attachment_name?: string | null
+          attachment_size?: number | null
+          attachment_url?: string | null
           content: string
           created_at?: string
           doctor_slot: number
           id?: string
+          message_type?: string
+          read_by_admin?: boolean
           read_by_designer?: boolean
           read_by_doctor?: boolean
+          read_by_secretary?: boolean
+          read_by_technician?: boolean
           sender: string
+          sender_name?: string | null
         }
         Update: {
+          attachment_mime?: string | null
+          attachment_name?: string | null
+          attachment_size?: number | null
+          attachment_url?: string | null
           content?: string
           created_at?: string
           doctor_slot?: number
           id?: string
+          message_type?: string
+          read_by_admin?: boolean
           read_by_designer?: boolean
           read_by_doctor?: boolean
+          read_by_secretary?: boolean
+          read_by_technician?: boolean
           sender?: string
+          sender_name?: string | null
         }
         Relationships: [
           {
