@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import {
   Sparkles, ArrowRight, Lock, Upload, Send, FileText, Download, Archive,
-  Trash2, Share2, MessageSquare, Files as FilesIcon, ArchiveRestore, Copy, Check,
+  Trash2, Share2, MessageSquare, Files as FilesIcon, ArchiveRestore, Copy, Check, Search,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -336,7 +336,7 @@ function ChatPanel({ doctor, actor }: { doctor: Doctor; actor: "doctor" | "desig
       .eq("doctor_slot", doctor.slot).order("created_at");
     setMsgs((data as DocMsg[]) ?? []);
     const readField = me === "doctor" ? "read_by_doctor" : "read_by_designer";
-    await supabase.from("doctor_messages").update({ [readField]: true })
+    await (supabase.from("doctor_messages") as any).update({ [readField]: true })
       .eq("doctor_slot", doctor.slot).eq("sender", peer).eq(readField, false);
   }, [doctor.slot, me, peer]);
 
