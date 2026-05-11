@@ -144,6 +144,121 @@ export type Database = {
         }
         Relationships: []
       }
+      doctor_files: {
+        Row: {
+          archived: boolean
+          created_at: string
+          doctor_slot: number
+          file_name: string
+          file_path: string
+          id: string
+          public_url: string | null
+          size_bytes: number | null
+          uploaded_by: string
+        }
+        Insert: {
+          archived?: boolean
+          created_at?: string
+          doctor_slot: number
+          file_name: string
+          file_path: string
+          id?: string
+          public_url?: string | null
+          size_bytes?: number | null
+          uploaded_by?: string
+        }
+        Update: {
+          archived?: boolean
+          created_at?: string
+          doctor_slot?: number
+          file_name?: string
+          file_path?: string
+          id?: string
+          public_url?: string | null
+          size_bytes?: number | null
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doctor_files_doctor_slot_fkey"
+            columns: ["doctor_slot"]
+            isOneToOne: false
+            referencedRelation: "doctor_profiles"
+            referencedColumns: ["slot"]
+          },
+        ]
+      }
+      doctor_messages: {
+        Row: {
+          content: string
+          created_at: string
+          doctor_slot: number
+          id: string
+          read_by_designer: boolean
+          read_by_doctor: boolean
+          sender: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          doctor_slot: number
+          id?: string
+          read_by_designer?: boolean
+          read_by_doctor?: boolean
+          sender: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          doctor_slot?: number
+          id?: string
+          read_by_designer?: boolean
+          read_by_doctor?: boolean
+          sender?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doctor_messages_doctor_slot_fkey"
+            columns: ["doctor_slot"]
+            isOneToOne: false
+            referencedRelation: "doctor_profiles"
+            referencedColumns: ["slot"]
+          },
+        ]
+      }
+      doctor_profiles: {
+        Row: {
+          active: boolean
+          branch: string | null
+          created_at: string
+          icon: string | null
+          name: string
+          password: string
+          slot: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          branch?: string | null
+          created_at?: string
+          icon?: string | null
+          name: string
+          password: string
+          slot: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          branch?: string | null
+          created_at?: string
+          icon?: string | null
+          name?: string
+          password?: string
+          slot?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           body: string | null
