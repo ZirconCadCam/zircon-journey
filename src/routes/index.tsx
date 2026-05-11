@@ -59,22 +59,23 @@ function Landing() {
         <h2 className="text-3xl font-bold text-center mb-12">منصات مخصصة لكل دور</h2>
         <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-5">
           {[
-            { icon: Stethoscope, t: "بوابة الطبيب", d: "حالات خاصة وسجل المرضى" },
-            { icon: Layers, t: "مصمم CAD/CAM", d: "استلام السكانات ورفع التصاميم" },
-            { icon: Wrench, t: "فني المختبر", d: "نحت وتصنيع الزركون" },
-            { icon: Users, t: "السكرتارية", d: "صنعاء و إب — تنسيق التسليم" },
-            { icon: Shield, t: "إدارة المركز", d: "تقارير وأرشيف شامل" },
+            { icon: Stethoscope, t: "بوابة الطبيب", d: "حالات خاصة وسجل المرضى", to: "/doctors" as const },
+            { icon: Layers, t: "مصمم CAD/CAM", d: "استلام السكانات ورفع التصاميم", to: "/login" as const },
+            { icon: Wrench, t: "فني المختبر", d: "نحت وتصنيع الزركون", to: "/login" as const },
+            { icon: Users, t: "السكرتارية", d: "صنعاء و إب — تنسيق التسليم", to: "/login" as const },
+            { icon: Shield, t: "إدارة المركز", d: "تقارير وأرشيف شامل", to: "/login" as const },
           ].map((c) => (
-            <div
+            <Link
               key={c.t}
-              className="rounded-2xl bg-card border border-border p-6 hover:shadow-luxury hover:-translate-y-1 transition"
+              to={c.to}
+              className="rounded-2xl bg-card border border-border p-6 hover:shadow-luxury hover:-translate-y-1 transition block"
             >
               <div className="size-12 rounded-xl gradient-gold grid place-items-center mb-4 shadow-gold">
                 <c.icon className="size-6" />
               </div>
               <div className="font-bold text-lg">{c.t}</div>
               <div className="text-sm text-muted-foreground mt-1">{c.d}</div>
-            </div>
+            </Link>
           ))}
         </div>
       </section>

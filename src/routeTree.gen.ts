@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DoctorsIndexRouteImport } from './routes/doctors.index'
+import { Route as DoctorsSlotRouteImport } from './routes/doctors.$slot'
 import { Route as CasesNewRouteImport } from './routes/cases.new'
 import { Route as CasesIdRouteImport } from './routes/cases.$id'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
@@ -29,6 +31,16 @@ const DashboardRoute = DashboardRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DoctorsIndexRoute = DoctorsIndexRouteImport.update({
+  id: '/doctors/',
+  path: '/doctors/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DoctorsSlotRoute = DoctorsSlotRouteImport.update({
+  id: '/doctors/$slot',
+  path: '/doctors/$slot',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CasesNewRoute = CasesNewRouteImport.update({
@@ -54,6 +66,8 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AdminUsersRoute
   '/cases/$id': typeof CasesIdRoute
   '/cases/new': typeof CasesNewRoute
+  '/doctors/$slot': typeof DoctorsSlotRoute
+  '/doctors/': typeof DoctorsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -62,6 +76,8 @@ export interface FileRoutesByTo {
   '/admin/users': typeof AdminUsersRoute
   '/cases/$id': typeof CasesIdRoute
   '/cases/new': typeof CasesNewRoute
+  '/doctors/$slot': typeof DoctorsSlotRoute
+  '/doctors': typeof DoctorsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -71,6 +87,8 @@ export interface FileRoutesById {
   '/admin/users': typeof AdminUsersRoute
   '/cases/$id': typeof CasesIdRoute
   '/cases/new': typeof CasesNewRoute
+  '/doctors/$slot': typeof DoctorsSlotRoute
+  '/doctors/': typeof DoctorsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -81,6 +99,8 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/cases/$id'
     | '/cases/new'
+    | '/doctors/$slot'
+    | '/doctors/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -89,6 +109,8 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/cases/$id'
     | '/cases/new'
+    | '/doctors/$slot'
+    | '/doctors'
   id:
     | '__root__'
     | '/'
@@ -97,6 +119,8 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/cases/$id'
     | '/cases/new'
+    | '/doctors/$slot'
+    | '/doctors/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -106,6 +130,8 @@ export interface RootRouteChildren {
   AdminUsersRoute: typeof AdminUsersRoute
   CasesIdRoute: typeof CasesIdRoute
   CasesNewRoute: typeof CasesNewRoute
+  DoctorsSlotRoute: typeof DoctorsSlotRoute
+  DoctorsIndexRoute: typeof DoctorsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -129,6 +155,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/doctors/': {
+      id: '/doctors/'
+      path: '/doctors'
+      fullPath: '/doctors/'
+      preLoaderRoute: typeof DoctorsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/doctors/$slot': {
+      id: '/doctors/$slot'
+      path: '/doctors/$slot'
+      fullPath: '/doctors/$slot'
+      preLoaderRoute: typeof DoctorsSlotRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/cases/new': {
@@ -162,6 +202,8 @@ const rootRouteChildren: RootRouteChildren = {
   AdminUsersRoute: AdminUsersRoute,
   CasesIdRoute: CasesIdRoute,
   CasesNewRoute: CasesNewRoute,
+  DoctorsSlotRoute: DoctorsSlotRoute,
+  DoctorsIndexRoute: DoctorsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
