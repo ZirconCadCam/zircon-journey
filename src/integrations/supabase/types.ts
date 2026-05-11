@@ -14,16 +14,257 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      case_files: {
+        Row: {
+          case_id: string
+          created_at: string
+          file_kind: string
+          file_name: string
+          file_path: string
+          file_type: string | null
+          id: string
+          size_bytes: number | null
+          uploader_id: string
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          file_kind?: string
+          file_name: string
+          file_path: string
+          file_type?: string | null
+          id?: string
+          size_bytes?: number | null
+          uploader_id: string
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          file_kind?: string
+          file_name?: string
+          file_path?: string
+          file_type?: string | null
+          id?: string
+          size_bytes?: number | null
+          uploader_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_files_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      case_messages: {
+        Row: {
+          case_id: string
+          content: string
+          created_at: string
+          id: string
+          sender_id: string
+        }
+        Insert: {
+          case_id: string
+          content: string
+          created_at?: string
+          id?: string
+          sender_id: string
+        }
+        Update: {
+          case_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_messages_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cases: {
+        Row: {
+          branch: Database["public"]["Enums"]["branch"]
+          case_code: string
+          created_at: string
+          designer_id: string | null
+          doctor_id: string
+          id: string
+          notes: string | null
+          patient_age: number | null
+          patient_name: string
+          patient_phone: string | null
+          shade: string | null
+          status: Database["public"]["Enums"]["case_status"]
+          technician_id: string | null
+          tooth_number: string | null
+          updated_at: string
+        }
+        Insert: {
+          branch: Database["public"]["Enums"]["branch"]
+          case_code?: string
+          created_at?: string
+          designer_id?: string | null
+          doctor_id: string
+          id?: string
+          notes?: string | null
+          patient_age?: number | null
+          patient_name: string
+          patient_phone?: string | null
+          shade?: string | null
+          status?: Database["public"]["Enums"]["case_status"]
+          technician_id?: string | null
+          tooth_number?: string | null
+          updated_at?: string
+        }
+        Update: {
+          branch?: Database["public"]["Enums"]["branch"]
+          case_code?: string
+          created_at?: string
+          designer_id?: string | null
+          doctor_id?: string
+          id?: string
+          notes?: string | null
+          patient_age?: number | null
+          patient_name?: string
+          patient_phone?: string | null
+          shade?: string | null
+          status?: Database["public"]["Enums"]["case_status"]
+          technician_id?: string | null
+          tooth_number?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          body: string | null
+          case_id: string | null
+          created_at: string
+          id: string
+          read: boolean
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          case_id?: string | null
+          created_at?: string
+          id?: string
+          read?: boolean
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          case_id?: string | null
+          created_at?: string
+          id?: string
+          read?: boolean
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          branch: Database["public"]["Enums"]["branch"] | null
+          created_at: string
+          full_name: string
+          id: string
+          phone: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          branch?: Database["public"]["Enums"]["branch"] | null
+          created_at?: string
+          full_name?: string
+          id: string
+          phone?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          branch?: Database["public"]["Enums"]["branch"] | null
+          created_at?: string
+          full_name?: string
+          id?: string
+          phone?: string | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          branch: Database["public"]["Enums"]["branch"] | null
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          branch?: Database["public"]["Enums"]["branch"] | null
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          branch?: Database["public"]["Enums"]["branch"] | null
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_primary_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      get_user_branch: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["branch"]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "doctor" | "designer" | "technician" | "secretary"
+      branch: "sanaa" | "ibb"
+      case_status:
+        | "new"
+        | "designing"
+        | "design_ready"
+        | "milling"
+        | "ready"
+        | "delivered"
+        | "archived"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +391,18 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "doctor", "designer", "technician", "secretary"],
+      branch: ["sanaa", "ibb"],
+      case_status: [
+        "new",
+        "designing",
+        "design_ready",
+        "milling",
+        "ready",
+        "delivered",
+        "archived",
+      ],
+    },
   },
 } as const
