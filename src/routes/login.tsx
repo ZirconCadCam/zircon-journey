@@ -11,14 +11,20 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const nav = useNavigate();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("zirconibb@gmail.com");
+  const [password, setPassword] = useState("12345");
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) nav({ to: "/dashboard" });
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (data.session) { nav({ to: "/dashboard" }); return; }
+      // Auto-login during build phase with default admin credentials
+      const { error } = await supabase.auth.signInWithPassword({
+        email: "zirconibb@gmail.com",
+        password: "12345",
+      });
+      if (!error) nav({ to: "/dashboard" });
     });
   }, [nav]);
 
