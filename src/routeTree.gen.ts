@@ -18,6 +18,7 @@ import { Route as DoctorsSlotRouteImport } from './routes/doctors.$slot'
 import { Route as CasesNewRouteImport } from './routes/cases.new'
 import { Route as CasesIdRouteImport } from './routes/cases.$id'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
+import { Route as AdminArchiveRouteImport } from './routes/admin.archive'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -64,11 +65,17 @@ const AdminUsersRoute = AdminUsersRouteImport.update({
   path: '/admin/users',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminArchiveRoute = AdminArchiveRouteImport.update({
+  id: '/admin/archive',
+  path: '/admin/archive',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/admin/archive': typeof AdminArchiveRoute
   '/admin/users': typeof AdminUsersRoute
   '/cases/$id': typeof CasesIdRoute
   '/cases/new': typeof CasesNewRoute
@@ -80,6 +87,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/admin/archive': typeof AdminArchiveRoute
   '/admin/users': typeof AdminUsersRoute
   '/cases/$id': typeof CasesIdRoute
   '/cases/new': typeof CasesNewRoute
@@ -92,6 +100,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/admin/archive': typeof AdminArchiveRoute
   '/admin/users': typeof AdminUsersRoute
   '/cases/$id': typeof CasesIdRoute
   '/cases/new': typeof CasesNewRoute
@@ -105,6 +114,7 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/login'
+    | '/admin/archive'
     | '/admin/users'
     | '/cases/$id'
     | '/cases/new'
@@ -116,6 +126,7 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/login'
+    | '/admin/archive'
     | '/admin/users'
     | '/cases/$id'
     | '/cases/new'
@@ -127,6 +138,7 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/login'
+    | '/admin/archive'
     | '/admin/users'
     | '/cases/$id'
     | '/cases/new'
@@ -139,6 +151,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
+  AdminArchiveRoute: typeof AdminArchiveRoute
   AdminUsersRoute: typeof AdminUsersRoute
   CasesIdRoute: typeof CasesIdRoute
   CasesNewRoute: typeof CasesNewRoute
@@ -212,6 +225,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminUsersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/archive': {
+      id: '/admin/archive'
+      path: '/admin/archive'
+      fullPath: '/admin/archive'
+      preLoaderRoute: typeof AdminArchiveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -219,6 +239,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
+  AdminArchiveRoute: AdminArchiveRoute,
   AdminUsersRoute: AdminUsersRoute,
   CasesIdRoute: CasesIdRoute,
   CasesNewRoute: CasesNewRoute,
