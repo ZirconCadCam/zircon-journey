@@ -148,9 +148,16 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
 
   return (
     <Shell right={
-      <button onClick={onLogout} className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-bold hover:bg-destructive hover:text-destructive-foreground transition">
-        خروج
-      </button>
+      <>
+        {role === "admin" && (
+          <Link to="/admin/archive" className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-bold hover:border-gold transition">
+            أرشيف الإدارة
+          </Link>
+        )}
+        <button onClick={onLogout} className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-bold hover:bg-destructive hover:text-destructive-foreground transition">
+          خروج
+        </button>
+      </>
     }>
       <main className="container mx-auto px-4 sm:px-6 py-6">
         <div className="rounded-3xl gradient-brown text-primary-foreground p-6 sm:p-8 shadow-luxury flex items-center justify-between flex-wrap gap-4">
