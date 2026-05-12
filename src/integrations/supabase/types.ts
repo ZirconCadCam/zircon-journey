@@ -144,6 +144,103 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_conversations: {
+        Row: {
+          archived: boolean
+          created_at: string
+          created_by: string
+          doctor_slot: number
+          id: string
+          last_message_at: string
+          participants: string[]
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          archived?: boolean
+          created_at?: string
+          created_by?: string
+          doctor_slot: number
+          id?: string
+          last_message_at?: string
+          participants: string[]
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          archived?: boolean
+          created_at?: string
+          created_by?: string
+          doctor_slot?: number
+          id?: string
+          last_message_at?: string
+          participants?: string[]
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_conversations_doctor_slot_fkey"
+            columns: ["doctor_slot"]
+            isOneToOne: false
+            referencedRelation: "doctor_profiles"
+            referencedColumns: ["slot"]
+          },
+        ]
+      }
+      chat_messages: {
+        Row: {
+          attachment_mime: string | null
+          attachment_name: string | null
+          attachment_path: string | null
+          attachment_size: number | null
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          message_type: string
+          read_by: string[]
+          sender: string
+          sender_name: string | null
+        }
+        Insert: {
+          attachment_mime?: string | null
+          attachment_name?: string | null
+          attachment_path?: string | null
+          attachment_size?: number | null
+          content?: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          message_type?: string
+          read_by?: string[]
+          sender: string
+          sender_name?: string | null
+        }
+        Update: {
+          attachment_mime?: string | null
+          attachment_name?: string | null
+          attachment_path?: string | null
+          attachment_size?: number | null
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          message_type?: string
+          read_by?: string[]
+          sender?: string
+          sender_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "chat_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       doctor_files: {
         Row: {
           archived: boolean
