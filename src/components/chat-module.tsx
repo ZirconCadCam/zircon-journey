@@ -5,9 +5,12 @@ import {
   summarizeParticipants,
   type ChatConversation, type ChatMessage, type RoleKey,
 } from "@/lib/chat";
+import { startResumableUpload, type ResumableHandle } from "@/lib/resumable-upload";
+import { saveToCenter, downloadUrlToCenter, fileManagerSupported, pickCenterFolder, getCenterFolder, CENTER_FOLDER_NAME } from "@/lib/file-manager";
 import {
   Send, Paperclip, Mic, Square, X, MessageSquare, Plus, Archive, ArchiveRestore,
   Search, FileText, Download, ChevronRight, Trash2, Check, CheckCheck, Clock, AlertCircle,
+  Copy, Reply, Share2, Save, FolderOpen, Pause, Play, RotateCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
@@ -19,7 +22,14 @@ interface Props {
   myName: string;
 }
 
-type LocalMsg = ChatMessage & { _local?: "sending" | "uploading" | "failed"; _progress?: number };
+type LocalMsg = ChatMessage & {
+  _local?: "sending" | "uploading" | "failed" | "paused";
+  _progress?: number;
+  _file?: File;          // kept in memory for resume after failure
+  _replyToId?: string;   // local-only reply reference
+};
+
+const ARCHIVED_KEY = (convId: string) => `zircon_msg_archived_${convId}`;
 
 function newId() {
   return (typeof crypto !== "undefined" && (crypto as any).randomUUID)
@@ -37,8 +47,7 @@ export function ChatModule({ doctorSlot, doctorName, me, myName }: Props) {
 
   const load = useCallback(async () => {
     const { data } = await supabase
-      .from("chat_conversations")
-      .select("*")
+      .from("chat_conversations").select("*")
       .eq("doctor_slot", doctorSlot)
       .order("last_message_at", { ascending: false });
     const list = ((data ?? []) as ChatConversation[]).filter(c =>
@@ -77,6 +86,7 @@ export function ChatModule({ doctorSlot, doctorName, me, myName }: Props) {
           <button onClick={()=>setView("archived")} className={`rounded-full px-4 py-1.5 text-xs font-bold border ${view==="archived"?"gradient-gold border-gold":"bg-card border-border"}`}>
             <Archive className="inline size-3 me-1" /> الأرشيف
           </button>
+          <FileManagerBadge />
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <select value={filterRole} onChange={e=>setFilterRole(e.target.value as any)}
@@ -117,6 +127,24 @@ export function ChatModule({ doctorSlot, doctorName, me, myName }: Props) {
         )}
       </div>
     </div>
+  );
+}
+
+function FileManagerBadge() {
+  const [linked, setLinked] = useState(false);
+  useEffect(() => { (async () => setLinked(!!(await getCenterFolder())))(); }, []);
+  if (!fileManagerSupported()) return null;
+  return (
+    <button
+      onClick={async () => {
+        const ok = await pickCenterFolder();
+        setLinked(!!(await getCenterFolder()));
+        if (ok) toast.success(`تم ربط مجلد "${CENTER_FOLDER_NAME}"`);
+      }}
+      className={`rounded-full px-3 py-1.5 text-[11px] font-bold border inline-flex items-center gap-1.5 ${linked ? "bg-emerald-600 text-white border-emerald-700" : "bg-card border-border hover:border-gold"}`}
+      title={linked ? `محفوظات تحفظ في "${CENTER_FOLDER_NAME}"` : `اربط مجلد "${CENTER_FOLDER_NAME}" على جهازك`}>
+      <FolderOpen className="size-3.5" /> {linked ? "مدير الملفات مرتبط" : "ربط مدير الملفات"}
+    </button>
   );
 }
 
@@ -196,10 +224,8 @@ function ComposeNew({ doctorSlot, me, myName, onClose, onCreated }: {
     setBusy(true);
     const participants = Array.from(new Set<RoleKey>([me, ...selected]));
     const { data, error } = await supabase.from("chat_conversations").insert({
-      doctor_slot: doctorSlot,
-      participants,
-      title: title.trim() || null,
-      created_by: me,
+      doctor_slot: doctorSlot, participants,
+      title: title.trim() || null, created_by: me,
     }).select("id").single();
     setBusy(false);
     if (error || !data) { toast.error(error?.message ?? "تعذر إنشاء المحادثة"); return; }
@@ -238,27 +264,6 @@ function ComposeNew({ doctorSlot, me, myName, onClose, onCreated }: {
   );
 }
 
-/** Upload via signed URL with XHR to track progress and support arbitrarily large files. */
-async function uploadWithProgress(
-  path: string,
-  file: File,
-  onProgress: (pct: number) => void,
-): Promise<void> {
-  const { data, error } = await supabase.storage.from(ATTACHMENTS_BUCKET).createSignedUploadUrl(path);
-  if (error || !data) throw new Error(error?.message ?? "تعذر إنشاء رابط الرفع");
-  await new Promise<void>((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open("PUT", data.signedUrl, true);
-    xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
-    xhr.upload.onprogress = (ev) => {
-      if (ev.lengthComputable) onProgress(Math.round((ev.loaded / ev.total) * 100));
-    };
-    xhr.onload = () => (xhr.status >= 200 && xhr.status < 300) ? resolve() : reject(new Error(`HTTP ${xhr.status}: ${xhr.responseText}`));
-    xhr.onerror = () => reject(new Error("فشل الاتصال بالخادم"));
-    xhr.send(file);
-  });
-}
-
 function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
   conv: ChatConversation; me: RoleKey; myName: string; doctorName: string;
   onBack: () => void; onChange: () => void;
@@ -267,13 +272,28 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
   const [text, setText] = useState("");
   const [recording, setRecording] = useState(false);
   const [recordSec, setRecordSec] = useState(0);
+  const [archivedIds, setArchivedIds] = useState<Set<string>>(() => {
+    if (typeof window === "undefined") return new Set();
+    try { return new Set(JSON.parse(localStorage.getItem(ARCHIVED_KEY(conv.id)) || "[]")); }
+    catch { return new Set(); }
+  });
+  const [showArchived, setShowArchived] = useState(false);
+  const [replyTo, setReplyTo] = useState<LocalMsg | null>(null);
+  const [menuFor, setMenuFor] = useState<{ msg: LocalMsg; x: number; y: number } | null>(null);
+
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const recTimerRef = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const uploadHandles = useRef<Map<string, ResumableHandle>>(new Map());
 
-  // Initial load + mark as read.
+  function persistArchived(next: Set<string>) {
+    setArchivedIds(new Set(next));
+    if (typeof window !== "undefined")
+      localStorage.setItem(ARCHIVED_KEY(conv.id), JSON.stringify(Array.from(next)));
+  }
+
   const initialLoad = useCallback(async () => {
     const { data } = await supabase.from("chat_messages").select("*")
       .eq("conversation_id", conv.id).order("created_at");
@@ -296,7 +316,6 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
           if (idx >= 0) { const next = [...prev]; next[idx] = m; return next; }
           return [...prev, m];
         });
-        // mark read if not from me
         if (m.sender !== me && !(m.read_by ?? []).includes(me)) {
           supabase.from("chat_messages")
             .update({ read_by: Array.from(new Set([...(m.read_by ?? []), me])) })
@@ -311,25 +330,48 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
     return () => { supabase.removeChannel(ch); };
   }, [conv.id, me, initialLoad]);
 
+  // Auto-resume failed/paused uploads when network comes back
+  useEffect(() => {
+    function onOnline() {
+      const failed = msgs.filter(m => (m._local === "failed" || m._local === "paused") && m._file);
+      if (failed.length === 0) return;
+      toast.info(`استئناف ${failed.length} رفع متوقف...`);
+      failed.forEach(m => resumeUpload(m));
+    }
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [msgs]);
+
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [msgs]);
 
+  function buildContent(raw: string): string {
+    if (!replyTo) return raw;
+    const snippet = (replyTo.message_type === "text"
+      ? replyTo.content
+      : replyTo.attachment_name || replyTo.content || "ملف"
+    ).slice(0, 120);
+    return `↪ رداً على ${ROLE_LABEL[replyTo.sender]}: «${snippet}»\n${raw}`;
+  }
+
   async function sendText() {
     const t = text.trim();
     if (!t) return;
-    setText("");
+    const finalContent = buildContent(t);
+    setText(""); setReplyTo(null);
     const id = newId();
     const optimistic: LocalMsg = {
       id, conversation_id: conv.id, sender: me, sender_name: myName,
-      content: t, message_type: "text",
+      content: finalContent, message_type: "text",
       attachment_path: null, attachment_name: null, attachment_size: null, attachment_mime: null,
       read_by: [me], created_at: new Date().toISOString(), _local: "sending",
     };
     setMsgs(prev => [...prev, optimistic]);
     const { error } = await supabase.from("chat_messages").insert({
       id, conversation_id: conv.id, sender: me, sender_name: myName,
-      content: t, message_type: "text", read_by: [me],
+      content: finalContent, message_type: "text", read_by: [me],
     });
     if (error) {
       setMsgs(prev => prev.map(m => m.id === id ? { ...m, _local: "failed" } : m));
@@ -339,37 +381,76 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
     }
   }
 
+  async function startUpload(id: string, path: string, file: File) {
+    try {
+      const handle = await startResumableUpload({
+        path, file,
+        onProgress: (pct) => {
+          setMsgs(prev => prev.map(m => m.id === id ? { ...m, _progress: pct, _local: "uploading" } : m));
+        },
+        onError: (err) => {
+          setMsgs(prev => prev.map(m => m.id === id ? { ...m, _local: "failed" } : m));
+          toast.error("توقف الرفع — سيتم الاستئناف تلقائياً عند عودة الاتصال");
+          console.error("[upload]", err);
+        },
+        onSuccess: async () => {
+          uploadHandles.current.delete(id);
+          const cur = msgs.find(m => m.id === id);
+          const insertContent = cur?.content ?? (file.name || "ملف");
+          const kind = (cur?.message_type ?? "file") as "file" | "audio";
+          const { error } = await supabase.from("chat_messages").insert({
+            id, conversation_id: conv.id, sender: me, sender_name: myName,
+            content: insertContent, message_type: kind,
+            attachment_path: path, attachment_name: file.name,
+            attachment_mime: file.type || null, attachment_size: file.size,
+            read_by: [me],
+          });
+          if (error) {
+            setMsgs(prev => prev.map(m => m.id === id ? { ...m, _local: "failed" } : m));
+            toast.error(error.message);
+          } else {
+            setMsgs(prev => prev.map(m => m.id === id ? { ...m, _local: undefined, _progress: 100, _file: undefined } : m));
+          }
+        },
+      });
+      uploadHandles.current.set(id, handle);
+    } catch (e: any) {
+      setMsgs(prev => prev.map(m => m.id === id ? { ...m, _local: "failed" } : m));
+      toast.error(e?.message ?? "فشل بدء الرفع");
+    }
+  }
+
   async function sendAttachment(file: File, kind: "file" | "audio") {
     const id = newId();
     const safeName = file.name || (kind === "audio" ? `voice-${Date.now()}.webm` : `file-${Date.now()}`);
     const path = `${conv.doctor_slot}/${conv.id}/${Date.now()}-${safeName}`;
+    const baseContent = kind === "audio" ? "🎤 تسجيل صوتي" : safeName;
+    const finalContent = buildContent(baseContent);
+    setReplyTo(null);
     const optimistic: LocalMsg = {
       id, conversation_id: conv.id, sender: me, sender_name: myName,
-      content: kind === "audio" ? "🎤 تسجيل صوتي" : safeName,
-      message_type: kind,
+      content: finalContent, message_type: kind,
       attachment_path: path, attachment_name: safeName,
       attachment_mime: file.type || null, attachment_size: file.size,
       read_by: [me], created_at: new Date().toISOString(),
-      _local: "uploading", _progress: 0,
+      _local: "uploading", _progress: 0, _file: file,
     };
     setMsgs(prev => [...prev, optimistic]);
-    try {
-      await uploadWithProgress(path, file, (pct) => {
-        setMsgs(prev => prev.map(m => m.id === id ? { ...m, _progress: pct } : m));
-      });
-      const { error } = await supabase.from("chat_messages").insert({
-        id, conversation_id: conv.id, sender: me, sender_name: myName,
-        content: optimistic.content, message_type: kind,
-        attachment_path: path, attachment_name: safeName,
-        attachment_mime: file.type || null, attachment_size: file.size,
-        read_by: [me],
-      });
-      if (error) throw error;
-      setMsgs(prev => prev.map(m => m.id === id ? { ...m, _local: undefined, _progress: 100 } : m));
-    } catch (e: any) {
-      setMsgs(prev => prev.map(m => m.id === id ? { ...m, _local: "failed" } : m));
-      toast.error(e.message ?? "فشل الإرسال");
-    }
+    await startUpload(id, path, file);
+  }
+
+  function resumeUpload(m: LocalMsg) {
+    if (!m._file || !m.attachment_path) return;
+    const existing = uploadHandles.current.get(m.id);
+    if (existing) { try { existing.resume(); } catch {} ; return; }
+    setMsgs(prev => prev.map(x => x.id === m.id ? { ...x, _local: "uploading" } : x));
+    startUpload(m.id, m.attachment_path, m._file);
+  }
+
+  function pauseUpload(m: LocalMsg) {
+    const h = uploadHandles.current.get(m.id);
+    if (h) { try { h.pause(); } catch {} }
+    setMsgs(prev => prev.map(x => x.id === m.id ? { ...x, _local: "paused" } : x));
   }
 
   async function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -411,7 +492,83 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
     recorderRef.current = null;
   }
 
+  // ---- Message context-menu actions ----
+  async function actCopy(m: LocalMsg) {
+    const txt = m.message_type === "text" ? m.content : (m.attachment_name || m.content);
+    await navigator.clipboard.writeText(txt);
+    toast.success("تم النسخ");
+  }
+  function actComment(m: LocalMsg) { setReplyTo(m); }
+  async function actResend(m: LocalMsg) {
+    if (m.message_type === "text") {
+      setText(m.content);
+      toast.info("جاهز لإعادة الإرسال");
+    } else if (m._file) {
+      await sendAttachment(m._file, m.message_type as any);
+    } else if (m.attachment_path) {
+      // re-share existing file as a new message (no re-upload needed)
+      const id = newId();
+      const { error } = await supabase.from("chat_messages").insert({
+        id, conversation_id: conv.id, sender: me, sender_name: myName,
+        content: m.content, message_type: m.message_type,
+        attachment_path: m.attachment_path, attachment_name: m.attachment_name,
+        attachment_mime: m.attachment_mime, attachment_size: m.attachment_size,
+        read_by: [me],
+      });
+      if (error) toast.error(error.message); else toast.success("تم إعادة الإرسال");
+    }
+  }
+  async function actShare(m: LocalMsg) {
+    let url: string | null = null;
+    let text = m.content;
+    if (m.attachment_path) url = await getSignedUrl(m.attachment_path, 3600);
+    const data: ShareData = { title: m.attachment_name ?? "Zircon Journey", text, ...(url ? { url } : {}) };
+    if (navigator.share) { try { await navigator.share(data); return; } catch {} }
+    if (url) { await navigator.clipboard.writeText(url); toast.success("تم نسخ الرابط للمشاركة"); }
+    else { await navigator.clipboard.writeText(text); toast.success("تم النسخ للمشاركة"); }
+  }
+  async function actSave(m: LocalMsg) {
+    if (m.message_type === "text") {
+      const blob = new Blob([m.content], { type: "text/plain;charset=utf-8" });
+      const r = await saveToCenter(blob, `message-${m.id.slice(0,8)}.txt`, "نصوص");
+      toast.success(r.fallback ? "تم التحميل" : `حُفظ في ${CENTER_FOLDER_NAME}/نصوص`);
+      return;
+    }
+    if (!m.attachment_path) return;
+    const url = await getSignedUrl(m.attachment_path, 600);
+    if (!url) { toast.error("تعذر الحصول على الرابط"); return; }
+    try {
+      const sub = m.message_type === "audio" ? "تسجيلات" : "ملفات";
+      const r = await downloadUrlToCenter(url, m.attachment_name || `file-${m.id.slice(0,8)}`, sub);
+      toast.success(r.fallback ? "تم التحميل" : `حُفظ في ${CENTER_FOLDER_NAME}/${sub}`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "تعذر الحفظ");
+    }
+  }
+  async function actDelete(m: LocalMsg) {
+    if (!confirm("حذف هذه الرسالة نهائياً؟")) return;
+    if (m._local) {
+      const h = uploadHandles.current.get(m.id);
+      if (h) { try { h.abort(); } catch {} ; uploadHandles.current.delete(m.id); }
+      setMsgs(prev => prev.filter(x => x.id !== m.id));
+      return;
+    }
+    if (m.attachment_path) {
+      await supabase.storage.from(ATTACHMENTS_BUCKET).remove([m.attachment_path]);
+    }
+    const { error } = await supabase.from("chat_messages").delete().eq("id", m.id);
+    if (error) toast.error(error.message);
+    else { setMsgs(prev => prev.filter(x => x.id !== m.id)); toast.success("تم الحذف"); }
+  }
+  function actArchive(m: LocalMsg) {
+    const next = new Set(archivedIds);
+    if (next.has(m.id)) next.delete(m.id); else next.add(m.id);
+    persistArchived(next);
+    toast.success(next.has(m.id) ? "تمت أرشفة الرسالة" : "تم إخراجها من الأرشيف");
+  }
+
   const otherParticipants = conv.participants.filter(p => p !== me);
+  const visibleMsgs = msgs.filter(m => showArchived ? archivedIds.has(m.id) : !archivedIds.has(m.id));
 
   return (
     <div className="rounded-2xl bg-card border border-border flex flex-col h-[640px] shadow-luxury">
@@ -421,9 +578,7 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
             <ChevronRight className="size-4" />
           </button>
           <div className="min-w-0">
-            <div className="font-bold text-sm truncate">
-              {conv.title || summarizeParticipants(conv.participants)}
-            </div>
+            <div className="font-bold text-sm truncate">{conv.title || summarizeParticipants(conv.participants)}</div>
             <div className="flex flex-wrap gap-1 mt-1">
               {conv.participants.map(p => (
                 <span key={p} className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${ROLE_COLOR[p]}`}>{ROLE_LABEL[p]}</span>
@@ -431,9 +586,16 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
             </div>
           </div>
         </div>
-        <span className={`text-[11px] font-bold rounded-full px-3 py-1 ${ROLE_COLOR[me]}`}>
-          أنت: {ROLE_LABEL[me]}{myName ? ` — ${myName}` : ""}
-        </span>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowArchived(v=>!v)}
+            className={`rounded-full px-3 py-1 text-[11px] font-bold border ${showArchived?"gradient-gold border-gold":"bg-card border-border hover:border-gold"}`}
+            title="أرشيف الرسائل (محلي)">
+            <Archive className="inline size-3 me-1" /> {showArchived ? `عرض الكل` : `أرشيف (${archivedIds.size})`}
+          </button>
+          <span className={`text-[11px] font-bold rounded-full px-3 py-1 ${ROLE_COLOR[me]}`}>
+            أنت: {ROLE_LABEL[me]}{myName ? ` — ${myName}` : ""}
+          </span>
+        </div>
       </div>
 
       {me === "admin" && !conv.participants.includes("admin") && (
@@ -444,8 +606,7 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
           <button
             onClick={async () => {
               const next = Array.from(new Set<RoleKey>([...conv.participants, "admin"]));
-              const { error } = await supabase.from("chat_conversations")
-                .update({ participants: next }).eq("id", conv.id);
+              const { error } = await supabase.from("chat_conversations").update({ participants: next }).eq("id", conv.id);
               if (error) toast.error(error.message);
               else { toast.success("تم انضمامك كطرف ثالث"); onChange(); }
             }}
@@ -456,44 +617,37 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
       )}
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3 bg-muted/20">
-        {msgs.length === 0 && <div className="text-center text-sm text-muted-foreground py-8">ابدأ المحادثة الآن.</div>}
-        {msgs.map(m => {
+        {visibleMsgs.length === 0 && <div className="text-center text-sm text-muted-foreground py-8">{showArchived ? "لا رسائل مؤرشفة." : "ابدأ المحادثة الآن."}</div>}
+        {visibleMsgs.map(m => {
           const mine = m.sender === me;
           return (
             <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm shadow-sm ${mine ? ROLE_COLOR[m.sender] : "bg-card border border-border"}`}>
-                <div className={`text-[10px] font-bold mb-0.5 ${mine ? "opacity-80" : "text-gold"}`}>
-                  {ROLE_LABEL[m.sender]}{m.sender_name ? ` • ${m.sender_name}` : (m.sender === "doctor" ? ` • ${doctorName}` : "")}
-                </div>
-                {m.message_type === "audio" ? (
-                  <AudioBubble path={m.attachment_path!} />
-                ) : m.message_type === "file" ? (
-                  <FileBubble msg={m} mine={mine} />
-                ) : (
-                  <div className="leading-relaxed whitespace-pre-wrap">{m.content}</div>
-                )}
-                {m._local === "uploading" && (
-                  <div className="mt-2">
-                    <Progress value={m._progress ?? 0} className="h-1.5 bg-white/20" />
-                    <div className="text-[10px] opacity-70 mt-1">{m._progress ?? 0}% • جارِ الرفع...</div>
-                  </div>
-                )}
-                <div className="text-[10px] opacity-70 mt-1 flex items-center gap-1.5 justify-end">
-                  <span>{new Date(m.created_at).toLocaleTimeString("ar")}</span>
-                  {mine && <MessageStatus msg={m} otherParticipants={otherParticipants} />}
-                </div>
-              </div>
+              <MessageBubble
+                m={m} mine={mine} doctorName={doctorName} otherParticipants={otherParticipants}
+                onLongPress={(x, y) => setMenuFor({ msg: m, x, y })}
+                onResume={() => resumeUpload(m)}
+                onPause={() => pauseUpload(m)}
+              />
             </div>
           );
         })}
       </div>
 
+      {replyTo && (
+        <div className="px-4 py-2 border-t border-border bg-muted/40 flex items-center gap-2 text-xs">
+          <Reply className="size-3.5 text-gold shrink-0" />
+          <div className="flex-1 truncate">
+            <span className="font-bold">{ROLE_LABEL[replyTo.sender]}: </span>
+            <span className="opacity-80">{(replyTo.message_type === "text" ? replyTo.content : replyTo.attachment_name || "ملف").slice(0,80)}</span>
+          </div>
+          <button onClick={()=>setReplyTo(null)} className="rounded p-1 hover:bg-card"><X className="size-3.5" /></button>
+        </div>
+      )}
+
       {recording ? (
         <div className="p-3 border-t border-border flex items-center gap-3 bg-rose-50 dark:bg-rose-950/20">
           <span className="size-3 rounded-full bg-rose-600 animate-pulse" />
-          <span className="text-sm font-mono">
-            جارِ التسجيل... {String(Math.floor(recordSec/60)).padStart(2,"0")}:{String(recordSec%60).padStart(2,"0")}
-          </span>
+          <span className="text-sm font-mono">جارِ التسجيل... {String(Math.floor(recordSec/60)).padStart(2,"0")}:{String(recordSec%60).padStart(2,"0")}</span>
           <button onClick={() => stopRecording(true)} className="ms-auto rounded-lg border border-border bg-card px-3 py-2 text-xs font-bold flex items-center gap-1 hover:bg-destructive hover:text-destructive-foreground">
             <X className="size-4" /> إلغاء
           </button>
@@ -509,35 +663,145 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
         <div className="p-3 border-t border-border flex gap-2 items-end">
           <input ref={fileInputRef} type="file" className="hidden" onChange={onPickFile} />
           <button onClick={() => fileInputRef.current?.click()}
-            className="rounded-xl border border-border p-2.5 hover:border-gold" title="إرفاق ملف (أي حجم)">
+            className="rounded-xl border border-border p-2.5 hover:border-gold" title="إرفاق ملف (أي حجم — رفع قابل للاستئناف)">
             <Paperclip className="size-4" />
           </button>
-          <button onClick={startRecording}
-            className="rounded-xl border border-border p-2.5 hover:border-gold" title="تسجيل صوتي">
+          <button onClick={startRecording} className="rounded-xl border border-border p-2.5 hover:border-gold" title="تسجيل صوتي">
             <Mic className="size-4" />
           </button>
           <input value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>{ if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); sendText(); } }}
             className="flex-1 rounded-xl border border-input bg-background px-4 py-2.5 text-sm outline-none focus:border-gold"
-            placeholder="اكتب رسالة..." />
-          <button onClick={sendText} disabled={!text.trim()}
-            className="rounded-xl gradient-gold p-3 shadow-gold disabled:opacity-50">
+            placeholder={replyTo ? "اكتب تعليقك..." : "اكتب رسالة..."} />
+          <button onClick={sendText} disabled={!text.trim()} className="rounded-xl gradient-gold p-3 shadow-gold disabled:opacity-50">
             <Send className="size-4 text-gold-foreground" />
           </button>
         </div>
+      )}
+
+      {menuFor && (
+        <MessageMenu
+          x={menuFor.x} y={menuFor.y} msg={menuFor.msg} archived={archivedIds.has(menuFor.msg.id)}
+          onClose={() => setMenuFor(null)}
+          onCopy={actCopy} onComment={actComment} onResend={actResend}
+          onShare={actShare} onSave={actSave} onDelete={actDelete} onArchive={actArchive}
+        />
       )}
     </div>
   );
 }
 
+function MessageBubble({ m, mine, doctorName, otherParticipants, onLongPress, onResume, onPause }: {
+  m: LocalMsg; mine: boolean; doctorName: string; otherParticipants: RoleKey[];
+  onLongPress: (x: number, y: number) => void;
+  onResume: () => void; onPause: () => void;
+}) {
+  const pressTimer = useRef<number | null>(null);
+  function startPress(x: number, y: number) {
+    if (pressTimer.current) window.clearTimeout(pressTimer.current);
+    pressTimer.current = window.setTimeout(() => onLongPress(x, y), 500);
+  }
+  function cancelPress() { if (pressTimer.current) { window.clearTimeout(pressTimer.current); pressTimer.current = null; } }
+
+  return (
+    <div
+      className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm shadow-sm select-none ${mine ? ROLE_COLOR[m.sender] : "bg-card border border-border"}`}
+      onContextMenu={(e) => { e.preventDefault(); onLongPress(e.clientX, e.clientY); }}
+      onTouchStart={(e) => { const t = e.touches[0]; startPress(t.clientX, t.clientY); }}
+      onTouchEnd={cancelPress} onTouchMove={cancelPress} onTouchCancel={cancelPress}
+      onMouseDown={(e) => startPress(e.clientX, e.clientY)} onMouseUp={cancelPress} onMouseLeave={cancelPress}
+    >
+      <div className={`text-[10px] font-bold mb-0.5 ${mine ? "opacity-80" : "text-gold"}`}>
+        {ROLE_LABEL[m.sender]}{m.sender_name ? ` • ${m.sender_name}` : (m.sender === "doctor" ? ` • ${doctorName}` : "")}
+      </div>
+      {m.message_type === "audio" ? (
+        <AudioBubble path={m.attachment_path!} />
+      ) : m.message_type === "file" ? (
+        <FileBubble msg={m} mine={mine} />
+      ) : (
+        <div className="leading-relaxed whitespace-pre-wrap">{m.content}</div>
+      )}
+      {(m._local === "uploading" || m._local === "paused" || m._local === "failed") && (
+        <div className="mt-2">
+          {(m._local === "uploading" || m._local === "paused") && (
+            <Progress value={m._progress ?? 0} className="h-1.5 bg-white/20" />
+          )}
+          <div className="text-[10px] opacity-80 mt-1 flex items-center gap-2">
+            <span>
+              {m._local === "uploading" && `${m._progress ?? 0}% • جارِ الرفع...`}
+              {m._local === "paused" && `${m._progress ?? 0}% • متوقف مؤقتاً`}
+              {m._local === "failed" && `فشل الرفع — اضغط للاستئناف`}
+            </span>
+            {m._local === "uploading" && (
+              <button onClick={(e)=>{e.stopPropagation(); onPause();}} className="ms-auto inline-flex items-center gap-1 rounded bg-black/20 px-2 py-0.5">
+                <Pause className="size-3" /> إيقاف
+              </button>
+            )}
+            {(m._local === "paused" || m._local === "failed") && m._file && (
+              <button onClick={(e)=>{e.stopPropagation(); onResume();}} className="ms-auto inline-flex items-center gap-1 rounded bg-black/20 px-2 py-0.5">
+                <Play className="size-3" /> استئناف
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+      <div className="text-[10px] opacity-70 mt-1 flex items-center gap-1.5 justify-end">
+        <span>{new Date(m.created_at).toLocaleTimeString("ar")}</span>
+        {mine && <MessageStatus msg={m} otherParticipants={otherParticipants} />}
+      </div>
+    </div>
+  );
+}
+
+function MessageMenu({ x, y, msg, archived, onClose, onCopy, onComment, onResend, onShare, onSave, onDelete, onArchive }: {
+  x: number; y: number; msg: LocalMsg; archived: boolean; onClose: () => void;
+  onCopy: (m: LocalMsg) => void; onComment: (m: LocalMsg) => void; onResend: (m: LocalMsg) => void;
+  onShare: (m: LocalMsg) => void; onSave: (m: LocalMsg) => void; onDelete: (m: LocalMsg) => void;
+  onArchive: (m: LocalMsg) => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    function out(e: MouseEvent | TouchEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    }
+    document.addEventListener("mousedown", out);
+    document.addEventListener("touchstart", out);
+    return () => { document.removeEventListener("mousedown", out); document.removeEventListener("touchstart", out); };
+  }, [onClose]);
+  const items = [
+    { icon: Copy, label: "نسخ", run: () => onCopy(msg) },
+    { icon: Reply, label: "تعليق / رد", run: () => onComment(msg) },
+    { icon: RotateCw, label: "إعادة الإرسال", run: () => onResend(msg) },
+    { icon: Share2, label: "مشاركة خارجية", run: () => onShare(msg) },
+    { icon: Save, label: `حفظ في ${CENTER_FOLDER_NAME}`, run: () => onSave(msg) },
+    { icon: Archive, label: archived ? "إخراج من الأرشيف" : "أرشفة", run: () => onArchive(msg) },
+    { icon: Trash2, label: "حذف", danger: true, run: () => onDelete(msg) },
+  ];
+  // Clamp to viewport
+  const top = Math.min(y, window.innerHeight - 320);
+  const left = Math.min(x, window.innerWidth - 240);
+  return (
+    <div className="fixed inset-0 z-50" onContextMenu={(e)=>e.preventDefault()}>
+      <div ref={ref} style={{ top, left }} className="absolute w-56 rounded-xl border border-border bg-popover text-popover-foreground shadow-luxury overflow-hidden">
+        {items.map((it, i) => (
+          <button key={i}
+            onClick={() => { it.run(); onClose(); }}
+            className={`w-full flex items-center gap-2 px-3 py-2.5 text-sm text-start hover:bg-muted ${it.danger ? "text-destructive hover:bg-destructive/10" : ""}`}>
+            <it.icon className="size-4" /> {it.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function MessageStatus({ msg, otherParticipants }: { msg: LocalMsg; otherParticipants: RoleKey[] }) {
-  if (msg._local === "failed") return <span title="فشل الإرسال — أعد المحاولة"><AlertCircle className="size-3.5 text-rose-300" /></span>;
+  if (msg._local === "failed") return <span title="فشل — سيستأنف تلقائياً عند الاتصال"><AlertCircle className="size-3.5 text-rose-300" /></span>;
+  if (msg._local === "paused") return <span title="متوقف"><Pause className="size-3.5 opacity-80" /></span>;
   if (msg._local === "sending" || msg._local === "uploading") return <span title="جارِ الإرسال"><Clock className="size-3.5 opacity-80" /></span>;
-  // Server-confirmed message
   const readers = (msg.read_by ?? []).filter(r => otherParticipants.includes(r));
   if (readers.length > 0) {
     return <span title={`قرأها: ${readers.map(r => ROLE_LABEL[r]).join("، ")}`}><CheckCheck className="size-3.5 text-sky-300" /></span>;
   }
-  // Delivered = stored on server (any other participant will receive via realtime when online)
   return <span title="تم التسليم"><Check className="size-3.5 opacity-90" /></span>;
 }
 
@@ -549,6 +813,14 @@ function FileBubble({ msg, mine }: { msg: LocalMsg; mine: boolean }) {
     const url = await getSignedUrl(msg.attachment_path, 300);
     setBusy(false);
     if (!url) { toast.error("تعذر إنشاء رابط التحميل"); return; }
+    // If file manager is linked, save into center; else open in new tab
+    if (fileManagerSupported() && (await getCenterFolder())) {
+      try {
+        const r = await downloadUrlToCenter(url, msg.attachment_name || "file", "ملفات");
+        toast.success(r.fallback ? "تم التحميل" : `حُفظ في ${CENTER_FOLDER_NAME}/ملفات`);
+        return;
+      } catch {}
+    }
     window.open(url, "_blank", "noopener");
   }
   const sizeLabel = msg.attachment_size
@@ -563,7 +835,7 @@ function FileBubble({ msg, mine }: { msg: LocalMsg; mine: boolean }) {
       <div className="min-w-0 flex-1">
         <div className="font-bold truncate">{msg.attachment_name}</div>
         <div className="text-[10px] opacity-70">
-          {sizeLabel}{sizeLabel ? " — " : ""}{msg._local ? "جارِ الرفع..." : "اضغط للتحميل (رابط آمن مؤقت)"}
+          {sizeLabel}{sizeLabel ? " — " : ""}{msg._local ? "جارِ الرفع..." : "اضغط للتحميل"}
         </div>
       </div>
       <Download className="size-4 ms-auto shrink-0" />
