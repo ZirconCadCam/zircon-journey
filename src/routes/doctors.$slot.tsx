@@ -6,7 +6,7 @@ import { ChatModule } from "@/components/chat-module";
 import { ROLE_LABEL as CHAT_LABEL, type RoleKey } from "@/lib/chat";
 import {
   Sparkles, ArrowRight, Lock, Upload, FileText, Download, Archive,
-  Trash2, Share2, MessageSquare, Files as FilesIcon, ArchiveRestore, Copy, Check, Search,
+  Trash2, Share2, MessageSquare, Files as FilesIcon, ArchiveRestore, Copy, Check, Search, Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -349,6 +349,10 @@ function FilesPanel({ doctor, actor }: { doctor: Doctor; actor: string }) {
             <input value={q} onChange={e=>setQ(e.target.value)} placeholder="بحث في الملفات..."
               className="rounded-xl border border-input bg-card pr-9 pl-3 py-2 text-sm outline-none focus:border-gold w-56" />
           </div>
+          <Link to="/cases/new"
+            className="inline-flex items-center gap-2 rounded-xl border border-gold bg-card px-4 py-2 text-sm font-bold hover:gradient-gold transition">
+            <Plus className="size-4" /> إضافة حالة
+          </Link>
           <label className="cursor-pointer inline-flex items-center gap-2 rounded-xl gradient-brown px-4 py-2 text-sm font-bold shadow-luxury">
             <Upload className="size-4" /> {uploading ? "جارِ الرفع..." : "رفع ملف"}
             <input ref={fileInput} type="file" className="hidden" onChange={upload} disabled={uploading} />
