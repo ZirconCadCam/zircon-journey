@@ -33,11 +33,11 @@ export const STAFF_ROLES: RoleKey[] = ["designer", "technician", "secretary_sana
 
 // Hardcoded gate passwords for staff portals (consistent with doctor portal pattern).
 export const STAFF_PASSWORDS: Record<Exclude<RoleKey, "doctor">, string> = {
-  designer: "designer1",
-  technician: "tech1",
-  secretary_sanaa: "secsanaa1",
-  secretary_ibb: "secibb1",
-  admin: "admin1",
+  designer: "mcadcam",
+  technician: "fcadcam",
+  secretary_sanaa: "sanaacadcam",
+  secretary_ibb: "ibbcadcam",
+  admin: "ZirconCadCam1979",
 };
 
 export interface ChatConversation {
