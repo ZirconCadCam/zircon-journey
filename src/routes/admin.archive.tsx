@@ -26,7 +26,8 @@ function AdminArchivePage() {
   const [authed, setAuthed] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && localStorage.getItem("zircon_staff_admin") === "1") setAuthed(true);
+    if (typeof window === "undefined") return;
+    if (localStorage.getItem("zircon_admin_all") === "1" || localStorage.getItem("zircon_staff_admin") === "1") setAuthed(true);
   }, []);
 
   if (!authed) return <Gate onOk={() => { localStorage.setItem("zircon_staff_admin", "1"); setAuthed(true); }} />;
