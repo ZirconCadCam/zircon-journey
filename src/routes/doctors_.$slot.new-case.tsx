@@ -214,9 +214,9 @@ function NewSlotCase() {
             <div className="border-t border-border pt-5">
               <h2 className="text-lg font-bold mb-3">تفاصيل الحالة</h2>
               <div className="grid md:grid-cols-3 gap-4">
-                <Field label="رقم السن">
+                <Field label="رقم السن (FDI)" error={errors.tooth_number}>
                   <input className="zinput" value={form.tooth_number}
-                    onChange={e=>setForm({...form,tooth_number:e.target.value})} placeholder="مثال: 11, 24..." />
+                    onChange={e=>setForm({...form,tooth_number:e.target.value})} placeholder="مثال: 11, 24, 36" />
                 </Field>
                 <Field label="اللون (Shade)">
                   <select className="zinput" value={form.shade}
