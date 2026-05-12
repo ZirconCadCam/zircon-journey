@@ -57,7 +57,7 @@ function Landing() {
       {/* Roles */}
       <section id="roles" className="container mx-auto px-6 pb-24">
         <h2 className="text-3xl font-bold text-center mb-12">منصات مخصصة لكل دور</h2>
-        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-5">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-5">
           {[
             { icon: Stethoscope, t: "بوابة الطبيب", d: "حالات خاصة وسجل المرضى", to: "/doctors" as const },
             { icon: Layers, t: "مصمم CAD/CAM", d: "محادثات مع الأطباء واستلام الملفات", to: "/staff/$role" as const, params: { role: "designer" } },
