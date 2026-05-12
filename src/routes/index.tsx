@@ -60,14 +60,16 @@ function Landing() {
         <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-5">
           {[
             { icon: Stethoscope, t: "بوابة الطبيب", d: "حالات خاصة وسجل المرضى", to: "/doctors" as const },
-            { icon: Layers, t: "مصمم CAD/CAM", d: "استلام السكانات ورفع التصاميم", to: "/login" as const },
-            { icon: Wrench, t: "فني المختبر", d: "نحت وتصنيع الزركون", to: "/login" as const },
-            { icon: Users, t: "السكرتارية", d: "صنعاء و إب — تنسيق التسليم", to: "/login" as const },
-            { icon: Shield, t: "إدارة المركز", d: "تقارير وأرشيف شامل", to: "/login" as const },
-          ].map((c) => (
+            { icon: Layers, t: "مصمم CAD/CAM", d: "محادثات مع الأطباء واستلام الملفات", to: "/staff/$role" as const, params: { role: "designer" } },
+            { icon: Wrench, t: "فني المختبر", d: "تنسيق التصنيع والتسليم", to: "/staff/$role" as const, params: { role: "technician" } },
+            { icon: Users, t: "سكرتارية صنعاء", d: "تنسيق فرع صنعاء", to: "/staff/$role" as const, params: { role: "secretary_sanaa" } },
+            { icon: Users, t: "سكرتارية إب", d: "تنسيق فرع إب", to: "/staff/$role" as const, params: { role: "secretary_ibb" } },
+            { icon: Shield, t: "إدارة المركز", d: "إشراف ومراقبة المحادثات", to: "/staff/$role" as const, params: { role: "admin" } },
+          ].map((c: any) => (
             <Link
               key={c.t}
               to={c.to}
+              params={c.params}
               className="rounded-2xl bg-card border border-border p-6 hover:shadow-luxury hover:-translate-y-1 transition block"
             >
               <div className="size-12 rounded-xl gradient-gold grid place-items-center mb-4 shadow-gold">
