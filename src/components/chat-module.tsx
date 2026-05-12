@@ -364,6 +364,25 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
         </span>
       </div>
 
+      {me === "admin" && !conv.participants.includes("admin") && (
+        <div className="px-4 py-2 border-b border-border bg-rose-50 dark:bg-rose-950/20 flex items-center justify-between gap-3 flex-wrap">
+          <div className="text-xs text-rose-800 dark:text-rose-200 font-bold">
+            👁 أنت تشاهد محادثة خاصة كمشرف. لن يراك أحد إلا إذا انضممت كطرف ثالث.
+          </div>
+          <button
+            onClick={async () => {
+              const next = Array.from(new Set<RoleKey>([...conv.participants, "admin"]));
+              const { error } = await supabase.from("chat_conversations")
+                .update({ participants: next }).eq("id", conv.id);
+              if (error) toast.error(error.message);
+              else { toast.success("تم انضمامك كطرف ثالث"); onChange(); }
+            }}
+            className="rounded-lg gradient-brown px-3 py-1.5 text-xs font-bold shadow-luxury">
+            الانضمام كطرف ثالث
+          </button>
+        </div>
+      )}
+
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3 bg-muted/20">
         {msgs.length === 0 && <div className="text-center text-sm text-muted-foreground py-8">ابدأ المحادثة الآن.</div>}
         {msgs.map(m => {
