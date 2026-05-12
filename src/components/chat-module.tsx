@@ -32,8 +32,10 @@ export function ChatModule({ doctorSlot, doctorName, me, myName }: Props) {
       .select("*")
       .eq("doctor_slot", doctorSlot)
       .order("last_message_at", { ascending: false });
+    // Privacy: only participants see the conversation.
+    // Admin override: admin can view ALL conversations across the portal as a supervisor.
     const list = ((data ?? []) as ChatConversation[]).filter(c =>
-      me === "doctor" ? c.participants.includes("doctor") : c.participants.includes(me)
+      me === "admin" ? true : c.participants.includes(me)
     );
     setConversations(list);
   }, [doctorSlot, me]);
