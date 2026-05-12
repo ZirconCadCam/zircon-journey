@@ -21,7 +21,9 @@ function StaffPortal() {
 
   useEffect(() => {
     if (!VALID.includes(role)) return;
-    if (typeof window !== "undefined" && localStorage.getItem(`zircon_staff_${role}`) === "1") setAuthed(true);
+    if (typeof window === "undefined") return;
+    if (localStorage.getItem("zircon_admin_all") === "1") { setAuthed(true); return; }
+    if (localStorage.getItem(`zircon_staff_${role}`) === "1") setAuthed(true);
   }, [role]);
 
   if (!VALID.includes(role)) {
