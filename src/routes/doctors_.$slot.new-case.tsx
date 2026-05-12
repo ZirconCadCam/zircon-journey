@@ -301,14 +301,15 @@ function NewSlotCase() {
   );
 }
 
-function Field({ label, required, children, className }:
-  { label: string; required?: boolean; children: React.ReactNode; className?: string }) {
+function Field({ label, required, children, className, error }:
+  { label: string; required?: boolean; children: React.ReactNode; className?: string; error?: string }) {
   return (
     <label className={`block ${className ?? ""}`}>
       <div className="text-xs font-bold text-muted-foreground mb-1.5">
         {label} {required && <span className="text-destructive">*</span>}
       </div>
       {children}
+      {error && <div className="text-[11px] text-destructive mt-1 font-medium">{error}</div>}
     </label>
   );
 }
