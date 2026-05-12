@@ -65,7 +65,20 @@ function NewSlotCase() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.patient_name.trim()) { toast.error("اسم المريض مطلوب"); return; }
+    const parsed = patientSchema.safeParse({
+      patient_name: form.patient_name,
+      patient_phone: form.patient_phone,
+      patient_age: form.patient_age,
+      tooth_number: form.tooth_number,
+    });
+    if (!parsed.success) {
+      const fieldErrs: Record<string, string> = {};
+      parsed.error.issues.forEach(i => { fieldErrs[i.path[0] as string] = i.message; });
+      setErrors(fieldErrs);
+      toast.error(parsed.error.issues[0].message);
+      return;
+    }
+    setErrors({});
     setSubmitting(true);
     try {
       let scan_path: string | null = null;
