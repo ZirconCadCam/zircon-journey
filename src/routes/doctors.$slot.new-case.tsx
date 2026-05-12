@@ -78,7 +78,7 @@ function NewSlotCase() {
         });
       }
 
-      const { error } = await supabase.from("slot_cases").insert({
+      const { data: inserted, error } = await supabase.from("slot_cases").insert({
         doctor_slot: Number(slot),
         patient_name: form.patient_name.trim(),
         patient_phone: form.patient_phone.trim() || null,
@@ -89,9 +89,27 @@ function NewSlotCase() {
         case_type: form.case_type || null,
         notes: form.notes.trim() || null,
         scan_path, scan_name, scan_size, scan_mime,
-      });
+      }).select("id, case_code").single();
       if (error) throw error;
-      toast.success("تم إنشاء الحالة بنجاح");
+
+      // Auto-handoff: notify the next responsible role (designer) via chat.
+      try {
+        const { notifyRoleAboutCase, getStage, nextStage, localNotify } = await import("@/lib/case-stages");
+        const next = nextStage("new") ?? getStage("new");
+        if (next.ownerRole) {
+          await notifyRoleAboutCase({
+            doctorSlot: Number(slot),
+            doctorName: doctor!.name,
+            targetRole: next.ownerRole,
+            caseCode: inserted!.case_code,
+            patientName: form.patient_name.trim(),
+            stageLabel: `إحالة جديدة — ${next.label}`,
+          });
+        }
+        localNotify("Zircon Journey — تم إنشاء حالة", `${form.patient_name.trim()} • ${inserted!.case_code}`);
+      } catch { /* notification failures shouldn't block save */ }
+
+      toast.success("تم إنشاء الحالة وإرسال إشعار للمصمم");
       nav({ to: "/doctors/$slot", params: { slot } });
     } catch (err: any) {
       toast.error(err.message || "فشل إنشاء الحالة");
