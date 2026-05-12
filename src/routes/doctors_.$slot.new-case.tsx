@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ArrowRight, Sparkles, Upload, FileText, X, Loader2, ScanLine } from "lucide-react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/doctors/$slot/new-case")({
+export const Route = createFileRoute("/doctors_/$slot/new-case")({
   component: NewSlotCase,
 });
 
