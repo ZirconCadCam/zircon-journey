@@ -420,6 +420,10 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
             <Square className="size-4" /> إيقاف وإرسال
           </button>
         </div>
+      ) : me === "admin" && !conv.participants.includes("admin") ? (
+        <div className="p-3 border-t border-border text-center text-xs text-muted-foreground">
+          وضع المراقبة فقط — انضم كطرف ثالث للمشاركة في المحادثة.
+        </div>
       ) : (
         <div className="p-3 border-t border-border flex gap-2 items-end">
           <input ref={fileInputRef} type="file" className="hidden" onChange={onPickFile} />
