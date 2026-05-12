@@ -7,8 +7,10 @@ import { ROLE_LABEL as CHAT_LABEL, type RoleKey } from "@/lib/chat";
 import {
   Sparkles, ArrowRight, Lock, Upload, FileText, Download, Archive,
   Trash2, Share2, MessageSquare, Files as FilesIcon, ArchiveRestore, Copy, Check, Search, Plus,
+  ClipboardList, ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
+import { STAGES, getStage, nextStage, notifyRoleAboutCase, localNotify, type CaseStage } from "@/lib/case-stages";
 
 export const Route = createFileRoute("/doctors/$slot")({
   component: DoctorPortal,
@@ -156,7 +158,7 @@ function PasswordGate({ doctor, onOk }: { doctor: Doctor; onOk: () => void }) {
 
 function Portal({ doctor, actor, actorName, onLogout }: { doctor: Doctor; actor: Sender; actorName: string; onLogout: () => void }) {
   const { branch } = useAuth();
-  const [tab, setTab] = useState<"files" | "chat">("files");
+  const [tab, setTab] = useState<"cases" | "files" | "chat">("cases");
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
@@ -197,15 +199,16 @@ function Portal({ doctor, actor, actorName, onLogout }: { doctor: Doctor; actor:
           </div>
         </div>
 
-        <div className="mt-6 flex items-center gap-2 border-b border-border">
+        <div className="mt-6 flex items-center gap-2 border-b border-border overflow-x-auto">
+          <TabBtn active={tab==="cases"} onClick={()=>setTab("cases")} icon={<ClipboardList className="size-4" />} label="الحالات" />
           <TabBtn active={tab==="files"} onClick={()=>setTab("files")} icon={<FilesIcon className="size-4" />} label="الملفات" />
           <TabBtn active={tab==="chat"} onClick={()=>{ setTab("chat"); setUnread(0); }} icon={<MessageSquare className="size-4" />} label="المحادثة" badge={unread} />
         </div>
 
         <div className="mt-6">
-          {tab === "files"
-            ? <FilesPanel doctor={doctor} actor={actor} />
-            : <ChatModule doctorSlot={doctor.slot} doctorName={doctor.name} me={chatRole} myName={actorName || doctor.name} />}
+          {tab === "cases" && <CasesPanel doctor={doctor} />}
+          {tab === "files" && <FilesPanel doctor={doctor} actor={actor} />}
+          {tab === "chat" && <ChatModule doctorSlot={doctor.slot} doctorName={doctor.name} me={chatRole} myName={actorName || doctor.name} />}
         </div>
 
         <ChatNotificationsListener doctorSlot={doctor.slot} me={chatRole}
@@ -413,5 +416,130 @@ function FileRow({ f, onArchive, onRemove, onCopy, onShare }: any) {
         </button>
       </div>
     </li>
+  );
+}
+
+interface SlotCase {
+  id: string; doctor_slot: number; case_code: string; patient_name: string;
+  patient_phone: string | null; tooth_number: string | null; shade: string | null;
+  case_type: string | null; status: CaseStage; notes: string | null;
+  scan_path: string | null; scan_name: string | null;
+  created_at: string; updated_at: string;
+}
+
+function CasesPanel({ doctor }: { doctor: Doctor }) {
+  const [cases, setCases] = useState<SlotCase[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    const { data } = await supabase.from("slot_cases").select("*")
+      .eq("doctor_slot", doctor.slot).order("created_at", { ascending: false });
+    setCases((data as SlotCase[]) ?? []);
+    setLoading(false);
+  }, [doctor.slot]);
+
+  useEffect(() => {
+    load();
+    const ch = supabase.channel(`slot-cases-${doctor.slot}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "slot_cases", filter: `doctor_slot=eq.${doctor.slot}` }, load)
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [doctor.slot, load]);
+
+  async function advance(c: SlotCase) {
+    const next = nextStage(c.status);
+    if (!next) return;
+    const { error } = await supabase.from("slot_cases").update({ status: next.key, updated_at: new Date().toISOString() }).eq("id", c.id);
+    if (error) { toast.error(error.message); return; }
+    if (next.ownerRole) {
+      try {
+        await notifyRoleAboutCase({
+          doctorSlot: doctor.slot, doctorName: doctor.name,
+          targetRole: next.ownerRole, caseCode: c.case_code,
+          patientName: c.patient_name, stageLabel: `إحالة الحالة — ${next.label}`,
+        });
+      } catch {}
+    }
+    localNotify("Zircon Journey — تحديث حالة", `${c.case_code} → ${next.label}`);
+    toast.success(`تمت إحالة الحالة إلى: ${next.label}`);
+  }
+
+  if (loading) return <div className="p-12 text-center text-muted-foreground text-sm">جارِ تحميل الحالات...</div>;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="text-sm text-muted-foreground">
+          <span className="font-bold text-foreground">{cases.length}</span> حالة لـ {doctor.name}
+        </div>
+        <Link to="/doctors/$slot/new-case" params={{ slot: String(doctor.slot) }}
+          className="inline-flex items-center gap-2 rounded-xl gradient-brown px-4 py-2 text-sm font-bold shadow-luxury">
+          <Plus className="size-4" /> حالة جديدة
+        </Link>
+      </div>
+
+      {cases.length === 0 ? (
+        <div className="rounded-2xl bg-card border border-border p-12 text-center text-muted-foreground text-sm shadow-luxury">
+          <ClipboardList className="size-10 mx-auto mb-3 opacity-40" />
+          لا توجد حالات بعد. ابدأ بإضافة أول حالة.
+        </div>
+      ) : (
+        <div className="grid md:grid-cols-2 gap-4">
+          {cases.map(c => <CaseCard key={c.id} c={c} onAdvance={advance} />)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CaseCard({ c, onAdvance }: { c: SlotCase; onAdvance: (c: SlotCase) => void }) {
+  const stage = getStage(c.status);
+  const next = nextStage(c.status);
+  const stageIdx = STAGES.findIndex(s => s.key === stage.key);
+
+  return (
+    <article className="rounded-2xl bg-card border border-border p-5 shadow-luxury hover:border-gold/60 transition">
+      <header className="flex items-start justify-between gap-3 mb-3">
+        <div className="min-w-0">
+          <div className="font-mono text-[11px] text-muted-foreground">{c.case_code}</div>
+          <div className="font-bold text-base truncate">{c.patient_name}</div>
+          <div className="text-[11px] text-muted-foreground mt-0.5">
+            {c.case_type || "—"}{c.tooth_number ? ` • سن ${c.tooth_number}` : ""}{c.shade ? ` • ${c.shade}` : ""}
+          </div>
+        </div>
+        <span className="shrink-0 rounded-full gradient-gold text-gold-foreground text-[11px] font-bold px-2.5 py-1 shadow-gold">
+          {stage.label}
+        </span>
+      </header>
+
+      {/* Gold journey progress */}
+      <div className="space-y-2">
+        <div className="relative h-2.5 rounded-full bg-muted/60 overflow-hidden">
+          <div className="absolute inset-y-0 right-0 gradient-gold transition-all duration-700 shadow-gold"
+            style={{ width: `${stage.percent}%` }} />
+        </div>
+        <div className="flex justify-between text-[10px] text-muted-foreground font-bold">
+          {STAGES.map((s, i) => (
+            <span key={s.key} className={i <= stageIdx ? "text-gold" : ""}>{s.label}</span>
+          ))}
+        </div>
+      </div>
+
+      <footer className="flex items-center justify-between mt-4 pt-3 border-t border-border">
+        <div className="text-[11px] text-muted-foreground">
+          آخر تحديث: {new Date(c.updated_at).toLocaleString("ar")}
+        </div>
+        {next ? (
+          <button onClick={() => onAdvance(c)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gold bg-card px-3 py-1.5 text-xs font-bold hover:gradient-gold transition">
+            إحالة لـ {next.label} <ChevronRight className="size-3.5 rotate-180" />
+          </button>
+        ) : (
+          <span className="text-xs font-bold text-emerald-600 inline-flex items-center gap-1">
+            <Check className="size-3.5" /> مكتملة
+          </span>
+        )}
+      </footer>
+    </article>
   );
 }
