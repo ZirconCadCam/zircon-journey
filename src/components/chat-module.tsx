@@ -423,7 +423,16 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
   async function sendAttachment(file: File, kind: "file" | "audio") {
     const id = newId();
     const safeName = file.name || (kind === "audio" ? `voice-${Date.now()}.webm` : `file-${Date.now()}`);
-    const path = `${conv.doctor_slot}/${conv.id}/${Date.now()}-${safeName}`;
+    // Supabase Storage keys must be ASCII-safe. Sanitize while preserving the extension.
+    const dot = safeName.lastIndexOf(".");
+    const ext = dot > 0 ? safeName.slice(dot + 1).replace(/[^A-Za-z0-9]/g, "").toLowerCase() : "";
+    const sanitized = (dot > 0 ? safeName.slice(0, dot) : safeName)
+      .replace(/[^A-Za-z0-9._-]+/g, "_")
+      .replace(/_+/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .slice(0, 60) || "file";
+    const storageName = ext ? `${sanitized}.${ext}` : sanitized;
+    const path = `${conv.doctor_slot}/${conv.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${storageName}`;
     const baseContent = kind === "audio" ? "🎤 تسجيل صوتي" : safeName;
     const finalContent = buildContent(baseContent);
     setReplyTo(null);
