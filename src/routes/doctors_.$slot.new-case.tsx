@@ -189,15 +189,15 @@ function NewSlotCase() {
               <p className="text-xs text-muted-foreground">جميع الحقول المعلَّمة بنجمة مطلوبة.</p>
             </div>
             <div className="grid md:grid-cols-2 gap-4">
-              <Field label="اسم المريض" required>
-                <input className="zinput" value={form.patient_name}
+              <Field label="اسم المريض" required error={errors.patient_name}>
+                <input className="zinput" value={form.patient_name} maxLength={80}
                   onChange={e=>setForm({...form,patient_name:e.target.value})} required />
               </Field>
-              <Field label="رقم الهاتف">
-                <input dir="ltr" className="zinput" value={form.patient_phone}
+              <Field label="رقم الهاتف" error={errors.patient_phone}>
+                <input dir="ltr" className="zinput" value={form.patient_phone} maxLength={15}
                   onChange={e=>setForm({...form,patient_phone:e.target.value})} placeholder="7xxxxxxxx" />
               </Field>
-              <Field label="العمر">
+              <Field label="العمر" error={errors.patient_age}>
                 <input type="number" min={0} max={120} className="zinput" value={form.patient_age}
                   onChange={e=>setForm({...form,patient_age:e.target.value})} />
               </Field>
