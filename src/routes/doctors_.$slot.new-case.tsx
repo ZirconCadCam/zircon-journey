@@ -3,6 +3,26 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowRight, Sparkles, Upload, FileText, X, Loader2, ScanLine } from "lucide-react";
 import { toast } from "sonner";
+import { z } from "zod";
+
+const patientSchema = z.object({
+  patient_name: z.string().trim()
+    .min(2, "اسم المريض يجب أن لا يقل عن حرفين")
+    .max(80, "اسم المريض طويل جداً (الحد الأقصى 80 حرف)")
+    .regex(/^[\p{L}\s'.\-]+$/u, "اسم المريض يحتوي على رموز غير مسموحة"),
+  patient_phone: z.string().trim().optional().refine(
+    (v) => !v || /^[0-9+\-\s]{7,15}$/.test(v),
+    "رقم الهاتف غير صالح (7-15 رقماً)"
+  ),
+  patient_age: z.string().optional().refine(
+    (v) => !v || (/^\d+$/.test(v) && Number(v) >= 0 && Number(v) <= 120),
+    "العمر يجب أن يكون رقماً بين 0 و 120"
+  ),
+  tooth_number: z.string().trim().optional().refine(
+    (v) => !v || /^([1-4][1-8])(\s*[,،\-]\s*[1-4][1-8])*$/.test(v),
+    "رقم السن غير صالح (نظام FDI: 11-48، يمكن الفصل بفاصلة)"
+  ),
+});
 
 export const Route = createFileRoute("/doctors_/$slot/new-case")({
   component: NewSlotCase,
