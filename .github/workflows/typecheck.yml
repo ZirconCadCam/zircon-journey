@@ -1,0 +1,15 @@
+name: Typecheck
+on:
+  push: { branches: [main] }
+  pull_request:
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - name: Block TS2304 (missing components / identifiers)
+        run: bash scripts/check-ts2304.sh
+      - name: Full typecheck
+        run: bun run typecheck

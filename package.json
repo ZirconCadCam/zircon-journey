@@ -9,7 +9,9 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "typecheck": "tsc --noEmit",
+    "check:ts2304": "bash scripts/check-ts2304.sh"
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.25.5",

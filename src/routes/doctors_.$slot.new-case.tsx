@@ -3,6 +3,26 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowRight, Sparkles, Upload, FileText, X, Loader2, ScanLine } from "lucide-react";
 import { toast } from "sonner";
+import { z } from "zod";
+
+const patientSchema = z.object({
+  patient_name: z.string().trim()
+    .min(2, "اسم المريض يجب أن لا يقل عن حرفين")
+    .max(80, "اسم المريض طويل جداً (الحد الأقصى 80 حرف)")
+    .regex(/^[\p{L}\s'.\-]+$/u, "اسم المريض يحتوي على رموز غير مسموحة"),
+  patient_phone: z.string().trim().optional().refine(
+    (v) => !v || /^[0-9+\-\s]{7,15}$/.test(v),
+    "رقم الهاتف غير صالح (7-15 رقماً)"
+  ),
+  patient_age: z.string().optional().refine(
+    (v) => !v || (/^\d+$/.test(v) && Number(v) >= 0 && Number(v) <= 120),
+    "العمر يجب أن يكون رقماً بين 0 و 120"
+  ),
+  tooth_number: z.string().trim().optional().refine(
+    (v) => !v || /^([1-4][1-8])(\s*[,،\-]\s*[1-4][1-8])*$/.test(v),
+    "رقم السن غير صالح (نظام FDI: 11-48، يمكن الفصل بفاصلة)"
+  ),
+});
 
 export const Route = createFileRoute("/doctors_/$slot/new-case")({
   component: NewSlotCase,
@@ -26,6 +46,7 @@ function NewSlotCase() {
     patient_name: "", patient_phone: "", patient_age: "", patient_gender: "",
     tooth_number: "", shade: "A2", case_type: "تاج زيركون", notes: "",
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const sessionOk =
@@ -44,7 +65,20 @@ function NewSlotCase() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.patient_name.trim()) { toast.error("اسم المريض مطلوب"); return; }
+    const parsed = patientSchema.safeParse({
+      patient_name: form.patient_name,
+      patient_phone: form.patient_phone,
+      patient_age: form.patient_age,
+      tooth_number: form.tooth_number,
+    });
+    if (!parsed.success) {
+      const fieldErrs: Record<string, string> = {};
+      parsed.error.issues.forEach(i => { fieldErrs[i.path[0] as string] = i.message; });
+      setErrors(fieldErrs);
+      toast.error(parsed.error.issues[0].message);
+      return;
+    }
+    setErrors({});
     setSubmitting(true);
     try {
       let scan_path: string | null = null;
@@ -155,15 +189,15 @@ function NewSlotCase() {
               <p className="text-xs text-muted-foreground">جميع الحقول المعلَّمة بنجمة مطلوبة.</p>
             </div>
             <div className="grid md:grid-cols-2 gap-4">
-              <Field label="اسم المريض" required>
-                <input className="zinput" value={form.patient_name}
+              <Field label="اسم المريض" required error={errors.patient_name}>
+                <input className="zinput" value={form.patient_name} maxLength={80}
                   onChange={e=>setForm({...form,patient_name:e.target.value})} required />
               </Field>
-              <Field label="رقم الهاتف">
-                <input dir="ltr" className="zinput" value={form.patient_phone}
+              <Field label="رقم الهاتف" error={errors.patient_phone}>
+                <input dir="ltr" className="zinput" value={form.patient_phone} maxLength={15}
                   onChange={e=>setForm({...form,patient_phone:e.target.value})} placeholder="7xxxxxxxx" />
               </Field>
-              <Field label="العمر">
+              <Field label="العمر" error={errors.patient_age}>
                 <input type="number" min={0} max={120} className="zinput" value={form.patient_age}
                   onChange={e=>setForm({...form,patient_age:e.target.value})} />
               </Field>
@@ -180,9 +214,9 @@ function NewSlotCase() {
             <div className="border-t border-border pt-5">
               <h2 className="text-lg font-bold mb-3">تفاصيل الحالة</h2>
               <div className="grid md:grid-cols-3 gap-4">
-                <Field label="رقم السن">
+                <Field label="رقم السن (FDI)" error={errors.tooth_number}>
                   <input className="zinput" value={form.tooth_number}
-                    onChange={e=>setForm({...form,tooth_number:e.target.value})} placeholder="مثال: 11, 24..." />
+                    onChange={e=>setForm({...form,tooth_number:e.target.value})} placeholder="مثال: 11, 24, 36" />
                 </Field>
                 <Field label="اللون (Shade)">
                   <select className="zinput" value={form.shade}
@@ -267,14 +301,15 @@ function NewSlotCase() {
   );
 }
 
-function Field({ label, required, children, className }:
-  { label: string; required?: boolean; children: React.ReactNode; className?: string }) {
+function Field({ label, required, children, className, error }:
+  { label: string; required?: boolean; children: React.ReactNode; className?: string; error?: string }) {
   return (
     <label className={`block ${className ?? ""}`}>
       <div className="text-xs font-bold text-muted-foreground mb-1.5">
         {label} {required && <span className="text-destructive">*</span>}
       </div>
       {children}
+      {error && <div className="text-[11px] text-destructive mt-1 font-medium">{error}</div>}
     </label>
   );
 }
