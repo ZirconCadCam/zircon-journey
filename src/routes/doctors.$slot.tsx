@@ -2,10 +2,11 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, ROLE_LABELS, type AppRole } from "@/hooks/use-auth";
+import { ChatModule } from "@/components/chat-module";
+import { ROLE_LABEL as CHAT_LABEL, type RoleKey } from "@/lib/chat";
 import {
-  Sparkles, ArrowRight, Lock, Upload, Send, FileText, Download, Archive,
+  Sparkles, ArrowRight, Lock, Upload, FileText, Download, Archive,
   Trash2, Share2, MessageSquare, Files as FilesIcon, ArchiveRestore, Copy, Check, Search,
-  Paperclip, Mic, Square, Play, Pause, X,
 } from "lucide-react";
 import { toast } from "sonner";
 
