@@ -46,6 +46,7 @@ function NewSlotCase() {
     patient_name: "", patient_phone: "", patient_age: "", patient_gender: "",
     tooth_number: "", shade: "A2", case_type: "تاج زيركون", notes: "",
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const sessionOk =
