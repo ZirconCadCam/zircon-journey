@@ -19,6 +19,7 @@ import { Route as CasesNewRouteImport } from './routes/cases.new'
 import { Route as CasesIdRouteImport } from './routes/cases.$id'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminArchiveRouteImport } from './routes/admin.archive'
+import { Route as DoctorsSlotNewCaseRouteImport } from './routes/doctors.$slot.new-case'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -70,6 +71,11 @@ const AdminArchiveRoute = AdminArchiveRouteImport.update({
   path: '/admin/archive',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DoctorsSlotNewCaseRoute = DoctorsSlotNewCaseRouteImport.update({
+  id: '/new-case',
+  path: '/new-case',
+  getParentRoute: () => DoctorsSlotRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -79,9 +85,10 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AdminUsersRoute
   '/cases/$id': typeof CasesIdRoute
   '/cases/new': typeof CasesNewRoute
-  '/doctors/$slot': typeof DoctorsSlotRoute
+  '/doctors/$slot': typeof DoctorsSlotRouteWithChildren
   '/staff/$role': typeof StaffRoleRoute
   '/doctors/': typeof DoctorsIndexRoute
+  '/doctors/$slot/new-case': typeof DoctorsSlotNewCaseRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -91,9 +98,10 @@ export interface FileRoutesByTo {
   '/admin/users': typeof AdminUsersRoute
   '/cases/$id': typeof CasesIdRoute
   '/cases/new': typeof CasesNewRoute
-  '/doctors/$slot': typeof DoctorsSlotRoute
+  '/doctors/$slot': typeof DoctorsSlotRouteWithChildren
   '/staff/$role': typeof StaffRoleRoute
   '/doctors': typeof DoctorsIndexRoute
+  '/doctors/$slot/new-case': typeof DoctorsSlotNewCaseRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -104,9 +112,10 @@ export interface FileRoutesById {
   '/admin/users': typeof AdminUsersRoute
   '/cases/$id': typeof CasesIdRoute
   '/cases/new': typeof CasesNewRoute
-  '/doctors/$slot': typeof DoctorsSlotRoute
+  '/doctors/$slot': typeof DoctorsSlotRouteWithChildren
   '/staff/$role': typeof StaffRoleRoute
   '/doctors/': typeof DoctorsIndexRoute
+  '/doctors/$slot/new-case': typeof DoctorsSlotNewCaseRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -121,6 +130,7 @@ export interface FileRouteTypes {
     | '/doctors/$slot'
     | '/staff/$role'
     | '/doctors/'
+    | '/doctors/$slot/new-case'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -133,6 +143,7 @@ export interface FileRouteTypes {
     | '/doctors/$slot'
     | '/staff/$role'
     | '/doctors'
+    | '/doctors/$slot/new-case'
   id:
     | '__root__'
     | '/'
@@ -145,6 +156,7 @@ export interface FileRouteTypes {
     | '/doctors/$slot'
     | '/staff/$role'
     | '/doctors/'
+    | '/doctors/$slot/new-case'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -155,7 +167,7 @@ export interface RootRouteChildren {
   AdminUsersRoute: typeof AdminUsersRoute
   CasesIdRoute: typeof CasesIdRoute
   CasesNewRoute: typeof CasesNewRoute
-  DoctorsSlotRoute: typeof DoctorsSlotRoute
+  DoctorsSlotRoute: typeof DoctorsSlotRouteWithChildren
   StaffRoleRoute: typeof StaffRoleRoute
   DoctorsIndexRoute: typeof DoctorsIndexRoute
 }
@@ -232,8 +244,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminArchiveRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/doctors/$slot/new-case': {
+      id: '/doctors/$slot/new-case'
+      path: '/new-case'
+      fullPath: '/doctors/$slot/new-case'
+      preLoaderRoute: typeof DoctorsSlotNewCaseRouteImport
+      parentRoute: typeof DoctorsSlotRoute
+    }
   }
 }
+
+interface DoctorsSlotRouteChildren {
+  DoctorsSlotNewCaseRoute: typeof DoctorsSlotNewCaseRoute
+}
+
+const DoctorsSlotRouteChildren: DoctorsSlotRouteChildren = {
+  DoctorsSlotNewCaseRoute: DoctorsSlotNewCaseRoute,
+}
+
+const DoctorsSlotRouteWithChildren = DoctorsSlotRoute._addFileChildren(
+  DoctorsSlotRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -243,7 +274,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminUsersRoute: AdminUsersRoute,
   CasesIdRoute: CasesIdRoute,
   CasesNewRoute: CasesNewRoute,
-  DoctorsSlotRoute: DoctorsSlotRoute,
+  DoctorsSlotRoute: DoctorsSlotRouteWithChildren,
   StaffRoleRoute: StaffRoleRoute,
   DoctorsIndexRoute: DoctorsIndexRoute,
 }
