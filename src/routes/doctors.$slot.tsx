@@ -199,15 +199,16 @@ function Portal({ doctor, actor, actorName, onLogout }: { doctor: Doctor; actor:
           </div>
         </div>
 
-        <div className="mt-6 flex items-center gap-2 border-b border-border">
+        <div className="mt-6 flex items-center gap-2 border-b border-border overflow-x-auto">
+          <TabBtn active={tab==="cases"} onClick={()=>setTab("cases")} icon={<ClipboardList className="size-4" />} label="الحالات" />
           <TabBtn active={tab==="files"} onClick={()=>setTab("files")} icon={<FilesIcon className="size-4" />} label="الملفات" />
           <TabBtn active={tab==="chat"} onClick={()=>{ setTab("chat"); setUnread(0); }} icon={<MessageSquare className="size-4" />} label="المحادثة" badge={unread} />
         </div>
 
         <div className="mt-6">
-          {tab === "files"
-            ? <FilesPanel doctor={doctor} actor={actor} />
-            : <ChatModule doctorSlot={doctor.slot} doctorName={doctor.name} me={chatRole} myName={actorName || doctor.name} />}
+          {tab === "cases" && <CasesPanel doctor={doctor} />}
+          {tab === "files" && <FilesPanel doctor={doctor} actor={actor} />}
+          {tab === "chat" && <ChatModule doctorSlot={doctor.slot} doctorName={doctor.name} me={chatRole} myName={actorName || doctor.name} />}
         </div>
 
         <ChatNotificationsListener doctorSlot={doctor.slot} me={chatRole}
