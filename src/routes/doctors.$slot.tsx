@@ -352,7 +352,7 @@ function FilesPanel({ doctor, actor }: { doctor: Doctor; actor: string }) {
             <input value={q} onChange={e=>setQ(e.target.value)} placeholder="بحث في الملفات..."
               className="rounded-xl border border-input bg-card pr-9 pl-3 py-2 text-sm outline-none focus:border-gold w-56" />
           </div>
-          <Link to="/doctors_/$slot/new-case" params={{ slot: String(doctor.slot) }}
+          <Link to="/doctors/$slot/new-case" params={{ slot: String(doctor.slot) }}
             className="inline-flex items-center gap-2 rounded-xl border border-gold bg-card px-4 py-2 text-sm font-bold hover:gradient-gold transition">
             <Plus className="size-4" /> إضافة حالة
           </Link>
@@ -472,7 +472,7 @@ function CasesPanel({ doctor }: { doctor: Doctor }) {
         <div className="text-sm text-muted-foreground">
           <span className="font-bold text-foreground">{cases.length}</span> حالة لـ {doctor.name}
         </div>
-        <Link to="/doctors_/$slot/new-case" params={{ slot: String(doctor.slot) }}
+        <Link to="/doctors/$slot/new-case" params={{ slot: String(doctor.slot) }}
           className="inline-flex items-center gap-2 rounded-xl gradient-brown px-4 py-2 text-sm font-bold shadow-luxury">
           <Plus className="size-4" /> حالة جديدة
         </Link>
