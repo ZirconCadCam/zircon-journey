@@ -448,6 +448,72 @@ export type Database = {
         }
         Relationships: []
       }
+      slot_cases: {
+        Row: {
+          case_code: string
+          case_type: string | null
+          created_at: string
+          created_by: string
+          doctor_slot: number
+          id: string
+          notes: string | null
+          patient_age: number | null
+          patient_gender: string | null
+          patient_name: string
+          patient_phone: string | null
+          scan_mime: string | null
+          scan_name: string | null
+          scan_path: string | null
+          scan_size: number | null
+          shade: string | null
+          status: string
+          tooth_number: string | null
+          updated_at: string
+        }
+        Insert: {
+          case_code?: string
+          case_type?: string | null
+          created_at?: string
+          created_by?: string
+          doctor_slot: number
+          id?: string
+          notes?: string | null
+          patient_age?: number | null
+          patient_gender?: string | null
+          patient_name: string
+          patient_phone?: string | null
+          scan_mime?: string | null
+          scan_name?: string | null
+          scan_path?: string | null
+          scan_size?: number | null
+          shade?: string | null
+          status?: string
+          tooth_number?: string | null
+          updated_at?: string
+        }
+        Update: {
+          case_code?: string
+          case_type?: string | null
+          created_at?: string
+          created_by?: string
+          doctor_slot?: number
+          id?: string
+          notes?: string | null
+          patient_age?: number | null
+          patient_gender?: string | null
+          patient_name?: string
+          patient_phone?: string | null
+          scan_mime?: string | null
+          scan_name?: string | null
+          scan_path?: string | null
+          scan_size?: number | null
+          shade?: string | null
+          status?: string
+          tooth_number?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           branch: Database["public"]["Enums"]["branch"] | null
