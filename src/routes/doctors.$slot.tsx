@@ -6,7 +6,7 @@ import { ChatModule } from "@/components/chat-module";
 import { ROLE_LABEL as CHAT_LABEL, type RoleKey } from "@/lib/chat";
 import {
   Sparkles, ArrowRight, Lock, Upload, FileText, Download, Archive,
-  Trash2, Share2, MessageSquare, Files as FilesIcon, ArchiveRestore, Copy, Check, Search,
+  Trash2, Share2, MessageSquare, Files as FilesIcon, ArchiveRestore, Copy, Check, Search, Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 
