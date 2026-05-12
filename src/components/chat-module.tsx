@@ -32,8 +32,10 @@ export function ChatModule({ doctorSlot, doctorName, me, myName }: Props) {
       .select("*")
       .eq("doctor_slot", doctorSlot)
       .order("last_message_at", { ascending: false });
+    // Privacy: only participants see the conversation.
+    // Admin override: admin can view ALL conversations across the portal as a supervisor.
     const list = ((data ?? []) as ChatConversation[]).filter(c =>
-      me === "doctor" ? c.participants.includes("doctor") : c.participants.includes(me)
+      me === "admin" ? true : c.participants.includes(me)
     );
     setConversations(list);
   }, [doctorSlot, me]);
@@ -362,6 +364,25 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
         </span>
       </div>
 
+      {me === "admin" && !conv.participants.includes("admin") && (
+        <div className="px-4 py-2 border-b border-border bg-rose-50 dark:bg-rose-950/20 flex items-center justify-between gap-3 flex-wrap">
+          <div className="text-xs text-rose-800 dark:text-rose-200 font-bold">
+            👁 أنت تشاهد محادثة خاصة كمشرف. لن يراك أحد إلا إذا انضممت كطرف ثالث.
+          </div>
+          <button
+            onClick={async () => {
+              const next = Array.from(new Set<RoleKey>([...conv.participants, "admin"]));
+              const { error } = await supabase.from("chat_conversations")
+                .update({ participants: next }).eq("id", conv.id);
+              if (error) toast.error(error.message);
+              else { toast.success("تم انضمامك كطرف ثالث"); onChange(); }
+            }}
+            className="rounded-lg gradient-brown px-3 py-1.5 text-xs font-bold shadow-luxury">
+            الانضمام كطرف ثالث
+          </button>
+        </div>
+      )}
+
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3 bg-muted/20">
         {msgs.length === 0 && <div className="text-center text-sm text-muted-foreground py-8">ابدأ المحادثة الآن.</div>}
         {msgs.map(m => {
@@ -398,6 +419,10 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
           <button onClick={() => stopRecording(false)} className="rounded-lg gradient-gold px-3 py-2 text-xs font-bold flex items-center gap-1 shadow-gold text-gold-foreground">
             <Square className="size-4" /> إيقاف وإرسال
           </button>
+        </div>
+      ) : me === "admin" && !conv.participants.includes("admin") ? (
+        <div className="p-3 border-t border-border text-center text-xs text-muted-foreground">
+          وضع المراقبة فقط — انضم كطرف ثالث للمشاركة في المحادثة.
         </div>
       ) : (
         <div className="p-3 border-t border-border flex gap-2 items-end">
