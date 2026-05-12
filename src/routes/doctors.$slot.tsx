@@ -158,7 +158,7 @@ function PasswordGate({ doctor, onOk }: { doctor: Doctor; onOk: () => void }) {
 
 function Portal({ doctor, actor, actorName, onLogout }: { doctor: Doctor; actor: Sender; actorName: string; onLogout: () => void }) {
   const { branch } = useAuth();
-  const [tab, setTab] = useState<"files" | "chat">("files");
+  const [tab, setTab] = useState<"cases" | "files" | "chat">("cases");
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
