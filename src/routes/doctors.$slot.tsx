@@ -7,8 +7,10 @@ import { ROLE_LABEL as CHAT_LABEL, type RoleKey } from "@/lib/chat";
 import {
   Sparkles, ArrowRight, Lock, Upload, FileText, Download, Archive,
   Trash2, Share2, MessageSquare, Files as FilesIcon, ArchiveRestore, Copy, Check, Search, Plus,
+  ClipboardList, ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
+import { STAGES, getStage, nextStage, notifyRoleAboutCase, localNotify, type CaseStage } from "@/lib/case-stages";
 
 export const Route = createFileRoute("/doctors/$slot")({
   component: DoctorPortal,
