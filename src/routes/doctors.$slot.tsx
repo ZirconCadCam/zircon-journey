@@ -255,3 +255,153 @@ function ChatNotificationsListener({ doctorSlot, me, onUnread }: { doctorSlot: n
   }, [doctorSlot, me, onUnread]);
   return null;
 }
+
+function TabBtn({ active, onClick, icon, label, badge }: any) {
+  return (
+    <button onClick={onClick}
+      className={`relative flex items-center gap-2 px-5 py-3 text-sm font-bold border-b-2 -mb-px transition ${active?"border-gold text-gold":"border-transparent text-muted-foreground hover:text-foreground"}`}>
+      {icon} {label}
+      {badge > 0 && <span className="rounded-full gradient-gold text-[10px] font-bold px-1.5 min-w-[18px] h-[18px] grid place-items-center shadow-gold">{badge}</span>}
+    </button>
+  );
+}
+
+function FilesPanel({ doctor, actor }: { doctor: Doctor; actor: string }) {
+  const [files, setFiles] = useState<DocFile[]>([]);
+  const [view, setView] = useState<"active" | "archived">("active");
+  const [q, setQ] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  const load = useCallback(async () => {
+    const { data } = await supabase.from("doctor_files").select("*")
+      .eq("doctor_slot", doctor.slot).order("created_at", { ascending: false });
+    setFiles((data as DocFile[]) ?? []);
+  }, [doctor.slot]);
+
+  useEffect(() => {
+    load();
+    const ch = supabase.channel(`doctor-files-${doctor.slot}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "doctor_files", filter: `doctor_slot=eq.${doctor.slot}` }, load)
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [doctor.slot, load]);
+
+  async function upload(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setUploading(true);
+    const path = `${doctor.slot}/${Date.now()}-${f.name}`;
+    const { error: upErr } = await supabase.storage.from("doctor-files").upload(path, f, { upsert: false });
+    if (upErr) { toast.error(upErr.message); setUploading(false); return; }
+    const { data: pub } = supabase.storage.from("doctor-files").getPublicUrl(path);
+    const { error } = await supabase.from("doctor_files").insert({
+      doctor_slot: doctor.slot, file_name: f.name, file_path: path,
+      public_url: pub.publicUrl, size_bytes: f.size, uploaded_by: actor,
+    });
+    setUploading(false);
+    if (error) toast.error(error.message); else toast.success("تم رفع الملف");
+    if (fileInput.current) fileInput.current.value = "";
+  }
+
+  async function archive(f: DocFile, val: boolean) {
+    const { error } = await supabase.from("doctor_files").update({ archived: val }).eq("id", f.id);
+    if (error) toast.error(error.message); else toast.success(val ? "تمت الأرشفة" : "تم الإسترجاع");
+  }
+  async function remove(f: DocFile) {
+    if (!confirm(`حذف الملف "${f.file_name}"؟`)) return;
+    await supabase.storage.from("doctor-files").remove([f.file_path]);
+    const { error } = await supabase.from("doctor_files").delete().eq("id", f.id);
+    if (error) toast.error(error.message); else toast.success("تم الحذف");
+  }
+  async function copyLink(f: DocFile) {
+    if (!f.public_url) return;
+    await navigator.clipboard.writeText(f.public_url);
+    toast.success("تم نسخ رابط المشاركة");
+  }
+  async function shareExternal(f: DocFile) {
+    if (!f.public_url) return;
+    if (navigator.share) {
+      try { await navigator.share({ title: f.file_name, url: f.public_url }); } catch {}
+    } else copyLink(f);
+  }
+
+  const visible = files.filter(f => (view === "active" ? !f.archived : f.archived) && (!q || f.file_name.toLowerCase().includes(q.toLowerCase())));
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <button onClick={()=>setView("active")} className={`rounded-full px-4 py-1.5 text-xs font-bold border ${view==="active"?"gradient-gold border-gold":"bg-card border-border"}`}>النشطة</button>
+          <button onClick={()=>setView("archived")} className={`rounded-full px-4 py-1.5 text-xs font-bold border ${view==="archived"?"gradient-gold border-gold":"bg-card border-border"}`}>
+            <Archive className="inline size-3 me-1" /> المؤرشفة
+          </button>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search className="size-4 absolute top-1/2 -translate-y-1/2 right-3 text-muted-foreground" />
+            <input value={q} onChange={e=>setQ(e.target.value)} placeholder="بحث في الملفات..."
+              className="rounded-xl border border-input bg-card pr-9 pl-3 py-2 text-sm outline-none focus:border-gold w-56" />
+          </div>
+          <label className="cursor-pointer inline-flex items-center gap-2 rounded-xl gradient-brown px-4 py-2 text-sm font-bold shadow-luxury">
+            <Upload className="size-4" /> {uploading ? "جارِ الرفع..." : "رفع ملف"}
+            <input ref={fileInput} type="file" className="hidden" onChange={upload} disabled={uploading} />
+          </label>
+        </div>
+      </div>
+
+      <div className="rounded-2xl bg-card border border-border overflow-hidden shadow-luxury">
+        {visible.length === 0 ? (
+          <div className="p-12 text-center text-muted-foreground text-sm">
+            <FilesIcon className="size-10 mx-auto mb-3 opacity-40" />
+            لا توجد ملفات {view === "archived" ? "مؤرشفة" : ""} حالياً.
+          </div>
+        ) : (
+          <ul className="divide-y divide-border">
+            {visible.map(f => <FileRow key={f.id} f={f} onArchive={archive} onRemove={remove} onCopy={copyLink} onShare={shareExternal} />)}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function FileRow({ f, onArchive, onRemove, onCopy, onShare }: any) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <li className="flex items-center justify-between gap-3 p-4 hover:bg-muted/40 transition flex-wrap">
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        <div className="size-11 rounded-xl gradient-gold grid place-items-center shadow-gold shrink-0">
+          <FileText className="size-5 text-gold-foreground" />
+        </div>
+        <div className="min-w-0">
+          <div className="font-bold text-sm truncate">{f.file_name}</div>
+          <div className="text-[11px] text-muted-foreground mt-0.5">
+            {f.size_bytes ? `${(f.size_bytes/1024).toFixed(1)} KB • ` : ""}
+            رفع بواسطة {f.uploaded_by} • {new Date(f.created_at).toLocaleString("ar")}
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center gap-1.5 shrink-0">
+        <a href={f.public_url ?? "#"} download={f.file_name} target="_blank" rel="noreferrer"
+          className="rounded-lg border border-border p-2 hover:border-gold" title="تحميل">
+          <Download className="size-4" />
+        </a>
+        <button onClick={() => { onCopy(f); setCopied(true); setTimeout(()=>setCopied(false), 1500); }}
+          className="rounded-lg border border-border p-2 hover:border-gold" title="نسخ رابط المشاركة">
+          {copied ? <Check className="size-4 text-gold" /> : <Copy className="size-4" />}
+        </button>
+        <button onClick={() => onShare(f)} className="rounded-lg border border-border p-2 hover:border-gold" title="مشاركة خارجية">
+          <Share2 className="size-4" />
+        </button>
+        <button onClick={() => onArchive(f, !f.archived)} className="rounded-lg border border-border p-2 hover:border-gold"
+          title={f.archived ? "إسترجاع" : "أرشفة"}>
+          {f.archived ? <ArchiveRestore className="size-4" /> : <Archive className="size-4" />}
+        </button>
+        <button onClick={() => onRemove(f)} className="rounded-lg border border-border p-2 hover:bg-destructive hover:text-destructive-foreground" title="حذف">
+          <Trash2 className="size-4" />
+        </button>
+      </div>
+    </li>
+  );
+}
