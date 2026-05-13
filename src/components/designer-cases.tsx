@@ -4,7 +4,32 @@ import { toast } from "sonner";
 import {
   Stethoscope, FileText, Download, Share2, Loader2,
   ScanLine, User, Phone, Hash, Palette, ClipboardList, Calendar,
+  Archive, Trash2,
 } from "lucide-react";
+
+/** Inject hex overrides for our oklch CSS variables into html2canvas's cloned doc. */
+const H2C_ONCLONE = (doc: Document) => {
+  const css = doc.createElement("style");
+  css.textContent = `:root, html, body, * {
+    --background:#ffffff; --foreground:#1a1a1a;
+    --card:#ffffff; --card-foreground:#1a1a1a;
+    --popover:#ffffff; --popover-foreground:#1a1a1a;
+    --primary:#5b3a14; --primary-foreground:#ffffff;
+    --secondary:#f5f0e0; --secondary-foreground:#1a1a1a;
+    --muted:#f5f0e0; --muted-foreground:#777777;
+    --accent:#b8893a; --accent-foreground:#ffffff;
+    --destructive:#c0392b; --destructive-foreground:#ffffff;
+    --border:#e2d4b1; --input:#e2d4b1; --ring:#b8893a;
+    --gold:#b8893a; --gold-foreground:#ffffff;
+    --sidebar:#ffffff; --sidebar-foreground:#1a1a1a;
+    --sidebar-primary:#5b3a14; --sidebar-primary-foreground:#ffffff;
+    --sidebar-accent:#f5f0e0; --sidebar-accent-foreground:#1a1a1a;
+    --sidebar-border:#e2d4b1; --sidebar-ring:#b8893a;
+    --chart-1:#b8893a; --chart-2:#5b3a14; --chart-3:#777777; --chart-4:#e2d4b1; --chart-5:#faf6ee;
+  }
+  html, body { background:#ffffff !important; color:#1a1a1a !important; }`;
+  doc.head.appendChild(css);
+};
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { saveToCenter, downloadUrlToCenter, fileManagerSupported, CENTER_FOLDER_NAME } from "@/lib/file-manager";
@@ -151,7 +176,7 @@ export function DesignerCases() {
         });
       }
 
-      const canvas = await html2canvas(node, { scale: 2, backgroundColor: "#ffffff", useCORS: true });
+      const canvas = await html2canvas(node, { scale: 2, backgroundColor: "#ffffff", useCORS: true, onclone: H2C_ONCLONE });
       document.body.removeChild(node);
 
       const pdf = new jsPDF({ unit: "pt", format: "a4" });
@@ -243,7 +268,7 @@ export function DesignerCases() {
         </div>
       `;
       document.body.appendChild(node);
-      const canvas = await html2canvas(node, { scale: 2, backgroundColor: "#ffffff", useCORS: true });
+      const canvas = await html2canvas(node, { scale: 2, backgroundColor: "#ffffff", useCORS: true, onclone: H2C_ONCLONE });
       document.body.removeChild(node);
 
       const pdf = new jsPDF({ unit: "pt", format: "a4" });
@@ -322,6 +347,26 @@ export function DesignerCases() {
     } catch (e: any) {
       if (e?.name !== "AbortError") toast.error(e.message || "تعذر المشاركة");
     } finally { setBusyId(null); }
+  }
+
+  async function archiveCase(c: Case) {
+    if (!confirm(`أرشفة الحالة ${c.case_code}؟ لن تظهر بعدها في القائمة.`)) return;
+    setBusyId(c.id);
+    const { error } = await supabase.from("slot_cases").update({ archived: true }).eq("id", c.id);
+    setBusyId(null);
+    if (error) { toast.error("تعذرت الأرشفة"); return; }
+    setCases(prev => prev.filter(x => x.id !== c.id));
+    toast.success("تم نقل الحالة إلى الأرشيف");
+  }
+
+  async function deleteCase(c: Case) {
+    if (!confirm(`حذف الحالة ${c.case_code} نهائياً؟ لا يمكن التراجع.`)) return;
+    setBusyId(c.id);
+    const { error } = await supabase.from("slot_cases").delete().eq("id", c.id);
+    setBusyId(null);
+    if (error) { toast.error("تعذر الحذف"); return; }
+    setCases(prev => prev.filter(x => x.id !== c.id));
+    toast.success("تم حذف الحالة");
   }
 
   if (loading) {
@@ -458,6 +503,16 @@ export function DesignerCases() {
                         className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-xs font-bold hover:border-gold transition disabled:opacity-60">
                         {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Share2 className="size-3.5" />}
                         مشاركة
+                      </button>
+                      <button onClick={() => archiveCase(c)} disabled={busy}
+                        className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-xs font-bold hover:border-gold transition disabled:opacity-60">
+                        <Archive className="size-3.5" />
+                        أرشفة
+                      </button>
+                      <button onClick={() => deleteCase(c)} disabled={busy}
+                        className="inline-flex items-center gap-2 rounded-xl border border-destructive/40 bg-card text-destructive px-3 py-2 text-xs font-bold hover:bg-destructive hover:text-destructive-foreground transition disabled:opacity-60">
+                        <Trash2 className="size-3.5" />
+                        حذف
                       </button>
                     </div>
                   </div>
