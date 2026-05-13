@@ -914,23 +914,59 @@ function FileBubble({ msg, mine }: { msg: LocalMsg; mine: boolean }) {
   );
 }
 
-function AudioBubble({ path }: { path: string }) {
+function AudioBubble({ path, name, mime }: { path: string; name?: string | null; mime?: string | null }) {
   const [url, setUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  async function resolveUrl(): Promise<string | null> {
+    if (/^https?:\/\//i.test(path)) return path;
+    return await getSignedUrl(path, 600);
+  }
   async function loadAudio() {
     setBusy(true);
-    const u = await getSignedUrl(path, 600);
+    const u = await resolveUrl();
     setBusy(false);
     if (!u) { toast.error("تعذر تحميل التسجيل"); return; }
     setUrl(u);
   }
-  if (!url) {
-    return (
-      <button onClick={loadAudio} disabled={busy}
-        className="mt-1 flex items-center gap-2 rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-xs font-bold">
-        <Mic className="size-4" /> {busy ? "جارِ التحميل..." : "تشغيل التسجيل الصوتي"}
-      </button>
-    );
+  async function downloadAudio() {
+    setDownloading(true);
+    const u = await resolveUrl();
+    if (!u) { setDownloading(false); toast.error("تعذر إنشاء الرابط"); return; }
+    const filename = name || `voice-${Date.now()}.${(mime || "audio/webm").includes("mp4") ? "m4a" : "webm"}`;
+    try {
+      if (fileManagerSupported() && (await getCenterFolder())) {
+        const r = await downloadUrlToCenter(u, filename, "تسجيلات");
+        toast.success(r.fallback ? "تم التحميل" : `حُفظ في ${CENTER_FOLDER_NAME}/تسجيلات`);
+      } else {
+        const res = await fetch(u);
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = blobUrl; a.download = filename;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+        toast.success("تم تحميل الملف");
+      }
+    } catch (e: any) {
+      toast.error(e?.message ?? "تعذر التحميل");
+    } finally { setDownloading(false); }
   }
-  return <audio controls autoPlay src={url} className="mt-1 max-w-full" />;
+  return (
+    <div className="mt-1 space-y-2">
+      {url ? (
+        <audio controls autoPlay src={url} className="max-w-full" />
+      ) : (
+        <button onClick={loadAudio} disabled={busy}
+          className="flex items-center gap-2 rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-xs font-bold">
+          <Mic className="size-4" /> {busy ? "جارِ التحميل..." : "تشغيل التسجيل الصوتي"}
+        </button>
+      )}
+      <button onClick={downloadAudio} disabled={downloading}
+        className="inline-flex items-center gap-1.5 rounded-md gradient-gold text-gold-foreground px-2.5 py-1 text-[11px] font-bold disabled:opacity-50">
+        <Download className="size-3.5" /> {downloading ? "جارِ التحميل..." : "تحميل الملف"}
+      </button>
+    </div>
+  );
 }
+
