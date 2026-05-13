@@ -569,7 +569,18 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
     if (error) toast.error(error.message);
     else { setMsgs(prev => prev.filter(x => x.id !== m.id)); toast.success("تم الحذف"); }
   }
-  function actArchive(m: LocalMsg) {
+  async function actEdit(m: LocalMsg) {
+    if (m.sender !== me) { toast.error("لا يمكنك تعديل رسالة شخص آخر"); return; }
+    if (m.message_type !== "text") { toast.error("التعديل متاح للرسائل النصية فقط"); return; }
+    const next = window.prompt("تعديل الرسالة:", m.content);
+    if (next == null) return;
+    const trimmed = next.trim();
+    if (!trimmed || trimmed === m.content) return;
+    const { error } = await supabase.from("chat_messages")
+      .update({ content: trimmed, edited_at: new Date().toISOString() }).eq("id", m.id);
+    if (error) toast.error(error.message);
+    else { setMsgs(prev => prev.map(x => x.id === m.id ? { ...x, content: trimmed } : x)); toast.success("تم تعديل الرسالة"); }
+  }
     const next = new Set(archivedIds);
     if (next.has(m.id)) next.delete(m.id); else next.add(m.id);
     persistArchived(next);
