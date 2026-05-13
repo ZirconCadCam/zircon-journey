@@ -97,7 +97,7 @@ function DoctorPortal() {
 
   return <Portal doctor={doctor} actor={actor} actorName={actorName || doctor.name} onLogout={() => {
     if (actor === "doctor") localStorage.removeItem(SESSION_KEY(slot));
-    nav({ to: "/doctors" });
+    nav({ to: "/login" });
   }} />;
 }
 
