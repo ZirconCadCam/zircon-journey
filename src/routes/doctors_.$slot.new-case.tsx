@@ -55,7 +55,7 @@ function NewSlotCase() {
         localStorage.getItem("zircon_admin_all") === "1" ||
         ["doctor","designer","technician","secretary","admin"].some(r =>
           localStorage.getItem(`zircon_${r}_session`) === "1"));
-    if (!sessionOk) { nav({ to: "/doctors/$slot", params: { slot } }); return; }
+    if (!sessionOk) { nav({ to: "/login" }); return; }
     (async () => {
       const { data } = await supabase.from("doctor_profiles").select("*").eq("slot", Number(slot)).maybeSingle();
       setDoctor(data as Doctor);
