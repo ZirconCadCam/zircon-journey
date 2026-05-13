@@ -3,14 +3,15 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, ROLE_LABELS, type AppRole } from "@/hooks/use-auth";
 import { ChatModule } from "@/components/chat-module";
-import { ROLE_LABEL as CHAT_LABEL, type RoleKey } from "@/lib/chat";
+import { ROLE_LABEL as CHAT_LABEL, ROLE_COLOR as CHAT_COLOR, type RoleKey } from "@/lib/chat";
 import {
   Sparkles, ArrowRight, Lock, Upload, FileText, Download, Archive,
   Trash2, Share2, MessageSquare, Files as FilesIcon, ArchiveRestore, Copy, Check, Search, Plus,
-  ClipboardList, ChevronRight,
+  ClipboardList, MoreHorizontal, Pencil, Pin, PinOff, Send, X, Loader2,
+  Palette, Shield, Building2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { STAGES, getStage, nextStage, notifyRoleAboutCase, localNotify, type CaseStage } from "@/lib/case-stages";
+import { STAGES, getStage, notifyRoleAboutCase, localNotify, type CaseStage } from "@/lib/case-stages";
 
 export const Route = createFileRoute("/doctors/$slot")({
   component: DoctorPortal,
