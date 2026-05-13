@@ -155,7 +155,7 @@ function NewSlotCase() {
             `اللون: ${form.shade}`,
             `نوع الحالة: ${form.case_type}`,
             form.notes.trim() ? `ملاحظات: ${form.notes.trim()}` : null,
-            scan_path ? `📎 المسح: ${scan_name}\n${scan_path}` : null,
+            scan_path ? `📎 المسح مرفق أدناه — يمكن تحميله مباشرة` : null,
             `— ${doctor!.name}`,
           ].filter(Boolean).join("\n");
           await notifyRoleAboutCase({
@@ -166,6 +166,12 @@ function NewSlotCase() {
             patientName: form.patient_name.trim(),
             stageLabel: `إحالة جديدة — ${next.label}`,
             body: lines,
+            attachment: scan_path && scan_name ? {
+              path: scan_path,
+              name: scan_name,
+              mime: scan_mime,
+              size: scan_size,
+            } : null,
           });
         }
         localNotify("Zircon Journey — تم إنشاء حالة", `${form.patient_name.trim()} • ${inserted!.case_code}`);
