@@ -528,13 +528,37 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
     }
   }
   async function actShare(m: LocalMsg) {
-    let url: string | null = null;
-    let text = m.content;
-    if (m.attachment_path) url = await getSignedUrl(m.attachment_path, 3600);
-    const data: ShareData = { title: m.attachment_name ?? "Zircon Journey", text, ...(url ? { url } : {}) };
-    if (navigator.share) { try { await navigator.share(data); return; } catch {} }
-    if (url) { await navigator.clipboard.writeText(url); toast.success("تم نسخ الرابط للمشاركة"); }
-    else { await navigator.clipboard.writeText(text); toast.success("تم النسخ للمشاركة"); }
+    const text = m.content;
+    // For attachments, try sharing the actual file (Blob) so the receiver gets a file, not a link.
+    if (m.attachment_path) {
+      let url: string | null = null;
+      if (/^https?:\/\//i.test(m.attachment_path)) url = m.attachment_path;
+      else url = await getSignedUrl(m.attachment_path, 3600);
+      if (url) {
+        try {
+          const res = await fetch(url);
+          const blob = await res.blob();
+          const fname = m.attachment_name || `file-${m.id.slice(0,8)}`;
+          const file = new File([blob], fname, { type: m.attachment_mime || blob.type || "application/octet-stream" });
+          if (typeof navigator !== "undefined" && (navigator as any).canShare?.({ files: [file] })) {
+            await (navigator as any).share({ files: [file], title: fname, text });
+            return;
+          }
+          // Fallback: trigger a direct file download (no link sharing).
+          const blobUrl = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = blobUrl; a.download = fname;
+          document.body.appendChild(a); a.click(); a.remove();
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+          toast.success("تم تنزيل الملف للمشاركة");
+          return;
+        } catch { /* fall through */ }
+      }
+      toast.error("تعذر تجهيز الملف للمشاركة");
+      return;
+    }
+    if (navigator.share) { try { await navigator.share({ title: "Zircon Journey", text }); return; } catch {} }
+    await navigator.clipboard.writeText(text); toast.success("تم النسخ للمشاركة");
   }
   async function actSave(m: LocalMsg) {
     if (m.message_type === "text") {
@@ -736,7 +760,7 @@ function MessageBubble({ m, mine, doctorName, otherParticipants, onLongPress, on
         {ROLE_LABEL[m.sender]}{m.sender_name ? ` • ${m.sender_name}` : (m.sender === "doctor" ? ` • ${doctorName}` : "")}
       </div>
       {m.message_type === "audio" ? (
-        <AudioBubble path={m.attachment_path!} />
+        <AudioBubble path={m.attachment_path!} name={m.attachment_name} mime={m.attachment_mime} />
       ) : m.message_type === "file" ? (
         <FileBubble msg={m} mine={mine} />
       ) : (
@@ -890,23 +914,59 @@ function FileBubble({ msg, mine }: { msg: LocalMsg; mine: boolean }) {
   );
 }
 
-function AudioBubble({ path }: { path: string }) {
+function AudioBubble({ path, name, mime }: { path: string; name?: string | null; mime?: string | null }) {
   const [url, setUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  async function resolveUrl(): Promise<string | null> {
+    if (/^https?:\/\//i.test(path)) return path;
+    return await getSignedUrl(path, 600);
+  }
   async function loadAudio() {
     setBusy(true);
-    const u = await getSignedUrl(path, 600);
+    const u = await resolveUrl();
     setBusy(false);
     if (!u) { toast.error("تعذر تحميل التسجيل"); return; }
     setUrl(u);
   }
-  if (!url) {
-    return (
-      <button onClick={loadAudio} disabled={busy}
-        className="mt-1 flex items-center gap-2 rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-xs font-bold">
-        <Mic className="size-4" /> {busy ? "جارِ التحميل..." : "تشغيل التسجيل الصوتي"}
-      </button>
-    );
+  async function downloadAudio() {
+    setDownloading(true);
+    const u = await resolveUrl();
+    if (!u) { setDownloading(false); toast.error("تعذر إنشاء الرابط"); return; }
+    const filename = name || `voice-${Date.now()}.${(mime || "audio/webm").includes("mp4") ? "m4a" : "webm"}`;
+    try {
+      if (fileManagerSupported() && (await getCenterFolder())) {
+        const r = await downloadUrlToCenter(u, filename, "تسجيلات");
+        toast.success(r.fallback ? "تم التحميل" : `حُفظ في ${CENTER_FOLDER_NAME}/تسجيلات`);
+      } else {
+        const res = await fetch(u);
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = blobUrl; a.download = filename;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+        toast.success("تم تحميل الملف");
+      }
+    } catch (e: any) {
+      toast.error(e?.message ?? "تعذر التحميل");
+    } finally { setDownloading(false); }
   }
-  return <audio controls autoPlay src={url} className="mt-1 max-w-full" />;
+  return (
+    <div className="mt-1 space-y-2">
+      {url ? (
+        <audio controls autoPlay src={url} className="max-w-full" />
+      ) : (
+        <button onClick={loadAudio} disabled={busy}
+          className="flex items-center gap-2 rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-xs font-bold">
+          <Mic className="size-4" /> {busy ? "جارِ التحميل..." : "تشغيل التسجيل الصوتي"}
+        </button>
+      )}
+      <button onClick={downloadAudio} disabled={downloading}
+        className="inline-flex items-center gap-1.5 rounded-md gradient-gold text-gold-foreground px-2.5 py-1 text-[11px] font-bold disabled:opacity-50">
+        <Download className="size-3.5" /> {downloading ? "جارِ التحميل..." : "تحميل الملف"}
+      </button>
+    </div>
+  );
 }
+
