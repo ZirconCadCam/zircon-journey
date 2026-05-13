@@ -123,6 +123,9 @@ function NewSlotCase() {
         case_type: form.case_type || null,
         notes: form.notes.trim() || null,
         scan_path, scan_name, scan_size, scan_mime,
+        // After saving and notifying the designer, the case is automatically
+        // shown as "قيد التصميم" (designer stage) on the doctor's portal.
+        status: "designer",
       }).select("id, case_code").single();
       if (error) throw error;
 

@@ -10,7 +10,7 @@ import { saveToCenter, downloadUrlToCenter, fileManagerSupported, pickCenterFold
 import {
   Send, Paperclip, Mic, Square, X, MessageSquare, Plus, Archive, ArchiveRestore,
   Search, FileText, Download, ChevronRight, Trash2, Check, CheckCheck, Clock, AlertCircle,
-  Copy, Reply, Share2, Save, FolderOpen, Pause, Play, RotateCw,
+  Copy, Reply, Share2, Save, FolderOpen, Pause, Play, RotateCw, Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
@@ -569,6 +569,18 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
     if (error) toast.error(error.message);
     else { setMsgs(prev => prev.filter(x => x.id !== m.id)); toast.success("تم الحذف"); }
   }
+  async function actEdit(m: LocalMsg) {
+    if (m.sender !== me) { toast.error("لا يمكنك تعديل رسالة شخص آخر"); return; }
+    if (m.message_type !== "text") { toast.error("التعديل متاح للرسائل النصية فقط"); return; }
+    const next = window.prompt("تعديل الرسالة:", m.content);
+    if (next == null) return;
+    const trimmed = next.trim();
+    if (!trimmed || trimmed === m.content) return;
+    const { error } = await supabase.from("chat_messages")
+      .update({ content: trimmed, edited_at: new Date().toISOString() }).eq("id", m.id);
+    if (error) toast.error(error.message);
+    else { setMsgs(prev => prev.map(x => x.id === m.id ? { ...x, content: trimmed } : x)); toast.success("تم تعديل الرسالة"); }
+  }
   function actArchive(m: LocalMsg) {
     const next = new Set(archivedIds);
     if (next.has(m.id)) next.delete(m.id); else next.add(m.id);
@@ -690,8 +702,9 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
       {menuFor && (
         <MessageMenu
           x={menuFor.x} y={menuFor.y} msg={menuFor.msg} archived={archivedIds.has(menuFor.msg.id)}
+          canEdit={menuFor.msg.sender === me && menuFor.msg.message_type === "text" && !menuFor.msg._local}
           onClose={() => setMenuFor(null)}
-          onCopy={actCopy} onComment={actComment} onResend={actResend}
+          onCopy={actCopy} onComment={actComment} onResend={actResend} onEdit={actEdit}
           onShare={actShare} onSave={actSave} onDelete={actDelete} onArchive={actArchive}
         />
       )}
@@ -761,9 +774,10 @@ function MessageBubble({ m, mine, doctorName, otherParticipants, onLongPress, on
   );
 }
 
-function MessageMenu({ x, y, msg, archived, onClose, onCopy, onComment, onResend, onShare, onSave, onDelete, onArchive }: {
-  x: number; y: number; msg: LocalMsg; archived: boolean; onClose: () => void;
+function MessageMenu({ x, y, msg, archived, canEdit, onClose, onCopy, onComment, onResend, onEdit, onShare, onSave, onDelete, onArchive }: {
+  x: number; y: number; msg: LocalMsg; archived: boolean; canEdit: boolean; onClose: () => void;
   onCopy: (m: LocalMsg) => void; onComment: (m: LocalMsg) => void; onResend: (m: LocalMsg) => void;
+  onEdit: (m: LocalMsg) => void;
   onShare: (m: LocalMsg) => void; onSave: (m: LocalMsg) => void; onDelete: (m: LocalMsg) => void;
   onArchive: (m: LocalMsg) => void;
 }) {
@@ -779,6 +793,7 @@ function MessageMenu({ x, y, msg, archived, onClose, onCopy, onComment, onResend
   const items = [
     { icon: Copy, label: "نسخ", run: () => onCopy(msg) },
     { icon: Reply, label: "تعليق / رد", run: () => onComment(msg) },
+    ...(canEdit ? [{ icon: Pencil, label: "تعديل", run: () => onEdit(msg) }] : []),
     { icon: RotateCw, label: "إعادة الإرسال", run: () => onResend(msg) },
     { icon: Share2, label: "مشاركة خارجية", run: () => onShare(msg) },
     { icon: Save, label: `حفظ في ${CENTER_FOLDER_NAME}`, run: () => onSave(msg) },
