@@ -504,6 +504,16 @@ export function DesignerCases() {
                         {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Share2 className="size-3.5" />}
                         مشاركة
                       </button>
+                      <button onClick={() => archiveCase(c)} disabled={busy}
+                        className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-xs font-bold hover:border-gold transition disabled:opacity-60">
+                        <Archive className="size-3.5" />
+                        أرشفة
+                      </button>
+                      <button onClick={() => deleteCase(c)} disabled={busy}
+                        className="inline-flex items-center gap-2 rounded-xl border border-destructive/40 bg-card text-destructive px-3 py-2 text-xs font-bold hover:bg-destructive hover:text-destructive-foreground transition disabled:opacity-60">
+                        <Trash2 className="size-3.5" />
+                        حذف
+                      </button>
                     </div>
                   </div>
                 </li>
