@@ -464,7 +464,7 @@ function FileRow({ f, doctorBranch, onArchive, onRemove, onCopy, onShare, onSend
             <Send className="size-4" />
           </button>
           {sendOpen && (
-            <div role="menu" className="absolute z-30 mt-2 end-0 w-52 rounded-xl border border-border bg-popover shadow-luxury overflow-hidden animate-in fade-in zoom-in-95">
+            <div role="menu" className="absolute z-50 mt-2 end-0 w-52 rounded-xl border border-border bg-popover shadow-luxury overflow-hidden animate-in fade-in zoom-in-95">
               <div className="px-3 py-2 text-[11px] font-bold text-muted-foreground border-b border-border">أرسال إلى</div>
               {targets.map(t => (
                 <button key={t.role} onClick={() => { setSendOpen(false); onSendTo(f, t.role); }}
