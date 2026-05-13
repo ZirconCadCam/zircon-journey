@@ -83,22 +83,110 @@ export function DesignerCases() {
   }, [cases]);
 
   async function downloadScan(c: Case) {
-    if (!c.scan_path) { toast.error("لا يوجد ملف مسح مرفق"); return; }
     setBusyId(c.id);
     try {
-      const filename = c.scan_name || `${c.case_code}-scan.bin`;
+      const doctor = doctorMap.get(c.doctor_slot);
+      const branchAr = doctor?.branch === "sanaa" ? "صنعاء" : doctor?.branch === "ibb" ? "إب" : "—";
+      const dateStr = new Date(c.created_at).toISOString().slice(0, 10);
+      const safe = (s: string) => s.replace(/[\\/:*?"<>|]+/g, "_").trim();
+      const filename = `${safe(c.patient_name)} - ${branchAr} - ${safe(doctor?.name ?? `Slot ${c.doctor_slot}`)} - ${dateStr}.pdf`;
+
+      // Build hidden Arabic-friendly node including the scan image when available
+      const isImage = !!c.scan_mime?.startsWith("image/");
+      const node = document.createElement("div");
+      node.style.cssText = "position:fixed;left:-99999px;top:0;width:794px;padding:36px;background:#fff;color:#1a1a1a;font-family:'Cairo','Tajawal','Segoe UI',sans-serif;direction:rtl;text-align:right;line-height:1.7;";
+      node.innerHTML = `
+        <div style="border-bottom:3px solid #b8893a;padding-bottom:14px;margin-bottom:18px;">
+          <div style="font-size:22px;font-weight:800;color:#5b3a14;">Zircon Journey — تفاصيل الحالة</div>
+          <div style="font-size:12px;color:#777;margin-top:4px;">${new Date().toLocaleString("ar-EG")}</div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          ${row("رمز الحالة", c.case_code)}
+          ${row("الطبيب المعالج", doctor?.name ?? `Slot ${c.doctor_slot}`)}
+          ${row("الفرع", branchAr)}
+          ${row("الحالة", STATUS_LABEL[c.status] ?? c.status)}
+          ${row("تاريخ الإنشاء", new Date(c.created_at).toLocaleString("ar-EG"))}
+        </table>
+        <div style="margin-top:18px;padding:12px;background:#faf6ee;border-right:4px solid #b8893a;">
+          <div style="font-weight:800;color:#5b3a14;margin-bottom:6px;">بيانات المريض</div>
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            ${row("الاسم", c.patient_name)}
+            ${row("الهاتف", c.patient_phone || "—")}
+            ${row("العمر", c.patient_age?.toString() || "—")}
+            ${row("الجنس", c.patient_gender === "male" ? "ذكر" : c.patient_gender === "female" ? "أنثى" : "—")}
+          </table>
+        </div>
+        <div style="margin-top:14px;padding:12px;background:#f5f0e0;border-right:4px solid #b8893a;">
+          <div style="font-weight:800;color:#5b3a14;margin-bottom:6px;">تفاصيل الحالة</div>
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            ${row("نوع الحالة", c.case_type || "—")}
+            ${row("رقم السن (FDI)", c.tooth_number || "—")}
+            ${row("اللون", c.shade || "—")}
+          </table>
+        </div>
+        ${c.notes ? `
+        <div style="margin-top:14px;padding:12px;background:#fff;border:1px solid #e2d4b1;">
+          <div style="font-weight:800;color:#5b3a14;margin-bottom:6px;">ملاحظات</div>
+          <div style="white-space:pre-wrap;font-size:13px;">${escapeHtml(c.notes)}</div>
+        </div>` : ""}
+        ${c.scan_path ? `
+        <div style="margin-top:14px;padding:12px;background:#fff;border:1px dashed #b8893a;">
+          <div style="font-weight:800;color:#5b3a14;margin-bottom:8px;">📎 المسح ثلاثي الأبعاد</div>
+          ${isImage ? `<img src="${c.scan_path}" crossorigin="anonymous" style="max-width:100%;max-height:520px;display:block;margin:0 auto;border:1px solid #e2d4b1;border-radius:6px;" />`
+            : `<div style="font-size:12px;">الاسم: ${escapeHtml(c.scan_name || "—")}</div>
+               ${c.scan_size ? `<div style="font-size:12px;">الحجم: ${(c.scan_size/1024/1024).toFixed(2)} MB</div>` : ""}`}
+        </div>` : `<div style="margin-top:14px;padding:12px;background:#fff;border:1px dashed #ccc;color:#999;font-size:12px;">لا يوجد ملف مسح مرفق</div>`}
+        <div style="margin-top:24px;text-align:center;font-size:11px;color:#999;border-top:1px solid #eee;padding-top:10px;">
+          Zircon CAD/CAM — تقرير حالة آلي
+        </div>
+      `;
+      document.body.appendChild(node);
+
+      // Wait for the embedded image to load (or fail) before rasterizing
+      const img = node.querySelector("img");
+      if (img && !(img as HTMLImageElement).complete) {
+        await new Promise<void>(res => {
+          (img as HTMLImageElement).onload = () => res();
+          (img as HTMLImageElement).onerror = () => res();
+        });
+      }
+
+      const canvas = await html2canvas(node, { scale: 2, backgroundColor: "#ffffff", useCORS: true });
+      document.body.removeChild(node);
+
+      const pdf = new jsPDF({ unit: "pt", format: "a4" });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const imgW = pageW;
+      const imgH = (canvas.height * imgW) / canvas.width;
+      const dataImg = canvas.toDataURL("image/jpeg", 0.92);
+      if (imgH <= pageH) {
+        pdf.addImage(dataImg, "JPEG", 0, 0, imgW, imgH);
+      } else {
+        let remaining = imgH; let y = 0;
+        while (remaining > 0) {
+          pdf.addImage(dataImg, "JPEG", 0, y, imgW, imgH);
+          remaining -= pageH;
+          if (remaining > 0) { pdf.addPage(); y -= pageH; }
+        }
+      }
+      const blob = pdf.output("blob");
+
       if (fileManagerSupported()) {
-        const r = await downloadUrlToCenter(c.scan_path, filename, c.case_code);
-        if (r.fallback) toast.success("تم تنزيل الملف");
+        const r = await saveToCenter(blob, filename, c.case_code);
+        if (r.fallback) toast.success("تم تنزيل ملف PDF");
         else toast.success(`تم الحفظ في ${r.path}`);
       } else {
+        const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
-        a.href = c.scan_path; a.download = filename; a.target = "_blank";
+        a.href = url; a.download = filename;
         document.body.appendChild(a); a.click(); a.remove();
-        toast.success("تم تنزيل الملف");
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+        toast.success("تم تنزيل ملف PDF");
       }
     } catch (e: any) {
-      toast.error(e.message || "تعذر تنزيل الملف");
+      console.error(e);
+      toast.error(e.message || "تعذر تنزيل المسح");
     } finally { setBusyId(null); }
   }
 
