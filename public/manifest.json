@@ -1,0 +1,17 @@
+{
+  "name": "رحلة سن الزركون - Zircon Journey",
+  "short_name": "Zircon",
+  "description": "نظام إدارة سير العمل الاحترافي لمركز Zircon CAD CAM.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1a0f0a",
+  "theme_color": "#1a0f0a",
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

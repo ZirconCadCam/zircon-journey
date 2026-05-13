@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { STAGES, getStage, notifyRoleAboutCase, localNotify, type CaseStage } from "@/lib/case-stages";
+import { Z } from "@/lib/z-index";
 
 export const Route = createFileRoute("/doctors/$slot")({
   component: DoctorPortal,
@@ -103,7 +104,7 @@ function DoctorPortal() {
 function ShellHeader({ children, right }: { children: React.ReactNode; right?: React.ReactNode }) {
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur">
+      <header className={`sticky top-0 ${Z.header} border-b border-border/60 bg-background/85 backdrop-blur`}>
         <div className="container mx-auto flex items-center justify-between gap-4 px-6 py-3">
           <Link to="/doctors" className="flex items-center gap-3">
             <div className="size-10 rounded-xl gradient-gold grid place-items-center shadow-gold">
@@ -464,7 +465,7 @@ function FileRow({ f, doctorBranch, onArchive, onRemove, onCopy, onShare, onSend
             <Send className="size-4" />
           </button>
           {sendOpen && (
-            <div role="menu" className="absolute z-50 mt-2 end-0 w-52 rounded-xl border border-border bg-popover shadow-luxury overflow-hidden animate-in fade-in zoom-in-95">
+            <div role="menu" className={`absolute ${Z.dropdown} mt-2 end-0 w-52 rounded-xl border border-border bg-popover shadow-luxury overflow-hidden animate-in fade-in zoom-in-95`}>
               <div className="px-3 py-2 text-[11px] font-bold text-muted-foreground border-b border-border">أرسال إلى</div>
               {targets.map(t => (
                 <button key={t.role} onClick={() => { setSendOpen(false); onSendTo(f, t.role); }}
@@ -651,7 +652,7 @@ function CaseCard({ c, onEdit, onPin, onArchive, onDelete }: {
             <MoreHorizontal className="size-4" />
           </button>
           {menuOpen && (
-            <div role="menu" className="absolute z-30 mt-2 end-0 w-48 rounded-xl border border-border bg-popover shadow-luxury overflow-hidden animate-in fade-in zoom-in-95">
+            <div role="menu" className={`absolute ${Z.dropdown} mt-2 end-0 w-48 rounded-xl border border-border bg-popover shadow-luxury overflow-hidden animate-in fade-in zoom-in-95`}>
               <MenuItem icon={Pencil} label="تعديل" onClick={() => { setMenuOpen(false); onEdit(); }} />
               <MenuItem icon={c.pinned ? PinOff : Pin} label={c.pinned ? "إلغاء التثبيت" : "تثبيت"} onClick={() => { setMenuOpen(false); onPin(); }} />
               <MenuItem icon={c.archived ? ArchiveRestore : Archive} label={c.archived ? "استرجاع" : "أرشفة"} onClick={() => { setMenuOpen(false); onArchive(); }} />
@@ -713,7 +714,7 @@ function EditCaseModal({ c, onClose, onSaved }: { c: SlotCase; onClose: () => vo
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+    <div className={`fixed inset-0 ${Z.overlay} grid place-items-center p-4 bg-black/60 backdrop-blur-sm`} onClick={onClose}>
       <form onSubmit={save} onClick={e=>e.stopPropagation()}
         className="w-full max-w-lg rounded-2xl bg-card border border-border shadow-luxury p-6 space-y-4">
         <div className="flex items-center justify-between">
