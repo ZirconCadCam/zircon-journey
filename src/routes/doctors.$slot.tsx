@@ -409,8 +409,28 @@ function FilesPanel({ doctor, actor }: { doctor: Doctor; actor: string }) {
   );
 }
 
-function FileRow({ f, onArchive, onRemove, onCopy, onShare }: any) {
+function FileRow({ f, doctorBranch, onArchive, onRemove, onCopy, onShare, onSendTo }: any) {
   const [copied, setCopied] = useState(false);
+  const [sendOpen, setSendOpen] = useState(false);
+  const sendRef = useRef<HTMLDivElement>(null);
+
+  // close on outside click
+  useEffect(() => {
+    if (!sendOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (sendRef.current && !sendRef.current.contains(e.target as Node)) setSendOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [sendOpen]);
+
+  const secretaryRole: RoleKey = doctorBranch === "ibb" ? "secretary_ibb" : "secretary_sanaa";
+  const targets: { role: RoleKey; label: string; Icon: any; color: string }[] = [
+    { role: "designer", label: "المصمم", Icon: Palette, color: "bg-gold/90 text-gold-foreground" },
+    { role: "admin", label: "الإدارة", Icon: Shield, color: "bg-rose-700 text-white" },
+    { role: secretaryRole, label: doctorBranch === "ibb" ? "سكرتارية إب" : "سكرتارية صنعاء", Icon: Building2, color: "bg-emerald-600 text-white" },
+  ];
+
   return (
     <li className="flex items-center justify-between gap-3 p-4 hover:bg-muted/40 transition flex-wrap">
       <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -434,6 +454,31 @@ function FileRow({ f, onArchive, onRemove, onCopy, onShare }: any) {
           className="rounded-lg border border-border p-2 hover:border-gold" title="نسخ رابط المشاركة">
           {copied ? <Check className="size-4 text-gold" /> : <Copy className="size-4" />}
         </button>
+
+        {/* أرسال إلى — منسدلة احترافية */}
+        <div ref={sendRef} className="relative">
+          <button onClick={() => setSendOpen(o => !o)}
+            className={`rounded-lg border p-2 transition ${sendOpen ? "border-gold gradient-gold text-gold-foreground" : "border-border hover:border-gold"}`}
+            title="أرسال إلى"
+            aria-haspopup="menu" aria-expanded={sendOpen}>
+            <Send className="size-4" />
+          </button>
+          {sendOpen && (
+            <div role="menu" className="absolute z-30 mt-2 end-0 w-52 rounded-xl border border-border bg-popover shadow-luxury overflow-hidden animate-in fade-in zoom-in-95">
+              <div className="px-3 py-2 text-[11px] font-bold text-muted-foreground border-b border-border">أرسال إلى</div>
+              {targets.map(t => (
+                <button key={t.role} onClick={() => { setSendOpen(false); onSendTo(f, t.role); }}
+                  className="w-full flex items-center gap-2 px-3 py-2.5 text-sm font-bold text-start hover:bg-muted">
+                  <span className={`size-7 rounded-lg grid place-items-center ${t.color} shrink-0`}>
+                    <t.Icon className="size-3.5" />
+                  </span>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         <button onClick={() => onShare(f)} className="rounded-lg border border-border p-2 hover:border-gold" title="مشاركة خارجية">
           <Share2 className="size-4" />
         </button>
