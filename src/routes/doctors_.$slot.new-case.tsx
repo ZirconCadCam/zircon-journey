@@ -303,8 +303,14 @@ function NewSlotCase() {
             )}
 
             {submitting && scan && (
-              <div className="rounded-lg bg-muted/40 h-2 overflow-hidden">
-                <div className="h-full gradient-gold transition-all" style={{ width: `${scanProgress || 30}%` }} />
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-[11px] font-bold">
+                  <span className="text-muted-foreground">جارِ رفع المسح…</span>
+                  <span className="text-gold">{scanProgress}%</span>
+                </div>
+                <div className="rounded-lg bg-muted/40 h-2 overflow-hidden">
+                  <div className="h-full gradient-gold transition-all duration-200" style={{ width: `${scanProgress}%` }} />
+                </div>
               </div>
             )}
 
