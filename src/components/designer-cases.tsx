@@ -424,11 +424,19 @@ export function DesignerCases() {
                       )}
 
                       {c.scan_path && (
-                        <div className="mt-3 inline-flex items-center gap-2 text-xs bg-gold/10 border border-gold/30 rounded-lg px-3 py-1.5">
-                          <ScanLine className="size-3.5 text-gold" />
-                          <span className="font-bold">المسح ثلاثي الأبعاد:</span>
-                          <span className="truncate max-w-[200px]">{c.scan_name}</span>
-                          {c.scan_size && <span className="text-muted-foreground">({(c.scan_size/1024/1024).toFixed(1)} MB)</span>}
+                        <div className="mt-3 space-y-2">
+                          <div className="inline-flex items-center gap-2 text-xs bg-gold/10 border border-gold/30 rounded-lg px-3 py-1.5">
+                            <ScanLine className="size-3.5 text-gold" />
+                            <span className="font-bold">المسح ثلاثي الأبعاد:</span>
+                            <span className="truncate max-w-[200px]">{c.scan_name}</span>
+                            {c.scan_size && <span className="text-muted-foreground">({(c.scan_size/1024/1024).toFixed(1)} MB)</span>}
+                          </div>
+                          {c.scan_mime?.startsWith("image/") && (
+                            <div className="rounded-xl overflow-hidden border border-gold/30 bg-muted/30 max-w-md">
+                              <img src={c.scan_path} alt={c.scan_name || "3D scan"} loading="lazy"
+                                className="w-full max-h-80 object-contain bg-black/5" />
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
