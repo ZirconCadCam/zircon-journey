@@ -91,12 +91,22 @@ function NewSlotCase() {
         const safeBase = scan.name.replace(/\.[^.]+$/, "").replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 40) || "scan";
         const rand = Math.random().toString(36).slice(2, 8);
         const path = `${slot}/scans/${Date.now()}-${rand}-${safeBase}.${ext}`;
-        const { error: upErr } = await supabase.storage.from("doctor-files").upload(path, scan, {
-          upsert: false,
-          contentType: scan.type || "application/octet-stream",
+
+        // Resumable TUS upload with live progress
+        setScanProgress(1);
+        const { startResumableUpload } = await import("@/lib/resumable-upload");
+        await new Promise<void>((resolve, reject) => {
+          startResumableUpload({
+            bucket: "doctor-files",
+            path,
+            file: scan,
+            onProgress: (pct) => setScanProgress(Math.max(1, pct)),
+            onSuccess: () => resolve(),
+            onError: (err) => reject(err),
+          }).catch(reject);
         });
-        if (upErr) throw upErr;
         setScanProgress(100);
+
         const { data: pub } = supabase.storage.from("doctor-files").getPublicUrl(path);
         scan_path = pub.publicUrl;
         scan_name = scan.name;
@@ -129,11 +139,25 @@ function NewSlotCase() {
       }).select("id, case_code").single();
       if (error) throw error;
 
-      // Auto-handoff: notify the next responsible role (designer) via chat.
+      // Auto-handoff: send the full case payload to the designer via chat.
       try {
         const { notifyRoleAboutCase, getStage, nextStage, localNotify } = await import("@/lib/case-stages");
         const next = nextStage("new") ?? getStage("new");
         if (next.ownerRole) {
+          const lines = [
+            `📋 ${next.label}`,
+            `رمز الحالة: ${inserted!.case_code}`,
+            `المريض: ${form.patient_name.trim()}`,
+            form.patient_age ? `العمر: ${form.patient_age}` : null,
+            form.patient_gender ? `الجنس: ${form.patient_gender === "male" ? "ذكر" : "أنثى"}` : null,
+            form.patient_phone ? `الهاتف: ${form.patient_phone.trim()}` : null,
+            form.tooth_number ? `رقم السن: ${form.tooth_number.trim()}` : null,
+            `اللون: ${form.shade}`,
+            `نوع الحالة: ${form.case_type}`,
+            form.notes.trim() ? `ملاحظات: ${form.notes.trim()}` : null,
+            scan_path ? `📎 المسح: ${scan_name}\n${scan_path}` : null,
+            `— ${doctor!.name}`,
+          ].filter(Boolean).join("\n");
           await notifyRoleAboutCase({
             doctorSlot: Number(slot),
             doctorName: doctor!.name,
@@ -141,12 +165,13 @@ function NewSlotCase() {
             caseCode: inserted!.case_code,
             patientName: form.patient_name.trim(),
             stageLabel: `إحالة جديدة — ${next.label}`,
+            body: lines,
           });
         }
         localNotify("Zircon Journey — تم إنشاء حالة", `${form.patient_name.trim()} • ${inserted!.case_code}`);
       } catch { /* notification failures shouldn't block save */ }
 
-      toast.success("تم إنشاء الحالة وإرسال إشعار للمصمم");
+      toast.success("تم إنشاء الحالة وإرسال تفاصيلها للمصمم");
       nav({ to: "/doctors/$slot", params: { slot } });
     } catch (err: any) {
       toast.error(err.message || "فشل إنشاء الحالة");
