@@ -197,6 +197,7 @@ export type Database = {
           content: string
           conversation_id: string
           created_at: string
+          edited_at: string | null
           id: string
           message_type: string
           read_by: string[]
@@ -211,6 +212,7 @@ export type Database = {
           content?: string
           conversation_id: string
           created_at?: string
+          edited_at?: string | null
           id?: string
           message_type?: string
           read_by?: string[]
@@ -225,6 +227,7 @@ export type Database = {
           content?: string
           conversation_id?: string
           created_at?: string
+          edited_at?: string | null
           id?: string
           message_type?: string
           read_by?: string[]
@@ -450,6 +453,7 @@ export type Database = {
       }
       slot_cases: {
         Row: {
+          archived: boolean
           case_code: string
           case_type: string | null
           created_at: string
@@ -461,6 +465,7 @@ export type Database = {
           patient_gender: string | null
           patient_name: string
           patient_phone: string | null
+          pinned: boolean
           scan_mime: string | null
           scan_name: string | null
           scan_path: string | null
@@ -471,6 +476,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          archived?: boolean
           case_code?: string
           case_type?: string | null
           created_at?: string
@@ -482,6 +488,7 @@ export type Database = {
           patient_gender?: string | null
           patient_name: string
           patient_phone?: string | null
+          pinned?: boolean
           scan_mime?: string | null
           scan_name?: string | null
           scan_path?: string | null
@@ -492,6 +499,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          archived?: boolean
           case_code?: string
           case_type?: string | null
           created_at?: string
@@ -503,6 +511,7 @@ export type Database = {
           patient_gender?: string | null
           patient_name?: string
           patient_phone?: string | null
+          pinned?: boolean
           scan_mime?: string | null
           scan_name?: string | null
           scan_path?: string | null
