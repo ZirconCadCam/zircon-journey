@@ -496,19 +496,25 @@ function FileRow({ f, doctorBranch, onArchive, onRemove, onCopy, onShare, onSend
 
 interface SlotCase {
   id: string; doctor_slot: number; case_code: string; patient_name: string;
-  patient_phone: string | null; tooth_number: string | null; shade: string | null;
+  patient_phone: string | null; patient_age: number | null;
+  tooth_number: string | null; shade: string | null;
   case_type: string | null; status: CaseStage; notes: string | null;
   scan_path: string | null; scan_name: string | null;
+  pinned: boolean; archived: boolean;
   created_at: string; updated_at: string;
 }
 
 function CasesPanel({ doctor }: { doctor: Doctor }) {
   const [cases, setCases] = useState<SlotCase[]>([]);
   const [loading, setLoading] = useState(true);
+  const [view, setView] = useState<"active" | "archived">("active");
+  const [editing, setEditing] = useState<SlotCase | null>(null);
 
   const load = useCallback(async () => {
     const { data } = await supabase.from("slot_cases").select("*")
-      .eq("doctor_slot", doctor.slot).order("created_at", { ascending: false });
+      .eq("doctor_slot", doctor.slot)
+      .order("pinned", { ascending: false })
+      .order("created_at", { ascending: false });
     setCases((data as SlotCase[]) ?? []);
     setLoading(false);
   }, [doctor.slot]);
@@ -521,31 +527,39 @@ function CasesPanel({ doctor }: { doctor: Doctor }) {
     return () => { supabase.removeChannel(ch); };
   }, [doctor.slot, load]);
 
-  async function advance(c: SlotCase) {
-    const next = nextStage(c.status);
-    if (!next) return;
-    const { error } = await supabase.from("slot_cases").update({ status: next.key, updated_at: new Date().toISOString() }).eq("id", c.id);
-    if (error) { toast.error(error.message); return; }
-    if (next.ownerRole) {
-      try {
-        await notifyRoleAboutCase({
-          doctorSlot: doctor.slot, doctorName: doctor.name,
-          targetRole: next.ownerRole, caseCode: c.case_code,
-          patientName: c.patient_name, stageLabel: `إحالة الحالة — ${next.label}`,
-        });
-      } catch {}
-    }
-    localNotify("Zircon Journey — تحديث حالة", `${c.case_code} → ${next.label}`);
-    toast.success(`تمت إحالة الحالة إلى: ${next.label}`);
+  async function togglePin(c: SlotCase) {
+    const { error } = await supabase.from("slot_cases")
+      .update({ pinned: !c.pinned, updated_at: new Date().toISOString() }).eq("id", c.id);
+    if (error) toast.error(error.message);
+    else toast.success(!c.pinned ? "تم تثبيت الحالة" : "تم إلغاء التثبيت");
+  }
+  async function toggleArchive(c: SlotCase) {
+    const next = !c.archived;
+    const { error } = await supabase.from("slot_cases")
+      .update({ archived: next, updated_at: new Date().toISOString() }).eq("id", c.id);
+    if (error) toast.error(error.message);
+    else toast.success(next ? "تمت الأرشفة" : "تم الاسترجاع");
+  }
+  async function remove(c: SlotCase) {
+    if (!confirm(`حذف الحالة "${c.case_code} — ${c.patient_name}" نهائياً؟`)) return;
+    const { error } = await supabase.from("slot_cases").delete().eq("id", c.id);
+    if (error) toast.error(error.message); else toast.success("تم حذف الحالة");
   }
 
   if (loading) return <div className="p-12 text-center text-muted-foreground text-sm">جارِ تحميل الحالات...</div>;
 
+  const visible = cases.filter(c => view === "active" ? !c.archived : c.archived);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="text-sm text-muted-foreground">
-          <span className="font-bold text-foreground">{cases.length}</span> حالة لـ {doctor.name}
+        <div className="flex items-center gap-2">
+          <button onClick={()=>setView("active")} className={`rounded-full px-4 py-1.5 text-xs font-bold border ${view==="active"?"gradient-gold border-gold":"bg-card border-border"}`}>
+            النشطة ({cases.filter(c=>!c.archived).length})
+          </button>
+          <button onClick={()=>setView("archived")} className={`rounded-full px-4 py-1.5 text-xs font-bold border ${view==="archived"?"gradient-gold border-gold":"bg-card border-border"}`}>
+            <Archive className="inline size-3 me-1" /> المؤرشفة ({cases.filter(c=>c.archived).length})
+          </button>
         </div>
         <Link to="/doctors/$slot/new-case" params={{ slot: String(doctor.slot) }}
           className="inline-flex items-center gap-2 rounded-xl gradient-brown px-4 py-2 text-sm font-bold shadow-luxury">
@@ -553,27 +567,53 @@ function CasesPanel({ doctor }: { doctor: Doctor }) {
         </Link>
       </div>
 
-      {cases.length === 0 ? (
+      {visible.length === 0 ? (
         <div className="rounded-2xl bg-card border border-border p-12 text-center text-muted-foreground text-sm shadow-luxury">
           <ClipboardList className="size-10 mx-auto mb-3 opacity-40" />
-          لا توجد حالات بعد. ابدأ بإضافة أول حالة.
+          {view === "archived" ? "لا توجد حالات مؤرشفة." : "لا توجد حالات بعد. ابدأ بإضافة أول حالة."}
         </div>
       ) : (
         <div className="grid md:grid-cols-2 gap-4">
-          {cases.map(c => <CaseCard key={c.id} c={c} onAdvance={advance} />)}
+          {visible.map(c => (
+            <CaseCard key={c.id} c={c}
+              onEdit={() => setEditing(c)}
+              onPin={() => togglePin(c)}
+              onArchive={() => toggleArchive(c)}
+              onDelete={() => remove(c)} />
+          ))}
         </div>
       )}
+
+      {editing && <EditCaseModal c={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
     </div>
   );
 }
 
-function CaseCard({ c, onAdvance }: { c: SlotCase; onAdvance: (c: SlotCase) => void }) {
+function CaseCard({ c, onEdit, onPin, onArchive, onDelete }: {
+  c: SlotCase;
+  onEdit: () => void; onPin: () => void; onArchive: () => void; onDelete: () => void;
+}) {
   const stage = getStage(c.status);
-  const next = nextStage(c.status);
   const stageIdx = STAGES.findIndex(s => s.key === stage.key);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [menuOpen]);
 
   return (
-    <article className="rounded-2xl bg-card border border-border p-5 shadow-luxury hover:border-gold/60 transition">
+    <article className={`relative rounded-2xl bg-card border p-5 shadow-luxury hover:border-gold/60 transition ${c.pinned ? "border-gold/70" : "border-border"}`}>
+      {c.pinned && (
+        <span className="absolute -top-2 -start-2 rounded-full gradient-gold text-gold-foreground text-[10px] font-bold px-2 py-0.5 shadow-gold inline-flex items-center gap-1">
+          <Pin className="size-3" /> مثبّتة
+        </span>
+      )}
       <header className="flex items-start justify-between gap-3 mb-3">
         <div className="min-w-0">
           <div className="font-mono text-[11px] text-muted-foreground">{c.case_code}</div>
@@ -604,17 +644,129 @@ function CaseCard({ c, onAdvance }: { c: SlotCase; onAdvance: (c: SlotCase) => v
         <div className="text-[11px] text-muted-foreground">
           آخر تحديث: {new Date(c.updated_at).toLocaleString("ar")}
         </div>
-        {next ? (
-          <button onClick={() => onAdvance(c)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-gold bg-card px-3 py-1.5 text-xs font-bold hover:gradient-gold transition">
-            إحالة لـ {next.label} <ChevronRight className="size-3.5 rotate-180" />
+        <div ref={menuRef} className="relative">
+          <button onClick={() => setMenuOpen(o => !o)} aria-haspopup="menu" aria-expanded={menuOpen}
+            className={`rounded-lg border p-2 transition ${menuOpen ? "border-gold gradient-gold text-gold-foreground" : "border-border hover:border-gold"}`}
+            title="أدوات الحالة">
+            <MoreHorizontal className="size-4" />
           </button>
-        ) : (
-          <span className="text-xs font-bold text-emerald-600 inline-flex items-center gap-1">
-            <Check className="size-3.5" /> مكتملة
-          </span>
-        )}
+          {menuOpen && (
+            <div role="menu" className="absolute z-30 mt-2 end-0 w-48 rounded-xl border border-border bg-popover shadow-luxury overflow-hidden animate-in fade-in zoom-in-95">
+              <MenuItem icon={Pencil} label="تعديل" onClick={() => { setMenuOpen(false); onEdit(); }} />
+              <MenuItem icon={c.pinned ? PinOff : Pin} label={c.pinned ? "إلغاء التثبيت" : "تثبيت"} onClick={() => { setMenuOpen(false); onPin(); }} />
+              <MenuItem icon={c.archived ? ArchiveRestore : Archive} label={c.archived ? "استرجاع" : "أرشفة"} onClick={() => { setMenuOpen(false); onArchive(); }} />
+              <MenuItem icon={Trash2} label="حذف" danger onClick={() => { setMenuOpen(false); onDelete(); }} />
+            </div>
+          )}
+        </div>
       </footer>
     </article>
+  );
+}
+
+function MenuItem({ icon: Icon, label, onClick, danger }: { icon: any; label: string; onClick: () => void; danger?: boolean }) {
+  return (
+    <button onClick={onClick}
+      className={`w-full flex items-center gap-2 px-3 py-2.5 text-sm font-bold text-start hover:bg-muted ${danger ? "text-destructive hover:bg-destructive/10" : ""}`}>
+      <Icon className="size-4" /> {label}
+    </button>
+  );
+}
+
+const SHADES_LIST = ["A1","A2","A3","A3.5","A4","B1","B2","B3","B4","C1","C2","C3","C4","D2","D3","D4","BL1","BL2","BL3","BL4"];
+
+function EditCaseModal({ c, onClose, onSaved }: { c: SlotCase; onClose: () => void; onSaved: () => void }) {
+  const [form, setForm] = useState({
+    patient_name: c.patient_name,
+    patient_phone: c.patient_phone ?? "",
+    patient_age: c.patient_age != null ? String(c.patient_age) : "",
+    tooth_number: c.tooth_number ?? "",
+    shade: c.shade ?? "A2",
+    case_type: c.case_type ?? "",
+    notes: c.notes ?? "",
+  });
+  const [saving, setSaving] = useState(false);
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    if (form.patient_name.trim().length < 2) { toast.error("اسم المريض يجب أن لا يقل عن حرفين"); return; }
+    if (form.patient_age && (!/^\d+$/.test(form.patient_age) || +form.patient_age < 0 || +form.patient_age > 120)) {
+      toast.error("العمر يجب أن يكون رقماً بين 0 و 120"); return;
+    }
+    if (form.tooth_number && !/^([1-4][1-8])(\s*[,،\-]\s*[1-4][1-8])*$/.test(form.tooth_number)) {
+      toast.error("رقم السن غير صالح (نظام FDI)"); return;
+    }
+    setSaving(true);
+    const { error } = await supabase.from("slot_cases").update({
+      patient_name: form.patient_name.trim(),
+      patient_phone: form.patient_phone.trim() || null,
+      patient_age: form.patient_age ? Number(form.patient_age) : null,
+      tooth_number: form.tooth_number.trim() || null,
+      shade: form.shade || null,
+      case_type: form.case_type || null,
+      notes: form.notes.trim() || null,
+      updated_at: new Date().toISOString(),
+    }).eq("id", c.id);
+    setSaving(false);
+    if (error) toast.error(error.message);
+    else { toast.success("تم حفظ التعديلات"); onSaved(); }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <form onSubmit={save} onClick={e=>e.stopPropagation()}
+        className="w-full max-w-lg rounded-2xl bg-card border border-border shadow-luxury p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-xs text-muted-foreground font-mono">{c.case_code}</div>
+            <h2 className="text-lg font-bold mt-0.5">تعديل بيانات الحالة</h2>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-lg border border-border p-2 hover:border-gold"><X className="size-4" /></button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <label className="block col-span-2">
+            <div className="text-xs font-bold text-muted-foreground mb-1">اسم المريض *</div>
+            <input className="w-full rounded-xl border border-input bg-background px-3 py-2 outline-none focus:border-gold"
+              value={form.patient_name} onChange={e=>setForm({...form, patient_name: e.target.value})} required />
+          </label>
+          <label className="block">
+            <div className="text-xs font-bold text-muted-foreground mb-1">الهاتف</div>
+            <input dir="ltr" className="w-full rounded-xl border border-input bg-background px-3 py-2 outline-none focus:border-gold"
+              value={form.patient_phone} onChange={e=>setForm({...form, patient_phone: e.target.value})} />
+          </label>
+          <label className="block">
+            <div className="text-xs font-bold text-muted-foreground mb-1">العمر</div>
+            <input type="number" min={0} max={120} className="w-full rounded-xl border border-input bg-background px-3 py-2 outline-none focus:border-gold"
+              value={form.patient_age} onChange={e=>setForm({...form, patient_age: e.target.value})} />
+          </label>
+          <label className="block">
+            <div className="text-xs font-bold text-muted-foreground mb-1">رقم السن (FDI)</div>
+            <input className="w-full rounded-xl border border-input bg-background px-3 py-2 outline-none focus:border-gold"
+              value={form.tooth_number} onChange={e=>setForm({...form, tooth_number: e.target.value})} placeholder="مثال: 11, 24" />
+          </label>
+          <label className="block">
+            <div className="text-xs font-bold text-muted-foreground mb-1">اللون</div>
+            <select className="w-full rounded-xl border border-input bg-background px-3 py-2 outline-none focus:border-gold"
+              value={form.shade} onChange={e=>setForm({...form, shade: e.target.value})}>
+              {SHADES_LIST.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </label>
+          <label className="block col-span-2">
+            <div className="text-xs font-bold text-muted-foreground mb-1">ملاحظات</div>
+            <textarea rows={3} className="w-full rounded-xl border border-input bg-background px-3 py-2 outline-none focus:border-gold resize-none"
+              value={form.notes} onChange={e=>setForm({...form, notes: e.target.value})} />
+          </label>
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2 border-t border-border">
+          <button type="button" onClick={onClose} className="rounded-lg border border-border px-4 py-2 text-xs font-bold">إلغاء</button>
+          <button type="submit" disabled={saving}
+            className="rounded-lg gradient-brown px-5 py-2 text-xs font-bold shadow-luxury inline-flex items-center gap-2 disabled:opacity-60">
+            {saving ? <><Loader2 className="size-3.5 animate-spin" /> جارِ الحفظ...</> : "حفظ التعديلات"}
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }
