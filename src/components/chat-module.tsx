@@ -774,9 +774,10 @@ function MessageBubble({ m, mine, doctorName, otherParticipants, onLongPress, on
   );
 }
 
-function MessageMenu({ x, y, msg, archived, onClose, onCopy, onComment, onResend, onShare, onSave, onDelete, onArchive }: {
-  x: number; y: number; msg: LocalMsg; archived: boolean; onClose: () => void;
+function MessageMenu({ x, y, msg, archived, canEdit, onClose, onCopy, onComment, onResend, onEdit, onShare, onSave, onDelete, onArchive }: {
+  x: number; y: number; msg: LocalMsg; archived: boolean; canEdit: boolean; onClose: () => void;
   onCopy: (m: LocalMsg) => void; onComment: (m: LocalMsg) => void; onResend: (m: LocalMsg) => void;
+  onEdit: (m: LocalMsg) => void;
   onShare: (m: LocalMsg) => void; onSave: (m: LocalMsg) => void; onDelete: (m: LocalMsg) => void;
   onArchive: (m: LocalMsg) => void;
 }) {
@@ -792,6 +793,7 @@ function MessageMenu({ x, y, msg, archived, onClose, onCopy, onComment, onResend
   const items = [
     { icon: Copy, label: "نسخ", run: () => onCopy(msg) },
     { icon: Reply, label: "تعليق / رد", run: () => onComment(msg) },
+    ...(canEdit ? [{ icon: Pencil, label: "تعديل", run: () => onEdit(msg) }] : []),
     { icon: RotateCw, label: "إعادة الإرسال", run: () => onResend(msg) },
     { icon: Share2, label: "مشاركة خارجية", run: () => onShare(msg) },
     { icon: Save, label: `حفظ في ${CENTER_FOLDER_NAME}`, run: () => onSave(msg) },
