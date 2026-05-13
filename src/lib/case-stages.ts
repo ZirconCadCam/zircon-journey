@@ -43,8 +43,14 @@ export async function notifyRoleAboutCase(opts: {
   patientName: string;
   stageLabel: string;
   body?: string;
+  attachment?: {
+    path: string;        // public URL or storage path
+    name: string;
+    mime?: string | null;
+    size?: number | null;
+  } | null;
 }) {
-  const { doctorSlot, doctorName, targetRole, caseCode, patientName, stageLabel, body } = opts;
+  const { doctorSlot, doctorName, targetRole, caseCode, patientName, stageLabel, body, attachment } = opts;
   const participants: RoleKey[] = ["doctor", targetRole];
   const title = `حالة ${caseCode} — ${doctorName}`;
 
