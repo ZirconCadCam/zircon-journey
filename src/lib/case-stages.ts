@@ -43,8 +43,14 @@ export async function notifyRoleAboutCase(opts: {
   patientName: string;
   stageLabel: string;
   body?: string;
+  attachment?: {
+    path: string;        // public URL or storage path
+    name: string;
+    mime?: string | null;
+    size?: number | null;
+  } | null;
 }) {
-  const { doctorSlot, doctorName, targetRole, caseCode, patientName, stageLabel, body } = opts;
+  const { doctorSlot, doctorName, targetRole, caseCode, patientName, stageLabel, body, attachment } = opts;
   const participants: RoleKey[] = ["doctor", targetRole];
   const title = `حالة ${caseCode} — ${doctorName}`;
 
@@ -75,7 +81,11 @@ export async function notifyRoleAboutCase(opts: {
     sender: "doctor",
     sender_name: doctorName,
     content,
-    message_type: "text",
+    message_type: attachment ? "file" : "text",
+    attachment_path: attachment?.path ?? null,
+    attachment_name: attachment?.name ?? null,
+    attachment_mime: attachment?.mime ?? null,
+    attachment_size: attachment?.size ?? null,
   });
 }
 

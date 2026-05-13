@@ -155,7 +155,7 @@ function NewSlotCase() {
             `اللون: ${form.shade}`,
             `نوع الحالة: ${form.case_type}`,
             form.notes.trim() ? `ملاحظات: ${form.notes.trim()}` : null,
-            scan_path ? `📎 المسح: ${scan_name}\n${scan_path}` : null,
+            scan_path ? `📎 المسح مرفق أدناه — يمكن تحميله مباشرة` : null,
             `— ${doctor!.name}`,
           ].filter(Boolean).join("\n");
           await notifyRoleAboutCase({
@@ -166,6 +166,12 @@ function NewSlotCase() {
             patientName: form.patient_name.trim(),
             stageLabel: `إحالة جديدة — ${next.label}`,
             body: lines,
+            attachment: scan_path && scan_name ? {
+              path: scan_path,
+              name: scan_name,
+              mime: scan_mime,
+              size: scan_size,
+            } : null,
           });
         }
         localNotify("Zircon Journey — تم إنشاء حالة", `${form.patient_name.trim()} • ${inserted!.case_code}`);
@@ -287,30 +293,42 @@ function NewSlotCase() {
                   onChange={e => { const f = e.target.files?.[0]; if (f) setScan(f); }} />
               </label>
             ) : (
-              <div className="rounded-xl border border-border p-3 bg-muted/30 flex items-center gap-3">
-                <div className="size-10 rounded-lg gradient-gold grid place-items-center shrink-0">
+              <div className="rounded-xl border border-border p-3 bg-muted/30 flex items-stretch gap-3">
+                {/* Vertical progress bar (fills bottom→top while uploading) */}
+                {submitting && (
+                  <div
+                    className="relative w-3 rounded-full bg-muted/60 overflow-hidden shrink-0"
+                    role="progressbar"
+                    aria-valuenow={scanProgress}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-label="تقدم رفع المسح"
+                  >
+                    <div
+                      className="absolute inset-x-0 bottom-0 gradient-gold transition-all duration-200"
+                      style={{ height: `${scanProgress}%` }}
+                    />
+                  </div>
+                )}
+
+                <div className="size-10 rounded-lg gradient-gold grid place-items-center shrink-0 self-center">
                   <FileText className="size-5 text-gold-foreground" />
                 </div>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 self-center">
                   <div className="text-sm font-bold truncate">{scan.name}</div>
-                  <div className="text-[11px] text-muted-foreground">{(scan.size/1024/1024).toFixed(2)} MB</div>
+                  <div className="text-[11px] text-muted-foreground flex items-center gap-2">
+                    <span>{(scan.size/1024/1024).toFixed(2)} MB</span>
+                    {submitting && (
+                      <span className="text-gold font-bold">• {scanProgress}% جارِ الرفع…</span>
+                    )}
+                  </div>
                 </div>
-                <button type="button" onClick={() => { setScan(null); setScanProgress(0); if (fileInput.current) fileInput.current.value=""; }}
-                  className="rounded-lg border border-border p-1.5 hover:bg-destructive hover:text-destructive-foreground" aria-label="إزالة">
-                  <X className="size-4" />
-                </button>
-              </div>
-            )}
-
-            {submitting && scan && (
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-[11px] font-bold">
-                  <span className="text-muted-foreground">جارِ رفع المسح…</span>
-                  <span className="text-gold">{scanProgress}%</span>
-                </div>
-                <div className="rounded-lg bg-muted/40 h-2 overflow-hidden">
-                  <div className="h-full gradient-gold transition-all duration-200" style={{ width: `${scanProgress}%` }} />
-                </div>
+                {!submitting && (
+                  <button type="button" onClick={() => { setScan(null); setScanProgress(0); if (fileInput.current) fileInput.current.value=""; }}
+                    className="rounded-lg border border-border p-1.5 hover:bg-destructive hover:text-destructive-foreground self-center" aria-label="إزالة">
+                    <X className="size-4" />
+                  </button>
+                )}
               </div>
             )}
 
