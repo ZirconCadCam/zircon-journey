@@ -702,8 +702,9 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
       {menuFor && (
         <MessageMenu
           x={menuFor.x} y={menuFor.y} msg={menuFor.msg} archived={archivedIds.has(menuFor.msg.id)}
+          canEdit={menuFor.msg.sender === me && menuFor.msg.message_type === "text" && !menuFor.msg._local}
           onClose={() => setMenuFor(null)}
-          onCopy={actCopy} onComment={actComment} onResend={actResend}
+          onCopy={actCopy} onComment={actComment} onResend={actResend} onEdit={actEdit}
           onShare={actShare} onSave={actSave} onDelete={actDelete} onArchive={actArchive}
         />
       )}
