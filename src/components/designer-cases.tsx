@@ -349,6 +349,26 @@ export function DesignerCases() {
     } finally { setBusyId(null); }
   }
 
+  async function archiveCase(c: Case) {
+    if (!confirm(`أرشفة الحالة ${c.case_code}؟ لن تظهر بعدها في القائمة.`)) return;
+    setBusyId(c.id);
+    const { error } = await supabase.from("slot_cases").update({ archived: true }).eq("id", c.id);
+    setBusyId(null);
+    if (error) { toast.error("تعذرت الأرشفة"); return; }
+    setCases(prev => prev.filter(x => x.id !== c.id));
+    toast.success("تم نقل الحالة إلى الأرشيف");
+  }
+
+  async function deleteCase(c: Case) {
+    if (!confirm(`حذف الحالة ${c.case_code} نهائياً؟ لا يمكن التراجع.`)) return;
+    setBusyId(c.id);
+    const { error } = await supabase.from("slot_cases").delete().eq("id", c.id);
+    setBusyId(null);
+    if (error) { toast.error("تعذر الحذف"); return; }
+    setCases(prev => prev.filter(x => x.id !== c.id));
+    toast.success("تم حذف الحالة");
+  }
+
   if (loading) {
     return <div className="rounded-2xl bg-card border border-border p-12 text-center text-muted-foreground shadow-luxury">
       <Loader2 className="size-6 animate-spin mx-auto mb-2" /> جارِ تحميل الحالات…
