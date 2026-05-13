@@ -528,13 +528,37 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
     }
   }
   async function actShare(m: LocalMsg) {
-    let url: string | null = null;
-    let text = m.content;
-    if (m.attachment_path) url = await getSignedUrl(m.attachment_path, 3600);
-    const data: ShareData = { title: m.attachment_name ?? "Zircon Journey", text, ...(url ? { url } : {}) };
-    if (navigator.share) { try { await navigator.share(data); return; } catch {} }
-    if (url) { await navigator.clipboard.writeText(url); toast.success("تم نسخ الرابط للمشاركة"); }
-    else { await navigator.clipboard.writeText(text); toast.success("تم النسخ للمشاركة"); }
+    const text = m.content;
+    // For attachments, try sharing the actual file (Blob) so the receiver gets a file, not a link.
+    if (m.attachment_path) {
+      let url: string | null = null;
+      if (/^https?:\/\//i.test(m.attachment_path)) url = m.attachment_path;
+      else url = await getSignedUrl(m.attachment_path, 3600);
+      if (url) {
+        try {
+          const res = await fetch(url);
+          const blob = await res.blob();
+          const fname = m.attachment_name || `file-${m.id.slice(0,8)}`;
+          const file = new File([blob], fname, { type: m.attachment_mime || blob.type || "application/octet-stream" });
+          if (typeof navigator !== "undefined" && (navigator as any).canShare?.({ files: [file] })) {
+            await (navigator as any).share({ files: [file], title: fname, text });
+            return;
+          }
+          // Fallback: trigger a direct file download (no link sharing).
+          const blobUrl = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = blobUrl; a.download = fname;
+          document.body.appendChild(a); a.click(); a.remove();
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+          toast.success("تم تنزيل الملف للمشاركة");
+          return;
+        } catch { /* fall through */ }
+      }
+      toast.error("تعذر تجهيز الملف للمشاركة");
+      return;
+    }
+    if (navigator.share) { try { await navigator.share({ title: "Zircon Journey", text }); return; } catch {} }
+    await navigator.clipboard.writeText(text); toast.success("تم النسخ للمشاركة");
   }
   async function actSave(m: LocalMsg) {
     if (m.message_type === "text") {
