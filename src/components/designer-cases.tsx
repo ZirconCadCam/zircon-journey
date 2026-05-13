@@ -268,7 +268,7 @@ export function DesignerCases() {
         </div>
       `;
       document.body.appendChild(node);
-      const canvas = await html2canvas(node, { scale: 2, backgroundColor: "#ffffff", useCORS: true });
+      const canvas = await html2canvas(node, { scale: 2, backgroundColor: "#ffffff", useCORS: true, onclone: H2C_ONCLONE });
       document.body.removeChild(node);
 
       const pdf = new jsPDF({ unit: "pt", format: "a4" });
