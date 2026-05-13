@@ -336,6 +336,34 @@ function FilesPanel({ doctor, actor }: { doctor: Doctor; actor: string }) {
     } else copyLink(f);
   }
 
+  /**
+   * Send file as a chat message to a target staff role. Reuses (or creates)
+   * a 1-1 conversation between the doctor and that role under this slot.
+   */
+  async function sendToRole(f: DocFile, target: RoleKey) {
+    const participants: RoleKey[] = ["doctor", target];
+    const { data: existing } = await supabase.from("chat_conversations")
+      .select("id,participants").eq("doctor_slot", doctor.slot);
+    let conv = (existing ?? []).find((c: any) =>
+      Array.isArray(c.participants) && c.participants.length === 2
+      && c.participants.includes("doctor") && c.participants.includes(target)
+    ) as { id: string } | undefined;
+    if (!conv) {
+      const { data: created, error } = await supabase.from("chat_conversations")
+        .insert({ doctor_slot: doctor.slot, participants, title: `ملف من ${doctor.name}`, created_by: "doctor" })
+        .select("id").single();
+      if (error || !created) { toast.error(error?.message ?? "تعذر إنشاء المحادثة"); return; }
+      conv = created;
+    }
+    const { error: mErr } = await supabase.from("chat_messages").insert({
+      conversation_id: conv.id, sender: "doctor", sender_name: doctor.name,
+      content: `📎 ${f.file_name}\n${f.public_url ?? ""}`,
+      message_type: "text",
+    });
+    if (mErr) toast.error(mErr.message);
+    else toast.success(`تم إرسال "${f.file_name}" إلى ${CHAT_LABEL[target]}`);
+  }
+
   const visible = files.filter(f => (view === "active" ? !f.archived : f.archived) && (!q || f.file_name.toLowerCase().includes(q.toLowerCase())));
 
   return (
