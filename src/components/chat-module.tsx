@@ -581,6 +581,7 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
     if (error) toast.error(error.message);
     else { setMsgs(prev => prev.map(x => x.id === m.id ? { ...x, content: trimmed } : x)); toast.success("تم تعديل الرسالة"); }
   }
+  function actArchive(m: LocalMsg) {
     const next = new Set(archivedIds);
     if (next.has(m.id)) next.delete(m.id); else next.add(m.id);
     persistArchived(next);
