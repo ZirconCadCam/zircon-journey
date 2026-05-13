@@ -4,7 +4,32 @@ import { toast } from "sonner";
 import {
   Stethoscope, FileText, Download, Share2, Loader2,
   ScanLine, User, Phone, Hash, Palette, ClipboardList, Calendar,
+  Archive, Trash2,
 } from "lucide-react";
+
+/** Inject hex overrides for our oklch CSS variables into html2canvas's cloned doc. */
+const H2C_ONCLONE = (doc: Document) => {
+  const css = doc.createElement("style");
+  css.textContent = `:root, html, body, * {
+    --background:#ffffff; --foreground:#1a1a1a;
+    --card:#ffffff; --card-foreground:#1a1a1a;
+    --popover:#ffffff; --popover-foreground:#1a1a1a;
+    --primary:#5b3a14; --primary-foreground:#ffffff;
+    --secondary:#f5f0e0; --secondary-foreground:#1a1a1a;
+    --muted:#f5f0e0; --muted-foreground:#777777;
+    --accent:#b8893a; --accent-foreground:#ffffff;
+    --destructive:#c0392b; --destructive-foreground:#ffffff;
+    --border:#e2d4b1; --input:#e2d4b1; --ring:#b8893a;
+    --gold:#b8893a; --gold-foreground:#ffffff;
+    --sidebar:#ffffff; --sidebar-foreground:#1a1a1a;
+    --sidebar-primary:#5b3a14; --sidebar-primary-foreground:#ffffff;
+    --sidebar-accent:#f5f0e0; --sidebar-accent-foreground:#1a1a1a;
+    --sidebar-border:#e2d4b1; --sidebar-ring:#b8893a;
+    --chart-1:#b8893a; --chart-2:#5b3a14; --chart-3:#777777; --chart-4:#e2d4b1; --chart-5:#faf6ee;
+  }
+  html, body { background:#ffffff !important; color:#1a1a1a !important; }`;
+  doc.head.appendChild(css);
+};
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { saveToCenter, downloadUrlToCenter, fileManagerSupported, CENTER_FOLDER_NAME } from "@/lib/file-manager";
