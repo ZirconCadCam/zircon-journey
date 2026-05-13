@@ -2,8 +2,9 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ChatModule } from "@/components/chat-module";
+import { DesignerCases } from "@/components/designer-cases";
 import { ROLE_LABEL, STAFF_PASSWORDS, type RoleKey } from "@/lib/chat";
-import { Sparkles, ArrowRight, Lock, Stethoscope, MessageSquare } from "lucide-react";
+import { Sparkles, ArrowRight, Lock, Stethoscope, MessageSquare, ClipboardList } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/staff/$role")({
@@ -108,6 +109,7 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [selected, setSelected] = useState<Doctor | null>(null);
   const [unread, setUnread] = useState<Record<number, number>>({});
+  const [tab, setTab] = useState<"chat" | "cases">("chat");
 
   useEffect(() => {
     (async () => {
@@ -175,44 +177,64 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
           </div>
         </div>
 
-        <div className="mt-6 grid lg:grid-cols-[320px_1fr] gap-5">
-          <aside className="rounded-2xl bg-card border border-border overflow-hidden shadow-luxury">
-            <div className="p-4 border-b border-border font-bold text-sm flex items-center gap-2">
-              <Stethoscope className="size-4 text-gold" /> الأطباء
-            </div>
-            <ul className="divide-y divide-border max-h-[600px] overflow-y-auto">
-              {doctors.map(d => {
-                const u = unread[d.slot] ?? 0;
-                const on = selected?.slot === d.slot;
-                return (
-                  <li key={d.slot}>
-                    <button onClick={()=>setSelected(d)}
-                      className={`w-full text-start p-4 flex items-center gap-3 transition ${on?"bg-gold/10 border-r-4 border-gold":"hover:bg-muted/40"}`}>
-                      <div className="size-10 rounded-xl gradient-gold grid place-items-center shadow-gold shrink-0">
-                        <span className="font-extrabold text-gold-foreground">{d.name.replace(/^د\.\s*/, "").charAt(0)}</span>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="font-bold text-sm truncate">{d.name}</div>
-                        <div className="text-[11px] text-muted-foreground">{d.branch === "sanaa" ? "فرع صنعاء" : d.branch === "ibb" ? "فرع إب" : ""}</div>
-                      </div>
-                      {u > 0 && <span className="rounded-full gradient-gold text-[10px] font-bold px-1.5 min-w-[20px] h-[20px] grid place-items-center shadow-gold text-gold-foreground">{u}</span>}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </aside>
 
-          <section>
-            {selected ? (
-              <ChatModule doctorSlot={selected.slot} doctorName={selected.name} me={role} myName={ROLE_LABEL[role]} />
-            ) : (
-              <div className="rounded-2xl bg-card border border-border p-12 text-center text-muted-foreground shadow-luxury">
-                <MessageSquare className="size-10 mx-auto mb-3 opacity-40" />
-                اختر طبيباً من القائمة لعرض محادثاته.
-              </div>
-            )}
-          </section>
+        {role === "designer" && (
+          <div className="mt-6 inline-flex rounded-xl border border-border bg-card p-1 shadow-luxury">
+            <button onClick={() => setTab("chat")}
+              className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "chat" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
+              <MessageSquare className="size-4" /> المحادثات
+            </button>
+            <button onClick={() => setTab("cases")}
+              className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "cases" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
+              <ClipboardList className="size-4" /> الحالات
+            </button>
+          </div>
+        )}
+
+        <div className="mt-6">
+          {role === "designer" && tab === "cases" ? (
+            <DesignerCases />
+          ) : (
+            <div className="grid lg:grid-cols-[320px_1fr] gap-5">
+              <aside className="rounded-2xl bg-card border border-border overflow-hidden shadow-luxury">
+                <div className="p-4 border-b border-border font-bold text-sm flex items-center gap-2">
+                  <Stethoscope className="size-4 text-gold" /> الأطباء
+                </div>
+                <ul className="divide-y divide-border max-h-[600px] overflow-y-auto">
+                  {doctors.map(d => {
+                    const u = unread[d.slot] ?? 0;
+                    const on = selected?.slot === d.slot;
+                    return (
+                      <li key={d.slot}>
+                        <button onClick={()=>setSelected(d)}
+                          className={`w-full text-start p-4 flex items-center gap-3 transition ${on?"bg-gold/10 border-r-4 border-gold":"hover:bg-muted/40"}`}>
+                          <div className="size-10 rounded-xl gradient-gold grid place-items-center shadow-gold shrink-0">
+                            <span className="font-extrabold text-gold-foreground">{d.name.replace(/^د\.\s*/, "").charAt(0)}</span>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-bold text-sm truncate">{d.name}</div>
+                            <div className="text-[11px] text-muted-foreground">{d.branch === "sanaa" ? "فرع صنعاء" : d.branch === "ibb" ? "فرع إب" : ""}</div>
+                          </div>
+                          {u > 0 && <span className="rounded-full gradient-gold text-[10px] font-bold px-1.5 min-w-[20px] h-[20px] grid place-items-center shadow-gold text-gold-foreground">{u}</span>}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </aside>
+
+              <section>
+                {selected ? (
+                  <ChatModule doctorSlot={selected.slot} doctorName={selected.name} me={role} myName={ROLE_LABEL[role]} />
+                ) : (
+                  <div className="rounded-2xl bg-card border border-border p-12 text-center text-muted-foreground shadow-luxury">
+                    <MessageSquare className="size-10 mx-auto mb-3 opacity-40" />
+                    اختر طبيباً من القائمة لعرض محادثاته.
+                  </div>
+                )}
+              </section>
+            </div>
+          )}
         </div>
       </main>
     </Shell>
