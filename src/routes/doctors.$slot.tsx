@@ -392,7 +392,7 @@ function FilesPanel({ doctor, actor }: { doctor: Doctor; actor: string }) {
         </div>
       </div>
 
-      <div className="rounded-2xl bg-card border border-border overflow-hidden shadow-luxury">
+      <div className="rounded-2xl bg-card border border-border shadow-luxury">
         {visible.length === 0 ? (
           <div className="p-12 text-center text-muted-foreground text-sm">
             <FilesIcon className="size-10 mx-auto mb-3 opacity-40" />
@@ -464,7 +464,7 @@ function FileRow({ f, doctorBranch, onArchive, onRemove, onCopy, onShare, onSend
             <Send className="size-4" />
           </button>
           {sendOpen && (
-            <div role="menu" className="absolute z-30 mt-2 end-0 w-52 rounded-xl border border-border bg-popover shadow-luxury overflow-hidden animate-in fade-in zoom-in-95">
+            <div role="menu" className="absolute z-50 mt-2 end-0 w-52 rounded-xl border border-border bg-popover shadow-luxury overflow-hidden animate-in fade-in zoom-in-95">
               <div className="px-3 py-2 text-[11px] font-bold text-muted-foreground border-b border-border">أرسال إلى</div>
               {targets.map(t => (
                 <button key={t.role} onClick={() => { setSendOpen(false); onSendTo(f, t.role); }}
