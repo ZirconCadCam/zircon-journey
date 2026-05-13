@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { STAFF_PASSWORDS, ROLE_LABEL, type RoleKey } from "@/lib/chat";
 import { Sparkles, Lock } from "lucide-react";
@@ -11,11 +11,25 @@ export const Route = createFileRoute("/login")({
 
 const ADMIN_ALL_KEY = "zircon_admin_all";
 
+// Clears every portal session key so the next password entry starts a fresh session.
+export function clearAllPortalSessions() {
+  if (typeof window === "undefined") return;
+  const keys: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith("zircon_")) keys.push(k);
+  }
+  keys.forEach((k) => localStorage.removeItem(k));
+}
+
 function LoginPage() {
   const nav = useNavigate();
   const [pw, setPw] = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
+
+  // On mount, sign out of any active portal so the password drives the destination.
+  useEffect(() => { clearAllPortalSessions(); }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
