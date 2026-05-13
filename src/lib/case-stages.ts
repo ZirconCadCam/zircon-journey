@@ -81,7 +81,11 @@ export async function notifyRoleAboutCase(opts: {
     sender: "doctor",
     sender_name: doctorName,
     content,
-    message_type: "text",
+    message_type: attachment ? "file" : "text",
+    attachment_path: attachment?.path ?? null,
+    attachment_name: attachment?.name ?? null,
+    attachment_mime: attachment?.mime ?? null,
+    attachment_size: attachment?.size ?? null,
   });
 }
 
