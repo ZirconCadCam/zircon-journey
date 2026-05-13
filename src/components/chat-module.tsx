@@ -883,7 +883,9 @@ function FileBubble({ msg, mine }: { msg: LocalMsg; mine: boolean }) {
           {sizeLabel}{sizeLabel ? " — " : ""}{msg._local ? "جارِ الرفع..." : "اضغط للتحميل"}
         </div>
       </div>
-      <Download className="size-4 ms-auto shrink-0" />
+      <span className={`ms-auto inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold shrink-0 ${mine ? "bg-white/20" : "gradient-gold text-gold-foreground"}`}>
+        <Download className="size-3.5" /> تحميل
+      </span>
     </button>
   );
 }
