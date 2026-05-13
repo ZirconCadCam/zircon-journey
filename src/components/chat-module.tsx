@@ -760,7 +760,7 @@ function MessageBubble({ m, mine, doctorName, otherParticipants, onLongPress, on
         {ROLE_LABEL[m.sender]}{m.sender_name ? ` • ${m.sender_name}` : (m.sender === "doctor" ? ` • ${doctorName}` : "")}
       </div>
       {m.message_type === "audio" ? (
-        <AudioBubble path={m.attachment_path!} />
+        <AudioBubble path={m.attachment_path!} name={m.attachment_name} mime={m.attachment_mime} />
       ) : m.message_type === "file" ? (
         <FileBubble msg={m} mine={mine} />
       ) : (
