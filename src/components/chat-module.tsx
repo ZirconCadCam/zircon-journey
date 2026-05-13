@@ -831,21 +831,42 @@ function MessageStatus({ msg, otherParticipants }: { msg: LocalMsg; otherPartici
 
 function FileBubble({ msg, mine }: { msg: LocalMsg; mine: boolean }) {
   const [busy, setBusy] = useState(false);
+  async function resolveUrl(): Promise<string | null> {
+    if (!msg.attachment_path) return null;
+    if (/^https?:\/\//i.test(msg.attachment_path)) return msg.attachment_path;
+    return await getSignedUrl(msg.attachment_path, 600);
+  }
+  async function forceDownload(url: string, name: string) {
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl; a.download = name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+      return true;
+    } catch { return false; }
+  }
   async function download() {
     if (!msg.attachment_path) return;
     setBusy(true);
-    const url = await getSignedUrl(msg.attachment_path, 300);
-    setBusy(false);
-    if (!url) { toast.error("تعذر إنشاء رابط التحميل"); return; }
-    // If file manager is linked, save into center; else open in new tab
+    const url = await resolveUrl();
+    if (!url) { setBusy(false); toast.error("تعذر إنشاء رابط التحميل"); return; }
+    const name = msg.attachment_name || `file-${msg.id.slice(0,8)}`;
+    // If file manager is linked, save into center
     if (fileManagerSupported() && (await getCenterFolder())) {
       try {
-        const r = await downloadUrlToCenter(url, msg.attachment_name || "file", "ملفات");
+        const r = await downloadUrlToCenter(url, name, "ملفات");
+        setBusy(false);
         toast.success(r.fallback ? "تم التحميل" : `حُفظ في ${CENTER_FOLDER_NAME}/ملفات`);
         return;
       } catch {}
     }
-    window.open(url, "_blank", "noopener");
+    const ok = await forceDownload(url, name);
+    setBusy(false);
+    if (ok) toast.success("تم تحميل الملف");
+    else window.open(url, "_blank", "noopener");
   }
   const sizeLabel = msg.attachment_size
     ? msg.attachment_size > 1024*1024
