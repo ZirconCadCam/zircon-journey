@@ -392,7 +392,7 @@ function FilesPanel({ doctor, actor }: { doctor: Doctor; actor: string }) {
         </div>
       </div>
 
-      <div className="rounded-2xl bg-card border border-border overflow-hidden shadow-luxury">
+      <div className="rounded-2xl bg-card border border-border shadow-luxury">
         {visible.length === 0 ? (
           <div className="p-12 text-center text-muted-foreground text-sm">
             <FilesIcon className="size-10 mx-auto mb-3 opacity-40" />
