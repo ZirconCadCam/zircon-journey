@@ -546,7 +546,31 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                       </button>
                     </div>
                   </div>
+
+                  {/* Workflow controls: checkbox + .rar handoff */}
+                  {(() => {
+                    const target: RoleKey | null = actor === "designer"
+                      ? "technician"
+                      : (technicianTarget ?? (doctor?.branch === "ibb" ? "secretary_ibb" : "secretary_sanaa"));
+                    if (!target) return null;
+                    return (
+                      <CaseWorkflowControls
+                        c={c}
+                        actor={actor}
+                        actorName={actorName ?? ROLE_LABEL[actor]}
+                        doctorName={doctor?.name ?? `Slot ${c.doctor_slot}`}
+                        target={target}
+                        blockedByPending={pendingCaseCode && pendingCaseCode !== c.case_code ? pendingCaseCode : null}
+                      />
+                    );
+                  })()}
                 </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+    </div>
               );
             })}
           </ul>
