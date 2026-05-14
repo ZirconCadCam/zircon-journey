@@ -117,6 +117,26 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     return counts;
   }, [cases]);
 
+  // Compute the "pending file" gate: if this actor already checked a case
+  // but didn't yet send the .rar file, block ticking new ones.
+  const pendingCaseCode = useMemo(() => {
+    if (actor === "designer") {
+      const p = cases.find(c => c.design_done && !c.design_file_sent);
+      return p?.case_code ?? null;
+    }
+    const p = cases.find(c => c.fabrication_done && !c.fabrication_file_sent);
+    return p?.case_code ?? null;
+  }, [cases, actor]);
+
+  // Filter cases the technician should see: those that have been handed off
+  // (design_file_sent === true) and not yet finalized.
+  const visibleForActor = useMemo(() => {
+    if (actor === "technician") {
+      return filtered.filter(c => c.design_file_sent && !c.fabrication_file_sent);
+    }
+    return filtered;
+  }, [filtered, actor]);
+
   async function downloadScan(c: Case) {
     setBusyId(c.id);
     try {
