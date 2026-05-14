@@ -568,12 +568,12 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                     </div>
                   </div>
 
-                  {/* Workflow controls: checkbox + .rar handoff */}
+                  {/* Workflow controls vary per actor */}
                   {(() => {
-                    const target: RoleKey | null = actor === "designer"
-                      ? "technician"
-                      : (technicianTarget ?? (doctor?.branch === "ibb" ? "secretary_ibb" : "secretary_sanaa"));
-                    if (!target) return null;
+                    let target: RoleKey | undefined = undefined;
+                    if (actor === "designer") target = "technician";
+                    else if (actor === "technician")
+                      target = technicianTarget ?? (doctor?.branch === "ibb" ? "secretary_ibb" : "secretary_sanaa");
                     return (
                       <CaseWorkflowControls
                         c={c}
