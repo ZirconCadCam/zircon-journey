@@ -139,7 +139,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
           ${row("رمز الحالة", c.case_code)}
           ${row("الطبيب المعالج", doctor?.name ?? `Slot ${c.doctor_slot}`)}
           ${row("الفرع", branchAr)}
-          ${row("الحالة", STATUS_LABEL[c.status] ?? c.status)}
+          ${row("الحالة", getStage(deriveStageKey(c)).label)}
           ${row("تاريخ الإنشاء", new Date(c.created_at).toLocaleString("ar-EG"))}
         </table>
         <div style="margin-top:18px;padding:12px;background:#faf6ee;border-right:4px solid #b8893a;">
@@ -241,7 +241,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
           ${row("رمز الحالة", c.case_code)}
           ${row("الطبيب المعالج", doctor?.name ?? `Slot ${c.doctor_slot}`)}
           ${row("الفرع", doctor?.branch === "sanaa" ? "صنعاء" : doctor?.branch === "ibb" ? "إب" : "—")}
-          ${row("الحالة", STATUS_LABEL[c.status] ?? c.status)}
+          ${row("الحالة", getStage(deriveStageKey(c)).label)}
           ${row("تاريخ الإنشاء", new Date(c.created_at).toLocaleString("ar-EG"))}
         </table>
         <div style="margin-top:18px;padding:12px;background:#faf6ee;border-right:4px solid #b8893a;">
@@ -452,7 +452,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-mono text-xs rounded-md bg-muted px-2 py-0.5 font-bold">{c.case_code}</span>
-                        <span className="text-[11px] rounded-full gradient-gold text-gold-foreground px-2 py-0.5 font-bold">{STATUS_LABEL[c.status] ?? c.status}</span>
+                        <span className="text-[11px] rounded-full gradient-gold text-gold-foreground px-2 py-0.5 font-bold">{getStage(deriveStageKey(c)).label}</span>
                         <span className="text-[11px] text-muted-foreground flex items-center gap-1">
                           <Calendar className="size-3" /> {new Date(c.created_at).toLocaleDateString("ar-EG")}
                         </span>
