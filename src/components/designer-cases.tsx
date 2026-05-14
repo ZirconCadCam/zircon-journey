@@ -56,8 +56,17 @@ interface Case {
   scan_mime: string | null;
   design_done: boolean | null;
   design_file_sent: boolean | null;
+  design_html_sent?: boolean | null;
+  design_html_path?: string | null;
+  design_html_name?: string | null;
+  design_received_by_tech?: boolean | null;
   fabrication_done: boolean | null;
   fabrication_file_sent: boolean | null;
+  tech_data_sent_to_secretary?: boolean | null;
+  secretary_received?: boolean | null;
+  shipped_to_doctor?: boolean | null;
+  received_temporary?: boolean | null;
+  received_permanent?: boolean | null;
 }
 
 import { CaseWorkflowControls } from "@/components/case-workflow-controls";
@@ -66,8 +75,8 @@ import type { RoleKey } from "@/lib/chat";
 import { ROLE_LABEL } from "@/lib/chat";
 
 interface DesignerCasesProps {
-  /** Which actor view: designer (default) or technician */
-  actor?: "designer" | "technician";
+  /** Which actor view: designer, technician, or branch secretary */
+  actor?: "designer" | "technician" | "secretary_sanaa" | "secretary_ibb";
   /** When actor === technician, the secretary branch role to send to */
   technicianTarget?: RoleKey;
   actorName?: string;
@@ -128,14 +137,26 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     return p?.case_code ?? null;
   }, [cases, actor]);
 
-  // Filter cases the technician should see: those that have been handed off
-  // (design_file_sent === true) and not yet finalized.
+  // Filter cases each actor should see.
   const visibleForActor = useMemo(() => {
     if (actor === "technician") {
-      return filtered.filter(c => c.design_file_sent && !c.fabrication_file_sent);
+      // Technician sees only cases where designer finished + sent both files.
+      return filtered.filter(c =>
+        c.design_done && c.design_file_sent && c.design_html_sent
+        && !c.shipped_to_doctor
+      );
+    }
+    if (actor === "secretary_sanaa" || actor === "secretary_ibb") {
+      // Secretaries see cases the technician forwarded matching their branch.
+      const branch = actor === "secretary_sanaa" ? "sanaa" : "ibb";
+      return filtered.filter(c => {
+        if (!c.tech_data_sent_to_secretary) return false;
+        const d = doctorMap.get(c.doctor_slot);
+        return d?.branch === branch;
+      });
     }
     return filtered;
-  }, [filtered, actor]);
+  }, [filtered, actor, doctorMap]);
 
   async function downloadScan(c: Case) {
     setBusyId(c.id);
@@ -547,12 +568,12 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                     </div>
                   </div>
 
-                  {/* Workflow controls: checkbox + .rar handoff */}
+                  {/* Workflow controls vary per actor */}
                   {(() => {
-                    const target: RoleKey | null = actor === "designer"
-                      ? "technician"
-                      : (technicianTarget ?? (doctor?.branch === "ibb" ? "secretary_ibb" : "secretary_sanaa"));
-                    if (!target) return null;
+                    let target: RoleKey | undefined = undefined;
+                    if (actor === "designer") target = "technician";
+                    else if (actor === "technician")
+                      target = technicianTarget ?? (doctor?.branch === "ibb" ? "secretary_ibb" : "secretary_sanaa");
                     return (
                       <CaseWorkflowControls
                         c={c}

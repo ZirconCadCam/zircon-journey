@@ -65,6 +65,32 @@ function NewSlotCase() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    // Require all fields + a .zip scan file
+    const required = [
+      ["patient_name", form.patient_name, "اسم المريض"],
+      ["patient_phone", form.patient_phone, "رقم الهاتف"],
+      ["patient_age", form.patient_age, "العمر"],
+      ["patient_gender", form.patient_gender, "الجنس"],
+      ["tooth_number", form.tooth_number, "رقم السن"],
+      ["teeth_count", form.teeth_count, "عدد الأسنان"],
+      ["shade", form.shade, "اللون"],
+      ["case_type", form.case_type, "نوع الحالة"],
+    ] as const;
+    for (const [k, v, label] of required) {
+      if (!String(v ?? "").trim()) {
+        setErrors({ [k]: `${label} مطلوب` });
+        toast.error(`الرجاء تعبئة: ${label}`);
+        return;
+      }
+    }
+    if (!scan) {
+      toast.error("الرجاء اختيار ملف المسح بصيغة .zip");
+      return;
+    }
+    if (!/\.zip$/i.test(scan.name)) {
+      toast.error("ملف المسح يجب أن يكون بصيغة .zip فقط");
+      return;
+    }
     const parsed = patientSchema.safeParse({
       patient_name: form.patient_name,
       patient_phone: form.patient_phone,
@@ -284,18 +310,22 @@ function NewSlotCase() {
               <h2 className="text-lg font-bold">المسح ثلاثي الأبعاد الأولي</h2>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              ارفع ملف المسح الأولي (.stl, .obj, .ply, .3mf, .dcm أو ملف مضغوط).
-              يمكنك تخطي هذه الخطوة وإضافة المسح لاحقاً من صفحة الملفات.
+              ارفع ملف المسح الأولي بصيغة <span className="font-bold text-gold">.zip</span> فقط (إلزامي).
             </p>
 
             {!scan ? (
               <label className="block cursor-pointer rounded-xl border-2 border-dashed border-border hover:border-gold transition p-6 text-center">
                 <Upload className="size-7 mx-auto mb-2 text-muted-foreground" />
-                <div className="text-sm font-bold">اختر ملف المسح</div>
+                <div className="text-sm font-bold">اختر ملف المسح (.zip)</div>
                 <div className="text-[11px] text-muted-foreground mt-1">أو اسحبه هنا</div>
                 <input ref={fileInput} type="file" className="hidden"
-                  accept=".stl,.obj,.ply,.3mf,.dcm,.zip,.rar,model/*"
-                  onChange={e => { const f = e.target.files?.[0]; if (f) setScan(f); }} />
+                  accept=".zip,application/zip,application/x-zip-compressed"
+                  onChange={e => {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    if (!/\.zip$/i.test(f.name)) { toast.error("الرجاء اختيار ملف بصيغة .zip فقط"); return; }
+                    setScan(f);
+                  }} />
               </label>
             ) : (
               <div className="rounded-xl border border-border p-3 bg-muted/30 flex items-stretch gap-3">

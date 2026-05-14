@@ -460,6 +460,10 @@ export type Database = {
           created_by: string
           design_done: boolean
           design_file_sent: boolean
+          design_html_name: string | null
+          design_html_path: string | null
+          design_html_sent: boolean
+          design_received_by_tech: boolean
           doctor_slot: number
           fabrication_done: boolean
           fabrication_file_sent: boolean
@@ -470,12 +474,17 @@ export type Database = {
           patient_name: string
           patient_phone: string | null
           pinned: boolean
+          received_permanent: boolean
+          received_temporary: boolean
           scan_mime: string | null
           scan_name: string | null
           scan_path: string | null
           scan_size: number | null
+          secretary_received: boolean
           shade: string | null
+          shipped_to_doctor: boolean
           status: string
+          tech_data_sent_to_secretary: boolean
           teeth_count: string | null
           tooth_number: string | null
           updated_at: string
@@ -488,6 +497,10 @@ export type Database = {
           created_by?: string
           design_done?: boolean
           design_file_sent?: boolean
+          design_html_name?: string | null
+          design_html_path?: string | null
+          design_html_sent?: boolean
+          design_received_by_tech?: boolean
           doctor_slot: number
           fabrication_done?: boolean
           fabrication_file_sent?: boolean
@@ -498,12 +511,17 @@ export type Database = {
           patient_name: string
           patient_phone?: string | null
           pinned?: boolean
+          received_permanent?: boolean
+          received_temporary?: boolean
           scan_mime?: string | null
           scan_name?: string | null
           scan_path?: string | null
           scan_size?: number | null
+          secretary_received?: boolean
           shade?: string | null
+          shipped_to_doctor?: boolean
           status?: string
+          tech_data_sent_to_secretary?: boolean
           teeth_count?: string | null
           tooth_number?: string | null
           updated_at?: string
@@ -516,6 +534,10 @@ export type Database = {
           created_by?: string
           design_done?: boolean
           design_file_sent?: boolean
+          design_html_name?: string | null
+          design_html_path?: string | null
+          design_html_sent?: boolean
+          design_received_by_tech?: boolean
           doctor_slot?: number
           fabrication_done?: boolean
           fabrication_file_sent?: boolean
@@ -526,12 +548,17 @@ export type Database = {
           patient_name?: string
           patient_phone?: string | null
           pinned?: boolean
+          received_permanent?: boolean
+          received_temporary?: boolean
           scan_mime?: string | null
           scan_name?: string | null
           scan_path?: string | null
           scan_size?: number | null
+          secretary_received?: boolean
           shade?: string | null
+          shipped_to_doctor?: boolean
           status?: string
+          tech_data_sent_to_secretary?: boolean
           teeth_count?: string | null
           tooth_number?: string | null
           updated_at?: string

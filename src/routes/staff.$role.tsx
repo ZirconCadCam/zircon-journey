@@ -178,7 +178,7 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
         </div>
 
 
-        {(role === "designer" || role === "technician") && (
+        {(role === "designer" || role === "technician" || role === "secretary_sanaa" || role === "secretary_ibb") && (
           <div className="mt-6 inline-flex rounded-xl border border-border bg-card p-1 shadow-luxury">
             <button onClick={() => setTab("chat")}
               className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "chat" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
@@ -192,8 +192,8 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
         )}
 
         <div className="mt-6">
-          {(role === "designer" || role === "technician") && tab === "cases" ? (
-            <DesignerCases actor={role === "technician" ? "technician" : "designer"} actorName={ROLE_LABEL[role]} />
+          {(role === "designer" || role === "technician" || role === "secretary_sanaa" || role === "secretary_ibb") && tab === "cases" ? (
+            <DesignerCases actor={role as any} actorName={ROLE_LABEL[role]} />
           ) : (
             <div className="grid lg:grid-cols-[320px_1fr] gap-5">
               <aside className="rounded-2xl bg-card border border-border overflow-hidden shadow-luxury">
