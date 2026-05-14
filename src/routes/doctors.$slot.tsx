@@ -596,7 +596,7 @@ function CaseCard({ c, onEdit, onPin, onArchive, onDelete }: {
   c: SlotCase;
   onEdit: () => void; onPin: () => void; onArchive: () => void; onDelete: () => void;
 }) {
-  const stage = getStage(c.status);
+  const stage = getStage(deriveStageKey(c));
   const stageIdx = STAGES.findIndex(s => s.key === stage.key);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
