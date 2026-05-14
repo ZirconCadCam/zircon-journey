@@ -11,7 +11,7 @@ import {
   Palette, Shield, Building2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { STAGES, getStage, notifyRoleAboutCase, localNotify, type CaseStage } from "@/lib/case-stages";
+import { STAGES, getStage, deriveStageKey, notifyRoleAboutCase, localNotify, type CaseStage } from "@/lib/case-stages";
 import { Z } from "@/lib/z-index";
 
 export const Route = createFileRoute("/doctors/$slot")({
