@@ -56,8 +56,17 @@ interface Case {
   scan_mime: string | null;
   design_done: boolean | null;
   design_file_sent: boolean | null;
+  design_html_sent?: boolean | null;
+  design_html_path?: string | null;
+  design_html_name?: string | null;
+  design_received_by_tech?: boolean | null;
   fabrication_done: boolean | null;
   fabrication_file_sent: boolean | null;
+  tech_data_sent_to_secretary?: boolean | null;
+  secretary_received?: boolean | null;
+  shipped_to_doctor?: boolean | null;
+  received_temporary?: boolean | null;
+  received_permanent?: boolean | null;
 }
 
 import { CaseWorkflowControls } from "@/components/case-workflow-controls";
@@ -66,8 +75,8 @@ import type { RoleKey } from "@/lib/chat";
 import { ROLE_LABEL } from "@/lib/chat";
 
 interface DesignerCasesProps {
-  /** Which actor view: designer (default) or technician */
-  actor?: "designer" | "technician";
+  /** Which actor view: designer, technician, or branch secretary */
+  actor?: "designer" | "technician" | "secretary_sanaa" | "secretary_ibb";
   /** When actor === technician, the secretary branch role to send to */
   technicianTarget?: RoleKey;
   actorName?: string;
