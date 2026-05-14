@@ -751,6 +751,11 @@ function EditCaseModal({ c, onClose, onSaved }: { c: SlotCase; onClose: () => vo
               value={form.tooth_number} onChange={e=>setForm({...form, tooth_number: e.target.value})} placeholder="مثال: 11, 24" />
           </label>
           <label className="block">
+            <div className="text-xs font-bold text-muted-foreground mb-1">عدد الأسنان</div>
+            <input className="w-full rounded-xl border border-input bg-background px-3 py-2 outline-none focus:border-gold"
+              value={form.teeth_count} onChange={e=>setForm({...form, teeth_count: e.target.value})} placeholder="مثال: 3" />
+          </label>
+          <label className="block">
             <div className="text-xs font-bold text-muted-foreground mb-1">اللون</div>
             <select className="w-full rounded-xl border border-input bg-background px-3 py-2 outline-none focus:border-gold"
               value={form.shade} onChange={e=>setForm({...form, shade: e.target.value})}>
