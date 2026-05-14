@@ -684,6 +684,7 @@ function EditCaseModal({ c, onClose, onSaved }: { c: SlotCase; onClose: () => vo
     patient_phone: c.patient_phone ?? "",
     patient_age: c.patient_age != null ? String(c.patient_age) : "",
     tooth_number: c.tooth_number ?? "",
+    teeth_count: c.teeth_count ?? "",
     shade: c.shade ?? "A2",
     case_type: c.case_type ?? "",
     notes: c.notes ?? "",
