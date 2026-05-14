@@ -36,14 +36,18 @@ export function deriveStageKey(c: {
   status?: string | null;
   design_done?: boolean | null;
   design_file_sent?: boolean | null;
+  design_html_sent?: boolean | null;
+  design_received_by_tech?: boolean | null;
   fabrication_done?: boolean | null;
   fabrication_file_sent?: boolean | null;
+  tech_data_sent_to_secretary?: boolean | null;
+  shipped_to_doctor?: boolean | null;
 }): CaseStage {
-  if (c.fabrication_file_sent) return "delivered";
-  if (c.fabrication_done) return "fab_done";
-  if (c.design_file_sent) return "technician";
-  if (c.design_done) return "design_done";
-  if (c.status === "new") return "new";
+  if (c.shipped_to_doctor) return "delivered";
+  if (c.fabrication_done || c.tech_data_sent_to_secretary) return "fab_done";
+  if (c.design_received_by_tech) return "technician";
+  if (c.design_done && c.design_file_sent && c.design_html_sent) return "design_done";
+  if (c.status === "new" && !c.design_done) return "new";
   return "designer";
 }
 
