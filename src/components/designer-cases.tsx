@@ -446,7 +446,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
       <section className="space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="text-sm text-muted-foreground">
-            عرض <span className="font-bold text-foreground">{filtered.length}</span> حالة
+            عرض <span className="font-bold text-foreground">{visibleForActor.length}</span> حالة
             {filterSlot !== "all" && doctorMap.get(filterSlot) && <> — {doctorMap.get(filterSlot)!.name}</>}
           </div>
           {fileManagerSupported() && (
@@ -456,14 +456,14 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
           )}
         </div>
 
-        {filtered.length === 0 ? (
+        {visibleForActor.length === 0 ? (
           <div className="rounded-2xl bg-card border border-border p-12 text-center text-muted-foreground shadow-luxury">
             <ClipboardList className="size-10 mx-auto mb-3 opacity-40" />
             لا توجد حالات لعرضها
           </div>
         ) : (
           <ul className="space-y-3">
-            {filtered.map(c => {
+            {visibleForActor.map(c => {
               const doctor = doctorMap.get(c.doctor_slot);
               const busy = busyId === c.id;
               return (
