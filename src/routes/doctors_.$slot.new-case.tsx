@@ -44,7 +44,7 @@ function NewSlotCase() {
   const [scanProgress, setScanProgress] = useState(0);
   const [form, setForm] = useState({
     patient_name: "", patient_phone: "", patient_age: "", patient_gender: "",
-    tooth_number: "", shade: "A2", case_type: "تاج زيركون", notes: "",
+    tooth_number: "", teeth_count: "", shade: "A2", case_type: "تاج زيركون", notes: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
