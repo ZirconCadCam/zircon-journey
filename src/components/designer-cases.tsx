@@ -44,6 +44,7 @@ interface Case {
   patient_age: number | null;
   patient_gender: string | null;
   tooth_number: string | null;
+  teeth_count: string | null;
   shade: string | null;
   case_type: string | null;
   notes: string | null;
@@ -53,17 +54,26 @@ interface Case {
   scan_name: string | null;
   scan_size: number | null;
   scan_mime: string | null;
+  design_done: boolean | null;
+  design_file_sent: boolean | null;
+  fabrication_done: boolean | null;
+  fabrication_file_sent: boolean | null;
 }
 
-const STATUS_LABEL: Record<string, string> = {
-  new: "جديدة",
-  designer: "قيد التصميم",
-  technician: "قيد التصنيع",
-  ready: "جاهزة للتسليم",
-  delivered: "تم التسليم",
-};
+import { CaseWorkflowControls } from "@/components/case-workflow-controls";
+import { deriveStageKey, getStage } from "@/lib/case-stages";
+import type { RoleKey } from "@/lib/chat";
+import { ROLE_LABEL } from "@/lib/chat";
 
-export function DesignerCases() {
+interface DesignerCasesProps {
+  /** Which actor view: designer (default) or technician */
+  actor?: "designer" | "technician";
+  /** When actor === technician, the secretary branch role to send to */
+  technicianTarget?: RoleKey;
+  actorName?: string;
+}
+
+export function DesignerCases({ actor = "designer", technicianTarget, actorName }: DesignerCasesProps = {}) {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [cases, setCases] = useState<Case[]>([]);
   const [filterSlot, setFilterSlot] = useState<number | "all">("all");
