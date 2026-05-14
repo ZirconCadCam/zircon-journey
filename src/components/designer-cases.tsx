@@ -571,12 +571,6 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
         )}
       </section>
     </div>
-              );
-            })}
-          </ul>
-        )}
-      </section>
-    </div>
   );
 }
 
