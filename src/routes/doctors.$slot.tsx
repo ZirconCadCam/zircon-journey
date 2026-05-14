@@ -706,6 +706,7 @@ function EditCaseModal({ c, onClose, onSaved }: { c: SlotCase; onClose: () => vo
       patient_phone: form.patient_phone.trim() || null,
       patient_age: form.patient_age ? Number(form.patient_age) : null,
       tooth_number: form.tooth_number.trim() || null,
+      teeth_count: form.teeth_count.trim() || null,
       shade: form.shade || null,
       case_type: form.case_type || null,
       notes: form.notes.trim() || null,
