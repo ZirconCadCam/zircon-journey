@@ -44,6 +44,7 @@ interface Case {
   patient_age: number | null;
   patient_gender: string | null;
   tooth_number: string | null;
+  teeth_count: string | null;
   shade: string | null;
   case_type: string | null;
   notes: string | null;
@@ -53,17 +54,26 @@ interface Case {
   scan_name: string | null;
   scan_size: number | null;
   scan_mime: string | null;
+  design_done: boolean | null;
+  design_file_sent: boolean | null;
+  fabrication_done: boolean | null;
+  fabrication_file_sent: boolean | null;
 }
 
-const STATUS_LABEL: Record<string, string> = {
-  new: "جديدة",
-  designer: "قيد التصميم",
-  technician: "قيد التصنيع",
-  ready: "جاهزة للتسليم",
-  delivered: "تم التسليم",
-};
+import { CaseWorkflowControls } from "@/components/case-workflow-controls";
+import { deriveStageKey, getStage } from "@/lib/case-stages";
+import type { RoleKey } from "@/lib/chat";
+import { ROLE_LABEL } from "@/lib/chat";
 
-export function DesignerCases() {
+interface DesignerCasesProps {
+  /** Which actor view: designer (default) or technician */
+  actor?: "designer" | "technician";
+  /** When actor === technician, the secretary branch role to send to */
+  technicianTarget?: RoleKey;
+  actorName?: string;
+}
+
+export function DesignerCases({ actor = "designer", technicianTarget, actorName }: DesignerCasesProps = {}) {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [cases, setCases] = useState<Case[]>([]);
   const [filterSlot, setFilterSlot] = useState<number | "all">("all");
@@ -107,6 +117,26 @@ export function DesignerCases() {
     return counts;
   }, [cases]);
 
+  // Compute the "pending file" gate: if this actor already checked a case
+  // but didn't yet send the .rar file, block ticking new ones.
+  const pendingCaseCode = useMemo(() => {
+    if (actor === "designer") {
+      const p = cases.find(c => c.design_done && !c.design_file_sent);
+      return p?.case_code ?? null;
+    }
+    const p = cases.find(c => c.fabrication_done && !c.fabrication_file_sent);
+    return p?.case_code ?? null;
+  }, [cases, actor]);
+
+  // Filter cases the technician should see: those that have been handed off
+  // (design_file_sent === true) and not yet finalized.
+  const visibleForActor = useMemo(() => {
+    if (actor === "technician") {
+      return filtered.filter(c => c.design_file_sent && !c.fabrication_file_sent);
+    }
+    return filtered;
+  }, [filtered, actor]);
+
   async function downloadScan(c: Case) {
     setBusyId(c.id);
     try {
@@ -129,7 +159,7 @@ export function DesignerCases() {
           ${row("رمز الحالة", c.case_code)}
           ${row("الطبيب المعالج", doctor?.name ?? `Slot ${c.doctor_slot}`)}
           ${row("الفرع", branchAr)}
-          ${row("الحالة", STATUS_LABEL[c.status] ?? c.status)}
+          ${row("الحالة", getStage(deriveStageKey(c)).label)}
           ${row("تاريخ الإنشاء", new Date(c.created_at).toLocaleString("ar-EG"))}
         </table>
         <div style="margin-top:18px;padding:12px;background:#faf6ee;border-right:4px solid #b8893a;">
@@ -231,7 +261,7 @@ export function DesignerCases() {
           ${row("رمز الحالة", c.case_code)}
           ${row("الطبيب المعالج", doctor?.name ?? `Slot ${c.doctor_slot}`)}
           ${row("الفرع", doctor?.branch === "sanaa" ? "صنعاء" : doctor?.branch === "ibb" ? "إب" : "—")}
-          ${row("الحالة", STATUS_LABEL[c.status] ?? c.status)}
+          ${row("الحالة", getStage(deriveStageKey(c)).label)}
           ${row("تاريخ الإنشاء", new Date(c.created_at).toLocaleString("ar-EG"))}
         </table>
         <div style="margin-top:18px;padding:12px;background:#faf6ee;border-right:4px solid #b8893a;">
@@ -416,7 +446,7 @@ export function DesignerCases() {
       <section className="space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="text-sm text-muted-foreground">
-            عرض <span className="font-bold text-foreground">{filtered.length}</span> حالة
+            عرض <span className="font-bold text-foreground">{visibleForActor.length}</span> حالة
             {filterSlot !== "all" && doctorMap.get(filterSlot) && <> — {doctorMap.get(filterSlot)!.name}</>}
           </div>
           {fileManagerSupported() && (
@@ -426,14 +456,14 @@ export function DesignerCases() {
           )}
         </div>
 
-        {filtered.length === 0 ? (
+        {visibleForActor.length === 0 ? (
           <div className="rounded-2xl bg-card border border-border p-12 text-center text-muted-foreground shadow-luxury">
             <ClipboardList className="size-10 mx-auto mb-3 opacity-40" />
             لا توجد حالات لعرضها
           </div>
         ) : (
           <ul className="space-y-3">
-            {filtered.map(c => {
+            {visibleForActor.map(c => {
               const doctor = doctorMap.get(c.doctor_slot);
               const busy = busyId === c.id;
               return (
@@ -442,7 +472,7 @@ export function DesignerCases() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-mono text-xs rounded-md bg-muted px-2 py-0.5 font-bold">{c.case_code}</span>
-                        <span className="text-[11px] rounded-full gradient-gold text-gold-foreground px-2 py-0.5 font-bold">{STATUS_LABEL[c.status] ?? c.status}</span>
+                        <span className="text-[11px] rounded-full gradient-gold text-gold-foreground px-2 py-0.5 font-bold">{getStage(deriveStageKey(c)).label}</span>
                         <span className="text-[11px] text-muted-foreground flex items-center gap-1">
                           <Calendar className="size-3" /> {new Date(c.created_at).toLocaleDateString("ar-EG")}
                         </span>
@@ -516,6 +546,24 @@ export function DesignerCases() {
                       </button>
                     </div>
                   </div>
+
+                  {/* Workflow controls: checkbox + .rar handoff */}
+                  {(() => {
+                    const target: RoleKey | null = actor === "designer"
+                      ? "technician"
+                      : (technicianTarget ?? (doctor?.branch === "ibb" ? "secretary_ibb" : "secretary_sanaa"));
+                    if (!target) return null;
+                    return (
+                      <CaseWorkflowControls
+                        c={c}
+                        actor={actor}
+                        actorName={actorName ?? ROLE_LABEL[actor]}
+                        doctorName={doctor?.name ?? `Slot ${c.doctor_slot}`}
+                        target={target}
+                        blockedByPending={pendingCaseCode && pendingCaseCode !== c.case_code ? pendingCaseCode : null}
+                      />
+                    );
+                  })()}
                 </li>
               );
             })}

@@ -11,7 +11,7 @@ import {
   Palette, Shield, Building2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { STAGES, getStage, notifyRoleAboutCase, localNotify, type CaseStage } from "@/lib/case-stages";
+import { STAGES, getStage, deriveStageKey, notifyRoleAboutCase, localNotify, type CaseStage } from "@/lib/case-stages";
 import { Z } from "@/lib/z-index";
 
 export const Route = createFileRoute("/doctors/$slot")({
@@ -498,10 +498,12 @@ function FileRow({ f, doctorBranch, onArchive, onRemove, onCopy, onShare, onSend
 interface SlotCase {
   id: string; doctor_slot: number; case_code: string; patient_name: string;
   patient_phone: string | null; patient_age: number | null;
-  tooth_number: string | null; shade: string | null;
+  tooth_number: string | null; teeth_count: string | null; shade: string | null;
   case_type: string | null; status: CaseStage; notes: string | null;
   scan_path: string | null; scan_name: string | null;
   pinned: boolean; archived: boolean;
+  design_done: boolean | null; design_file_sent: boolean | null;
+  fabrication_done: boolean | null; fabrication_file_sent: boolean | null;
   created_at: string; updated_at: string;
 }
 
@@ -594,7 +596,7 @@ function CaseCard({ c, onEdit, onPin, onArchive, onDelete }: {
   c: SlotCase;
   onEdit: () => void; onPin: () => void; onArchive: () => void; onDelete: () => void;
 }) {
-  const stage = getStage(c.status);
+  const stage = getStage(deriveStageKey(c));
   const stageIdx = STAGES.findIndex(s => s.key === stage.key);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -620,7 +622,7 @@ function CaseCard({ c, onEdit, onPin, onArchive, onDelete }: {
           <div className="font-mono text-[11px] text-muted-foreground">{c.case_code}</div>
           <div className="font-bold text-base truncate">{c.patient_name}</div>
           <div className="text-[11px] text-muted-foreground mt-0.5">
-            {c.case_type || "—"}{c.tooth_number ? ` • سن ${c.tooth_number}` : ""}{c.shade ? ` • ${c.shade}` : ""}
+            {c.case_type || "—"}{c.tooth_number ? ` • سن ${c.tooth_number}` : ""}{c.teeth_count ? ` • عدد ${c.teeth_count}` : ""}{c.shade ? ` • ${c.shade}` : ""}
           </div>
         </div>
         <span className="shrink-0 rounded-full gradient-gold text-gold-foreground text-[11px] font-bold px-2.5 py-1 shadow-gold">
@@ -682,6 +684,7 @@ function EditCaseModal({ c, onClose, onSaved }: { c: SlotCase; onClose: () => vo
     patient_phone: c.patient_phone ?? "",
     patient_age: c.patient_age != null ? String(c.patient_age) : "",
     tooth_number: c.tooth_number ?? "",
+    teeth_count: c.teeth_count ?? "",
     shade: c.shade ?? "A2",
     case_type: c.case_type ?? "",
     notes: c.notes ?? "",
@@ -703,6 +706,7 @@ function EditCaseModal({ c, onClose, onSaved }: { c: SlotCase; onClose: () => vo
       patient_phone: form.patient_phone.trim() || null,
       patient_age: form.patient_age ? Number(form.patient_age) : null,
       tooth_number: form.tooth_number.trim() || null,
+      teeth_count: form.teeth_count.trim() || null,
       shade: form.shade || null,
       case_type: form.case_type || null,
       notes: form.notes.trim() || null,
@@ -745,6 +749,11 @@ function EditCaseModal({ c, onClose, onSaved }: { c: SlotCase; onClose: () => vo
             <div className="text-xs font-bold text-muted-foreground mb-1">رقم السن (FDI)</div>
             <input className="w-full rounded-xl border border-input bg-background px-3 py-2 outline-none focus:border-gold"
               value={form.tooth_number} onChange={e=>setForm({...form, tooth_number: e.target.value})} placeholder="مثال: 11, 24" />
+          </label>
+          <label className="block">
+            <div className="text-xs font-bold text-muted-foreground mb-1">عدد الأسنان</div>
+            <input className="w-full rounded-xl border border-input bg-background px-3 py-2 outline-none focus:border-gold"
+              value={form.teeth_count} onChange={e=>setForm({...form, teeth_count: e.target.value})} placeholder="مثال: 3" />
           </label>
           <label className="block">
             <div className="text-xs font-bold text-muted-foreground mb-1">اللون</div>

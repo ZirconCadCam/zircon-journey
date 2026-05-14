@@ -44,7 +44,7 @@ function NewSlotCase() {
   const [scanProgress, setScanProgress] = useState(0);
   const [form, setForm] = useState({
     patient_name: "", patient_phone: "", patient_age: "", patient_gender: "",
-    tooth_number: "", shade: "A2", case_type: "تاج زيركون", notes: "",
+    tooth_number: "", teeth_count: "", shade: "A2", case_type: "تاج زيركون", notes: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -129,6 +129,7 @@ function NewSlotCase() {
         patient_age: form.patient_age ? Number(form.patient_age) : null,
         patient_gender: form.patient_gender || null,
         tooth_number: form.tooth_number.trim() || null,
+        teeth_count: form.teeth_count.trim() || null,
         shade: form.shade || null,
         case_type: form.case_type || null,
         notes: form.notes.trim() || null,
@@ -247,10 +248,14 @@ function NewSlotCase() {
 
             <div className="border-t border-border pt-5">
               <h2 className="text-lg font-bold mb-3">تفاصيل الحالة</h2>
-              <div className="grid md:grid-cols-3 gap-4">
+              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Field label="رقم السن (FDI)" error={errors.tooth_number}>
                   <input className="zinput" value={form.tooth_number}
                     onChange={e=>setForm({...form,tooth_number:e.target.value})} placeholder="مثال: 11, 24, 36" />
+                </Field>
+                <Field label="عدد الأسنان">
+                  <input className="zinput" value={form.teeth_count}
+                    onChange={e=>setForm({...form,teeth_count:e.target.value})} placeholder="مثال: 3" />
                 </Field>
                 <Field label="اللون (Shade)">
                   <select className="zinput" value={form.shade}

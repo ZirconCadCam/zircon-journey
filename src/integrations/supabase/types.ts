@@ -458,7 +458,11 @@ export type Database = {
           case_type: string | null
           created_at: string
           created_by: string
+          design_done: boolean
+          design_file_sent: boolean
           doctor_slot: number
+          fabrication_done: boolean
+          fabrication_file_sent: boolean
           id: string
           notes: string | null
           patient_age: number | null
@@ -472,6 +476,7 @@ export type Database = {
           scan_size: number | null
           shade: string | null
           status: string
+          teeth_count: string | null
           tooth_number: string | null
           updated_at: string
         }
@@ -481,7 +486,11 @@ export type Database = {
           case_type?: string | null
           created_at?: string
           created_by?: string
+          design_done?: boolean
+          design_file_sent?: boolean
           doctor_slot: number
+          fabrication_done?: boolean
+          fabrication_file_sent?: boolean
           id?: string
           notes?: string | null
           patient_age?: number | null
@@ -495,6 +504,7 @@ export type Database = {
           scan_size?: number | null
           shade?: string | null
           status?: string
+          teeth_count?: string | null
           tooth_number?: string | null
           updated_at?: string
         }
@@ -504,7 +514,11 @@ export type Database = {
           case_type?: string | null
           created_at?: string
           created_by?: string
+          design_done?: boolean
+          design_file_sent?: boolean
           doctor_slot?: number
+          fabrication_done?: boolean
+          fabrication_file_sent?: boolean
           id?: string
           notes?: string | null
           patient_age?: number | null
@@ -518,6 +532,7 @@ export type Database = {
           scan_size?: number | null
           shade?: string | null
           status?: string
+          teeth_count?: string | null
           tooth_number?: string | null
           updated_at?: string
         }

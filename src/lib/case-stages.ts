@@ -1,22 +1,24 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { RoleKey } from "@/lib/chat";
 
-export type CaseStage = "new" | "designer" | "technician" | "ready" | "delivered";
+export type CaseStage =
+  | "new" | "designer" | "design_done"
+  | "technician" | "fab_done" | "delivered";
 
 export interface StageInfo {
   key: CaseStage;
   label: string;
   percent: number;
-  /** The role that becomes responsible at this stage (used for routing notifications). */
   ownerRole: RoleKey | null;
 }
 
 export const STAGES: StageInfo[] = [
-  { key: "new",        label: "حالة جديدة",        percent: 10,  ownerRole: "designer" },
-  { key: "designer",   label: "قيد التصميم",       percent: 35,  ownerRole: "designer" },
-  { key: "technician", label: "قيد التصنيع",       percent: 60,  ownerRole: "technician" },
-  { key: "ready",      label: "جاهزة للتسليم",     percent: 85,  ownerRole: "secretary_sanaa" },
-  { key: "delivered",  label: "تم التسليم",        percent: 100, ownerRole: null },
+  { key: "new",         label: "حالة جديدة",   percent: 8,   ownerRole: "designer" },
+  { key: "designer",    label: "قيد التصميم",  percent: 25,  ownerRole: "designer" },
+  { key: "design_done", label: "تم التصميم",   percent: 45,  ownerRole: "designer" },
+  { key: "technician",  label: "قيد التصنيع",  percent: 65,  ownerRole: "technician" },
+  { key: "fab_done",    label: "تم التصنيع",   percent: 85,  ownerRole: "technician" },
+  { key: "delivered",   label: "تم الترحيل",   percent: 100, ownerRole: null },
 ];
 
 export function getStage(key: string | null | undefined): StageInfo {
@@ -27,6 +29,22 @@ export function nextStage(key: string | null | undefined): StageInfo | null {
   const i = STAGES.findIndex(s => s.key === key);
   if (i < 0 || i >= STAGES.length - 1) return null;
   return STAGES[i + 1];
+}
+
+/** Derive the visible stage from boolean flags on a case row. */
+export function deriveStageKey(c: {
+  status?: string | null;
+  design_done?: boolean | null;
+  design_file_sent?: boolean | null;
+  fabrication_done?: boolean | null;
+  fabrication_file_sent?: boolean | null;
+}): CaseStage {
+  if (c.fabrication_file_sent) return "delivered";
+  if (c.fabrication_done) return "fab_done";
+  if (c.design_file_sent) return "technician";
+  if (c.design_done) return "design_done";
+  if (c.status === "new") return "new";
+  return "designer";
 }
 
 /**
