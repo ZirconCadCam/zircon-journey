@@ -137,14 +137,26 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     return p?.case_code ?? null;
   }, [cases, actor]);
 
-  // Filter cases the technician should see: those that have been handed off
-  // (design_file_sent === true) and not yet finalized.
+  // Filter cases each actor should see.
   const visibleForActor = useMemo(() => {
     if (actor === "technician") {
-      return filtered.filter(c => c.design_file_sent && !c.fabrication_file_sent);
+      // Technician sees only cases where designer finished + sent both files.
+      return filtered.filter(c =>
+        c.design_done && c.design_file_sent && c.design_html_sent
+        && !c.shipped_to_doctor
+      );
+    }
+    if (actor === "secretary_sanaa" || actor === "secretary_ibb") {
+      // Secretaries see cases the technician forwarded matching their branch.
+      const branch = actor === "secretary_sanaa" ? "sanaa" : "ibb";
+      return filtered.filter(c => {
+        if (!c.tech_data_sent_to_secretary) return false;
+        const d = doctorMap.get(c.doctor_slot);
+        return d?.branch === branch;
+      });
     }
     return filtered;
-  }, [filtered, actor]);
+  }, [filtered, actor, doctorMap]);
 
   async function downloadScan(c: Case) {
     setBusyId(c.id);
