@@ -129,6 +129,7 @@ function NewSlotCase() {
         patient_age: form.patient_age ? Number(form.patient_age) : null,
         patient_gender: form.patient_gender || null,
         tooth_number: form.tooth_number.trim() || null,
+        teeth_count: form.teeth_count.trim() || null,
         shade: form.shade || null,
         case_type: form.case_type || null,
         notes: form.notes.trim() || null,
