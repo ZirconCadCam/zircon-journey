@@ -498,10 +498,12 @@ function FileRow({ f, doctorBranch, onArchive, onRemove, onCopy, onShare, onSend
 interface SlotCase {
   id: string; doctor_slot: number; case_code: string; patient_name: string;
   patient_phone: string | null; patient_age: number | null;
-  tooth_number: string | null; shade: string | null;
+  tooth_number: string | null; teeth_count: string | null; shade: string | null;
   case_type: string | null; status: CaseStage; notes: string | null;
   scan_path: string | null; scan_name: string | null;
   pinned: boolean; archived: boolean;
+  design_done: boolean | null; design_file_sent: boolean | null;
+  fabrication_done: boolean | null; fabrication_file_sent: boolean | null;
   created_at: string; updated_at: string;
 }
 
