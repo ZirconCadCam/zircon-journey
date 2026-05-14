@@ -65,6 +65,32 @@ function NewSlotCase() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    // Require all fields + a .zip scan file
+    const required = [
+      ["patient_name", form.patient_name, "اسم المريض"],
+      ["patient_phone", form.patient_phone, "رقم الهاتف"],
+      ["patient_age", form.patient_age, "العمر"],
+      ["patient_gender", form.patient_gender, "الجنس"],
+      ["tooth_number", form.tooth_number, "رقم السن"],
+      ["teeth_count", form.teeth_count, "عدد الأسنان"],
+      ["shade", form.shade, "اللون"],
+      ["case_type", form.case_type, "نوع الحالة"],
+    ] as const;
+    for (const [k, v, label] of required) {
+      if (!String(v ?? "").trim()) {
+        setErrors({ [k]: `${label} مطلوب` });
+        toast.error(`الرجاء تعبئة: ${label}`);
+        return;
+      }
+    }
+    if (!scan) {
+      toast.error("الرجاء اختيار ملف المسح بصيغة .zip");
+      return;
+    }
+    if (!/\.zip$/i.test(scan.name)) {
+      toast.error("ملف المسح يجب أن يكون بصيغة .zip فقط");
+      return;
+    }
     const parsed = patientSchema.safeParse({
       patient_name: form.patient_name,
       patient_phone: form.patient_phone,
