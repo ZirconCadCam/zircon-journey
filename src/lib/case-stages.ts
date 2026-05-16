@@ -64,11 +64,15 @@ export function deriveStageKey(c: {
   permanent_fabrication_done?: boolean | null;
   permanent_shipped_to_secretary?: boolean | null;
   permanent_delivered_to_doctor?: boolean | null;
+  permanent_received_by_secretary?: boolean | null;
+  permanent_installed_by_doctor?: boolean | null;
   final_archived?: boolean | null;
 }): CaseStage {
   if (c.final_archived) return "final_archived";
+  if (c.permanent_installed_by_doctor) return "installed";
+  if (c.permanent_received_by_secretary) return "perm_received";
   if (c.permanent_delivered_to_doctor) return "permanent_shipped";
-  if (c.permanent_shipped_to_secretary) return "permanent_done";
+  if (c.permanent_shipped_to_secretary) return "permanent_shipped";
   if (c.permanent_fabrication_done) return "permanent_done";
   if (c.revision_approved_by_tech) return "permanent_fab";
   if (c.doctor_decision === "approved") {
