@@ -911,9 +911,17 @@ function DoctorControls({ c, actorName, doctorName }: {
         </div>
       )}
 
-      {permDelivered && (
+      {permDelivered && !installed && (
+        <button onClick={confirmInstalled} disabled={busy}
+          className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 text-white px-3 py-2 text-xs font-bold shadow">
+          {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
+          تأكيد التركيب وأرشفة الحالة
+        </button>
+      )}
+
+      {installed && (
         <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold border border-emerald-500 bg-emerald-50 rounded-lg px-2 py-1">
-          <Truck className="size-3.5" /> تم إرسال الأسنان الدائمة
+          <Archive className="size-3.5" /> تم التركيب — مؤرشفة نهائياً
         </span>
       )}
 
