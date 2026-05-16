@@ -822,8 +822,32 @@ function DoctorControls({ c, actorName, doctorName }: {
     setBusy(false);
   }
 
+  async function confirmInstalled() {
+    if (!window.confirm("هل تؤكد تركيب الأسنان الدائمة للمريض؟ سيتم أرشفة الحالة تلقائياً.")) return;
+    setBusy(true);
+    const { error } = await supabase.from("slot_cases")
+      .update({
+        permanent_installed_by_doctor: true,
+        final_archived: true,
+        archived: true,
+      }).eq("id", c.id);
+    if (!error) {
+      await appendAudit(c, { actor: actorName || "الطبيب", action: "تأكيد تركيب الأسنان الدائمة وأرشفة الحالة" });
+      const msg = `🦷✅ تم تركيب الأسنان الدائمة للمريض — الحالة ${c.case_code} (${c.patient_name}). الحالة مؤرشفة نهائياً.`;
+      for (const role of ["designer", "technician", "secretary_sanaa", "secretary_ibb"] as RoleKey[]) {
+        const conv = await ensureConv(c, "doctor", role, doctorName);
+        if (conv) await supabase.from("chat_messages").insert({
+          conversation_id: conv, sender: "doctor", sender_name: actorName,
+          content: msg, message_type: "text",
+        });
+      }
+      toast.success("✅ تم تأكيد التركيب — أُرشفت الحالة تلقائياً");
+    } else toast.error(error.message);
+    setBusy(false);
+  }
+
   // Status pill shown when no action is currently available (e.g. new case).
-  const hasAction = (shipped && !delivered) || (delivered && !decision);
+  const hasAction = (shipped && !delivered) || (delivered && !decision) || (permDelivered && !installed);
   const stageHint =
     decision === "approved" ? "تم الاعتماد النهائي — قيد نحت الدائم" :
     decision === "revision" ? "تم إرسال طلب التعديل — بانتظار المصمم" :
