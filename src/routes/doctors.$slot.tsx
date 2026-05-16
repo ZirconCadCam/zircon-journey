@@ -526,7 +526,18 @@ function CasesPanel({ doctor }: { doctor: Doctor }) {
   useEffect(() => {
     load();
     const ch = supabase.channel(`slot-cases-${doctor.slot}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "slot_cases", filter: `doctor_slot=eq.${doctor.slot}` }, load)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "slot_cases", filter: `doctor_slot=eq.${doctor.slot}` }, (payload: any) => {
+        const oldRow = payload.old ?? {};
+        const newRow = payload.new ?? {};
+        const oldStage = getStage(deriveStageKey(oldRow)).label;
+        const newStage = getStage(deriveStageKey(newRow)).label;
+        if (oldStage !== newStage) {
+          toast(`🔔 تحديث الحالة ${newRow.case_code}: ${newStage}`, { duration: 5000 });
+        }
+        load();
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "slot_cases", filter: `doctor_slot=eq.${doctor.slot}` }, load)
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "slot_cases", filter: `doctor_slot=eq.${doctor.slot}` }, load)
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [doctor.slot, load]);
