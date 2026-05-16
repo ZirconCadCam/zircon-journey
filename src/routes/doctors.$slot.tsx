@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { STAGES, getStage, deriveStageKey, notifyRoleAboutCase, localNotify, type CaseStage } from "@/lib/case-stages";
+import { CaseWorkflowControls } from "@/components/case-workflow-controls";
 import { Z } from "@/lib/z-index";
 
 export const Route = createFileRoute("/doctors/$slot")({
