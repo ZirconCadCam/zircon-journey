@@ -708,32 +708,43 @@ function SecretaryControls({ c, actorName, actor, doctorName }: {
         </label>
       </div>
 
-      {(permSent || permDelivered || archived) && (
+      {(permSent || permReceived || permDelivered || installed || archived) && (
         <div className="rounded-lg border border-emerald-500/40 bg-emerald-50/40 p-3 space-y-2">
           <div className="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
             <Truck className="size-3.5" /> الأسنان الدائمة
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            {permSent && !permDelivered && (
+            {permSent && !permReceived && (
+              <button onClick={confirmPermReceipt} disabled={busy}
+                className="inline-flex items-center gap-2 rounded-lg gradient-brown px-3 py-2 text-xs font-bold shadow-luxury">
+                {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
+                تأكيد استلام الدائم
+              </button>
+            )}
+            {permReceived && (
+              <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold">
+                <Check className="size-3.5" /> تم استلام الدائم
+              </span>
+            )}
+            {permReceived && !permDelivered && (
               <button onClick={deliverPermanent} disabled={busy}
                 className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 text-white px-3 py-2 text-xs font-bold">
                 <Truck className="size-3.5" /> تأكيد إرسال الدائم للطبيب
               </button>
             )}
-            {permDelivered && (
-              <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold">
-                <Check className="size-3.5" /> تم إرسال الدائم
+            {permDelivered && !installed && (
+              <span className="inline-flex items-center gap-1 text-[11px] text-amber-700 font-bold">
+                بانتظار تأكيد التركيب من الطبيب…
               </span>
             )}
-            {permDelivered && !archived && (
-              <button onClick={archiveFinal} disabled={busy}
-                className="inline-flex items-center gap-2 rounded-lg gradient-brown px-3 py-2 text-xs font-bold shadow-luxury">
-                <Archive className="size-3.5" /> أرشفة نهائية
-              </button>
+            {installed && (
+              <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold">
+                <Check className="size-3.5" /> تم التركيب
+              </span>
             )}
             {archived && (
               <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold">
-                <Archive className="size-3.5" /> مؤرشفة نهائياً
+                <Archive className="size-3.5" /> مؤرشفة نهائياً (تلقائياً)
               </span>
             )}
           </div>
