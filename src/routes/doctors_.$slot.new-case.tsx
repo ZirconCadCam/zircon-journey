@@ -296,7 +296,7 @@ function NewSlotCase() {
                     </select>
                   </Field>
                 </div>
-                <Field label="تحديد الأسنان على المخطط">
+                <Field label="تحديد الأسنان على المخطط" required error={errors.tooth_number}>
                   <ToothQuadrantPicker
                     value={form.tooth_number}
                     onChange={(flat) => setForm((f) => ({ ...f, tooth_number: flat }))}
