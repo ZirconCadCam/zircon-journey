@@ -1,0 +1,1 @@
+ALTER TABLE public.slot_cases ADD COLUMN IF NOT EXISTS audit_log jsonb NOT NULL DEFAULT '[]'::jsonb;
