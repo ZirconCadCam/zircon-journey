@@ -6,6 +6,7 @@ export type CaseStage =
   | "technician" | "temp_done" | "temp_shipped"
   | "doctor_review" | "revision" | "revision_done" | "approved"
   | "permanent_fab" | "permanent_done" | "permanent_shipped"
+  | "perm_received" | "installed"
   | "final_archived";
 
 export interface StageInfo {
