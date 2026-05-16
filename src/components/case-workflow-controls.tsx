@@ -587,7 +587,9 @@ function SecretaryControls({ c, actorName, actor, doctorName }: {
   const tempOk = !!c.received_temporary;
   const permOk = !!c.received_permanent;
   const permSent = !!c.permanent_shipped_to_secretary;
+  const permReceived = !!c.permanent_received_by_secretary;
   const permDelivered = !!c.permanent_delivered_to_doctor;
+  const installed = !!c.permanent_installed_by_doctor;
   const archived = !!c.final_archived;
 
   async function markReceived() {
