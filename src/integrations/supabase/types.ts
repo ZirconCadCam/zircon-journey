@@ -478,6 +478,8 @@ export type Database = {
           patient_phone: string | null
           permanent_delivered_to_doctor: boolean
           permanent_fabrication_done: boolean
+          permanent_installed_by_doctor: boolean
+          permanent_received_by_secretary: boolean
           permanent_shipped_to_secretary: boolean
           pinned: boolean
           received_permanent: boolean
@@ -527,6 +529,8 @@ export type Database = {
           patient_phone?: string | null
           permanent_delivered_to_doctor?: boolean
           permanent_fabrication_done?: boolean
+          permanent_installed_by_doctor?: boolean
+          permanent_received_by_secretary?: boolean
           permanent_shipped_to_secretary?: boolean
           pinned?: boolean
           received_permanent?: boolean
@@ -576,6 +580,8 @@ export type Database = {
           patient_phone?: string | null
           permanent_delivered_to_doctor?: boolean
           permanent_fabrication_done?: boolean
+          permanent_installed_by_doctor?: boolean
+          permanent_received_by_secretary?: boolean
           permanent_shipped_to_secretary?: boolean
           pinned?: boolean
           received_permanent?: boolean

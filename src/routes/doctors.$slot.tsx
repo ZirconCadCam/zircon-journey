@@ -672,9 +672,27 @@ function CaseCard({ c, doctorName, onEdit, onPin, onArchive, onDelete }: {
           {menuOpen && (
             <div role="menu" className={`absolute ${Z.dropdown} mt-2 end-0 w-48 rounded-xl border border-border bg-popover shadow-luxury overflow-hidden animate-in fade-in zoom-in-95`}>
               <MenuItem icon={Pencil} label="تعديل" onClick={() => { setMenuOpen(false); onEdit(); }} />
-              <MenuItem icon={c.pinned ? PinOff : Pin} label={c.pinned ? "إلغاء التثبيت" : "تثبيت"} onClick={() => { setMenuOpen(false); onPin(); }} />
-              <MenuItem icon={c.archived ? ArchiveRestore : Archive} label={c.archived ? "استرجاع" : "أرشفة"} onClick={() => { setMenuOpen(false); onArchive(); }} />
-              <MenuItem icon={Trash2} label="حذف" danger onClick={() => { setMenuOpen(false); onDelete(); }} />
+              {(() => {
+                const isAdmin = typeof window !== "undefined" && (
+                  localStorage.getItem("zircon_admin_all") === "1" ||
+                  localStorage.getItem("zircon_staff_admin") === "1"
+                );
+                const canPinDelete = !c.archived || isAdmin;
+                return <>
+                  {canPinDelete && (
+                    <MenuItem icon={c.pinned ? PinOff : Pin} label={c.pinned ? "إلغاء التثبيت" : "تثبيت"} onClick={() => { setMenuOpen(false); onPin(); }} />
+                  )}
+                  <MenuItem icon={c.archived ? ArchiveRestore : Archive} label={c.archived ? "استرجاع" : "أرشفة"} onClick={() => { setMenuOpen(false); onArchive(); }} />
+                  {canPinDelete && (
+                    <MenuItem icon={Trash2} label="حذف" danger onClick={() => { setMenuOpen(false); onDelete(); }} />
+                  )}
+                  {c.archived && !isAdmin && (
+                    <div className="px-3 py-2 text-[10px] text-muted-foreground border-t border-border">
+                      التثبيت والحذف للحالات المؤرشفة متاح للإدارة فقط
+                    </div>
+                  )}
+                </>;
+              })()}
             </div>
           )}
         </div>

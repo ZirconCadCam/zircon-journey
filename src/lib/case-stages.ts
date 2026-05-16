@@ -6,6 +6,7 @@ export type CaseStage =
   | "technician" | "temp_done" | "temp_shipped"
   | "doctor_review" | "revision" | "revision_done" | "approved"
   | "permanent_fab" | "permanent_done" | "permanent_shipped"
+  | "perm_received" | "installed"
   | "final_archived";
 
 export interface StageInfo {
@@ -16,19 +17,21 @@ export interface StageInfo {
 }
 
 export const STAGES: StageInfo[] = [
-  { key: "new",               label: "حالة جديدة",         percent: 6,   ownerRole: "designer" },
-  { key: "designer",          label: "قيد التصميم",        percent: 14,  ownerRole: "designer" },
-  { key: "design_done",       label: "تم التصميم",         percent: 22,  ownerRole: "designer" },
-  { key: "technician",        label: "قيد النحت",          percent: 30,  ownerRole: "technician" },
-  { key: "temp_done",         label: "تم نحت المؤقت",      percent: 38,  ownerRole: "technician" },
-  { key: "temp_shipped",      label: "تم إرسال المؤقت",    percent: 46,  ownerRole: "doctor" },
-  { key: "doctor_review",     label: "قيد المراجعة",       percent: 54,  ownerRole: "doctor" },
-  { key: "revision",          label: "يتطلب تعديل",        percent: 62,  ownerRole: "designer" },
-  { key: "revision_done",     label: "تم اعتماد التعديل",  percent: 70,  ownerRole: "technician" },
-  { key: "approved",          label: "اعتماد نهائي",       percent: 70,  ownerRole: "technician" },
-  { key: "permanent_fab",     label: "قيد نحت الدائم",     percent: 80,  ownerRole: "technician" },
-  { key: "permanent_done",    label: "تم نحت الدائم",      percent: 88,  ownerRole: null },
-  { key: "permanent_shipped", label: "تم إرسال الدائم",    percent: 96,  ownerRole: null },
+  { key: "new",               label: "حالة جديدة",         percent: 5,   ownerRole: "designer" },
+  { key: "designer",          label: "قيد التصميم",        percent: 12,  ownerRole: "designer" },
+  { key: "design_done",       label: "تم التصميم",         percent: 19,  ownerRole: "designer" },
+  { key: "technician",        label: "قيد النحت",          percent: 26,  ownerRole: "technician" },
+  { key: "temp_done",         label: "تم نحت المؤقت",      percent: 33,  ownerRole: "technician" },
+  { key: "temp_shipped",      label: "تم إرسال المؤقت",    percent: 40,  ownerRole: "doctor" },
+  { key: "doctor_review",     label: "قيد المراجعة",       percent: 47,  ownerRole: "doctor" },
+  { key: "revision",          label: "يتطلب تعديل",        percent: 54,  ownerRole: "designer" },
+  { key: "revision_done",     label: "تم اعتماد التعديل",  percent: 61,  ownerRole: "technician" },
+  { key: "approved",          label: "اعتماد نهائي",       percent: 61,  ownerRole: "technician" },
+  { key: "permanent_fab",     label: "قيد نحت الدائم",     percent: 68,  ownerRole: "technician" },
+  { key: "permanent_done",    label: "تم نحت الدائم",      percent: 75,  ownerRole: null },
+  { key: "permanent_shipped", label: "تم إرسال الدائم",    percent: 83,  ownerRole: "secretary_sanaa" },
+  { key: "perm_received",     label: "تم استلام الدائم",   percent: 91,  ownerRole: "doctor" },
+  { key: "installed",         label: "تم التركيب",         percent: 97,  ownerRole: null },
   { key: "final_archived",    label: "مؤرشف نهائياً",      percent: 100, ownerRole: null },
 ];
 
@@ -61,11 +64,15 @@ export function deriveStageKey(c: {
   permanent_fabrication_done?: boolean | null;
   permanent_shipped_to_secretary?: boolean | null;
   permanent_delivered_to_doctor?: boolean | null;
+  permanent_received_by_secretary?: boolean | null;
+  permanent_installed_by_doctor?: boolean | null;
   final_archived?: boolean | null;
 }): CaseStage {
   if (c.final_archived) return "final_archived";
+  if (c.permanent_installed_by_doctor) return "installed";
+  if (c.permanent_received_by_secretary) return "perm_received";
   if (c.permanent_delivered_to_doctor) return "permanent_shipped";
-  if (c.permanent_shipped_to_secretary) return "permanent_done";
+  if (c.permanent_shipped_to_secretary) return "permanent_shipped";
   if (c.permanent_fabrication_done) return "permanent_done";
   if (c.revision_approved_by_tech) return "permanent_fab";
   if (c.doctor_decision === "approved") {

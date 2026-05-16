@@ -39,6 +39,8 @@ export interface WorkflowCase {
   permanent_fabrication_done?: boolean | null;
   permanent_shipped_to_secretary?: boolean | null;
   permanent_delivered_to_doctor?: boolean | null;
+  permanent_received_by_secretary?: boolean | null;
+  permanent_installed_by_doctor?: boolean | null;
   final_archived?: boolean | null;
   audit_log?: Array<{ at: string; actor: string; action: string; notes?: string }> | null;
   // For folded card display:
@@ -585,7 +587,9 @@ function SecretaryControls({ c, actorName, actor, doctorName }: {
   const tempOk = !!c.received_temporary;
   const permOk = !!c.received_permanent;
   const permSent = !!c.permanent_shipped_to_secretary;
+  const permReceived = !!c.permanent_received_by_secretary;
   const permDelivered = !!c.permanent_delivered_to_doctor;
+  const installed = !!c.permanent_installed_by_doctor;
   const archived = !!c.final_archived;
 
   async function markReceived() {
@@ -620,7 +624,31 @@ function SecretaryControls({ c, actorName, actor, doctorName }: {
     if (error) toast.error(error.message);
   }
 
+  async function confirmPermReceipt() {
+    if (!window.confirm("تأكيد استلام الأسنان الدائمة من الفني؟")) return;
+    setBusy(true);
+    const { error } = await supabase.from("slot_cases")
+      .update({ permanent_received_by_secretary: true, received_permanent: true }).eq("id", c.id);
+    if (!error) {
+      const tconv = await ensureConv(c, actor, "technician", doctorName);
+      if (tconv) await supabase.from("chat_messages").insert({
+        conversation_id: tconv, sender: actor, sender_name: actorName,
+        content: `✅ تم استلام الأسنان الدائمة — الحالة ${c.case_code} (${c.patient_name}).`,
+        message_type: "text",
+      });
+      const dconv = await ensureConv(c, actor, "doctor", doctorName);
+      if (dconv) await supabase.from("chat_messages").insert({
+        conversation_id: dconv, sender: actor, sender_name: actorName,
+        content: `🦷 الأسنان الدائمة جاهزة للإرسال إليكم — الحالة ${c.case_code} (${c.patient_name}).`,
+        message_type: "text",
+      });
+      toast.success("✅ تم تأكيد استلام الدائم");
+    } else toast.error(error.message);
+    setBusy(false);
+  }
+
   async function deliverPermanent() {
+    if (!window.confirm("تأكيد إرسال الأسنان الدائمة للطبيب؟")) return;
     setBusy(true);
     const { error } = await supabase.from("slot_cases")
       .update({ permanent_delivered_to_doctor: true }).eq("id", c.id);
@@ -636,15 +664,6 @@ function SecretaryControls({ c, actorName, actor, doctorName }: {
     setBusy(false);
   }
 
-  async function archiveFinal() {
-    if (!confirm("أرشفة الحالة نهائياً؟")) return;
-    setBusy(true);
-    const { error } = await supabase.from("slot_cases")
-      .update({ final_archived: true, archived: true }).eq("id", c.id);
-    setBusy(false);
-    if (error) toast.error(error.message);
-    else toast.success("تمت الأرشفة النهائية");
-  }
 
   return (
     <div className="rounded-xl border border-border bg-muted/30 p-3 mt-3 space-y-2">
@@ -680,32 +699,43 @@ function SecretaryControls({ c, actorName, actor, doctorName }: {
         </label>
       </div>
 
-      {(permSent || permDelivered || archived) && (
+      {(permSent || permReceived || permDelivered || installed || archived) && (
         <div className="rounded-lg border border-emerald-500/40 bg-emerald-50/40 p-3 space-y-2">
           <div className="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
             <Truck className="size-3.5" /> الأسنان الدائمة
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            {permSent && !permDelivered && (
+            {permSent && !permReceived && (
+              <button onClick={confirmPermReceipt} disabled={busy}
+                className="inline-flex items-center gap-2 rounded-lg gradient-brown px-3 py-2 text-xs font-bold shadow-luxury">
+                {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
+                تأكيد استلام الدائم
+              </button>
+            )}
+            {permReceived && (
+              <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold">
+                <Check className="size-3.5" /> تم استلام الدائم
+              </span>
+            )}
+            {permReceived && !permDelivered && (
               <button onClick={deliverPermanent} disabled={busy}
                 className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 text-white px-3 py-2 text-xs font-bold">
                 <Truck className="size-3.5" /> تأكيد إرسال الدائم للطبيب
               </button>
             )}
-            {permDelivered && (
-              <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold">
-                <Check className="size-3.5" /> تم إرسال الدائم
+            {permDelivered && !installed && (
+              <span className="inline-flex items-center gap-1 text-[11px] text-amber-700 font-bold">
+                بانتظار تأكيد التركيب من الطبيب…
               </span>
             )}
-            {permDelivered && !archived && (
-              <button onClick={archiveFinal} disabled={busy}
-                className="inline-flex items-center gap-2 rounded-lg gradient-brown px-3 py-2 text-xs font-bold shadow-luxury">
-                <Archive className="size-3.5" /> أرشفة نهائية
-              </button>
+            {installed && (
+              <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold">
+                <Check className="size-3.5" /> تم التركيب
+              </span>
             )}
             {archived && (
               <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold">
-                <Archive className="size-3.5" /> مؤرشفة نهائياً
+                <Archive className="size-3.5" /> مؤرشفة نهائياً (تلقائياً)
               </span>
             )}
           </div>
@@ -734,6 +764,8 @@ function DoctorControls({ c, actorName, doctorName }: {
   const delivered = !!c.temporary_delivered;
   const decision = c.doctor_decision;
   const permDelivered = !!c.permanent_delivered_to_doctor;
+  const installed = !!c.permanent_installed_by_doctor;
+  const archived = !!c.final_archived;
   const log = Array.isArray(c.audit_log) ? c.audit_log : [];
 
   async function confirmDelivered() {
@@ -790,12 +822,37 @@ function DoctorControls({ c, actorName, doctorName }: {
     setBusy(false);
   }
 
+  async function confirmInstalled() {
+    if (!window.confirm("هل تؤكد تركيب الأسنان الدائمة للمريض؟ سيتم أرشفة الحالة تلقائياً.")) return;
+    setBusy(true);
+    const { error } = await supabase.from("slot_cases")
+      .update({
+        permanent_installed_by_doctor: true,
+        final_archived: true,
+        archived: true,
+      }).eq("id", c.id);
+    if (!error) {
+      await appendAudit(c, { actor: actorName || "الطبيب", action: "تأكيد تركيب الأسنان الدائمة وأرشفة الحالة" });
+      const msg = `🦷✅ تم تركيب الأسنان الدائمة للمريض — الحالة ${c.case_code} (${c.patient_name}). الحالة مؤرشفة نهائياً.`;
+      for (const role of ["designer", "technician", "secretary_sanaa", "secretary_ibb"] as RoleKey[]) {
+        const conv = await ensureConv(c, "doctor", role, doctorName);
+        if (conv) await supabase.from("chat_messages").insert({
+          conversation_id: conv, sender: "doctor", sender_name: actorName,
+          content: msg, message_type: "text",
+        });
+      }
+      toast.success("✅ تم تأكيد التركيب — أُرشفت الحالة تلقائياً");
+    } else toast.error(error.message);
+    setBusy(false);
+  }
+
   // Status pill shown when no action is currently available (e.g. new case).
-  const hasAction = (shipped && !delivered) || (delivered && !decision);
+  const hasAction = (shipped && !delivered) || (delivered && !decision) || (permDelivered && !installed);
   const stageHint =
+    archived || installed ? "تمت أرشفة الحالة نهائياً ✅" :
+    permDelivered ? "وصلت الأسنان الدائمة — أكد التركيب" :
     decision === "approved" ? "تم الاعتماد النهائي — قيد نحت الدائم" :
     decision === "revision" ? "تم إرسال طلب التعديل — بانتظار المصمم" :
-    permDelivered ? "تم إرسال الأسنان الدائمة" :
     delivered ? "قيد المراجعة — بانتظار قرارك" :
     shipped ? "وصلت الأسنان المؤقتة — أكد الاستلام" :
     "الحالة قيد التنفيذ — تابع مستوى التقدم";
@@ -854,9 +911,17 @@ function DoctorControls({ c, actorName, doctorName }: {
         </div>
       )}
 
-      {permDelivered && (
+      {permDelivered && !installed && (
+        <button onClick={confirmInstalled} disabled={busy}
+          className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 text-white px-3 py-2 text-xs font-bold shadow">
+          {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
+          تأكيد التركيب وأرشفة الحالة
+        </button>
+      )}
+
+      {installed && (
         <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold border border-emerald-500 bg-emerald-50 rounded-lg px-2 py-1">
-          <Truck className="size-3.5" /> تم إرسال الأسنان الدائمة
+          <Archive className="size-3.5" /> تم التركيب — مؤرشفة نهائياً
         </span>
       )}
 
