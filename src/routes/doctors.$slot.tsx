@@ -644,6 +644,10 @@ function CaseCard({ c, doctorName, onEdit, onPin, onArchive, onDelete }: {
         </div>
       </div>
 
+      <div className="mt-4 pt-3 border-t border-border">
+        <CaseWorkflowControls c={c as any} actor="doctor" actorName={doctorName} doctorName={doctorName} />
+      </div>
+
       <footer className="flex items-center justify-between mt-4 pt-3 border-t border-border">
         <div className="text-[11px] text-muted-foreground">
           آخر تحديث: {new Date(c.updated_at).toLocaleString("ar")}
