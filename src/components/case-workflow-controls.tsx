@@ -2,8 +2,9 @@ import { useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
-  CheckSquare, Square, Upload, Loader2, AlertCircle,
+  CheckSquare, Square, Loader2, AlertCircle,
   FileArchive, FileCode, ChevronDown, ChevronUp, Check, Send, Truck,
+  ThumbsUp, Pencil, X, Archive,
 } from "lucide-react";
 import type { RoleKey } from "@/lib/chat";
 import { ROLE_LABEL } from "@/lib/chat";
@@ -27,6 +28,18 @@ export interface WorkflowCase {
   shipped_to_doctor?: boolean | null;
   received_temporary?: boolean | null;
   received_permanent?: boolean | null;
+  // Second-cycle (review → permanent) fields:
+  temporary_delivered?: boolean | null;
+  doctor_decision?: string | null;
+  revision_notes?: string | null;
+  revision_design_file_path?: string | null;
+  revision_design_file_name?: string | null;
+  revision_design_done?: boolean | null;
+  revision_approved_by_tech?: boolean | null;
+  permanent_fabrication_done?: boolean | null;
+  permanent_shipped_to_secretary?: boolean | null;
+  permanent_delivered_to_doctor?: boolean | null;
+  final_archived?: boolean | null;
   // For folded card display:
   patient_phone?: string | null;
   patient_age?: number | null;
@@ -43,7 +56,7 @@ export interface WorkflowCase {
 interface Props {
   c: WorkflowCase;
   /** Which actor is operating */
-  actor: "designer" | "technician" | "secretary_sanaa" | "secretary_ibb";
+  actor: "doctor" | "designer" | "technician" | "secretary_sanaa" | "secretary_ibb";
   actorName: string;
   doctorName: string;
   /** target role to send the file to (technician for designer, secretary_* for technician) */
