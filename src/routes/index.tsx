@@ -61,7 +61,7 @@ function Landing() {
           {[
             { icon: Stethoscope, t: "بوابة الطبيب", d: "حالات خاصة وسجل المرضى", to: "/doctors" as const },
             { icon: Layers, t: "مصمم CAD/CAM", d: "محادثات مع الأطباء واستلام الملفات", to: "/staff/$role" as const, params: { role: "designer" } },
-            { icon: Wrench, t: "فني المختبر", d: "تنسيق التصنيع والتسليم", to: "/staff/$role" as const, params: { role: "technician" } },
+            { icon: Wrench, t: "فني المختبر", d: "تنسيق النحت والتسليم", to: "/staff/$role" as const, params: { role: "technician" } },
             { icon: Users, t: "سكرتارية صنعاء", d: "تنسيق فرع صنعاء", to: "/staff/$role" as const, params: { role: "secretary_sanaa" } },
             { icon: Users, t: "سكرتارية إب", d: "تنسيق فرع إب", to: "/staff/$role" as const, params: { role: "secretary_ibb" } },
             { icon: Shield, t: "إدارة المركز", d: "إشراف ومراقبة المحادثات", to: "/staff/$role" as const, params: { role: "admin" } },
