@@ -2,8 +2,9 @@ import { useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
-  CheckSquare, Square, Upload, Loader2, AlertCircle,
+  CheckSquare, Square, Loader2, AlertCircle,
   FileArchive, FileCode, ChevronDown, ChevronUp, Check, Send, Truck,
+  ThumbsUp, Pencil, X, Archive,
 } from "lucide-react";
 import type { RoleKey } from "@/lib/chat";
 import { ROLE_LABEL } from "@/lib/chat";
@@ -27,6 +28,18 @@ export interface WorkflowCase {
   shipped_to_doctor?: boolean | null;
   received_temporary?: boolean | null;
   received_permanent?: boolean | null;
+  // Second-cycle (review → permanent) fields:
+  temporary_delivered?: boolean | null;
+  doctor_decision?: string | null;
+  revision_notes?: string | null;
+  revision_design_file_path?: string | null;
+  revision_design_file_name?: string | null;
+  revision_design_done?: boolean | null;
+  revision_approved_by_tech?: boolean | null;
+  permanent_fabrication_done?: boolean | null;
+  permanent_shipped_to_secretary?: boolean | null;
+  permanent_delivered_to_doctor?: boolean | null;
+  final_archived?: boolean | null;
   // For folded card display:
   patient_phone?: string | null;
   patient_age?: number | null;
@@ -43,7 +56,7 @@ export interface WorkflowCase {
 interface Props {
   c: WorkflowCase;
   /** Which actor is operating */
-  actor: "designer" | "technician" | "secretary_sanaa" | "secretary_ibb";
+  actor: "doctor" | "designer" | "technician" | "secretary_sanaa" | "secretary_ibb";
   actorName: string;
   doctorName: string;
   /** target role to send the file to (technician for designer, secretary_* for technician) */
@@ -55,6 +68,9 @@ const RAR_RE = /\.rar$/i;
 const HTML_RE = /\.html?$/i;
 
 export function CaseWorkflowControls({ c, actor, actorName, doctorName, target, blockedByPending }: Props) {
+  if (actor === "doctor") {
+    return <DoctorControls c={c} actorName={actorName} doctorName={doctorName} />;
+  }
   if (actor === "designer") {
     return <DesignerControls c={c} actorName={actorName} doctorName={doctorName}
       target={target ?? "technician"} blockedByPending={blockedByPending ?? null} />;
@@ -62,7 +78,7 @@ export function CaseWorkflowControls({ c, actor, actorName, doctorName, target, 
   if (actor === "technician") {
     return <TechnicianControls c={c} actorName={actorName} doctorName={doctorName} target={target ?? null} />;
   }
-  return <SecretaryControls c={c} actorName={actorName} actor={actor} />;
+  return <SecretaryControls c={c} actorName={actorName} actor={actor} doctorName={doctorName} />;
 }
 
 // ---------- helpers ----------
@@ -211,6 +227,83 @@ function DesignerControls({ c, actorName, doctorName, target, blockedByPending }
           <span className="font-mono font-bold">{blockedByPending}</span>
         </div>
       )}
+      <DesignerRevisionSection c={c} actorName={actorName} doctorName={doctorName} />
+    </div>
+  );
+}
+
+// ---------- Designer: revision request from the doctor ----------
+function DesignerRevisionSection({ c, actorName, doctorName }: {
+  c: WorkflowCase; actorName: string; doctorName: string;
+}) {
+  const [busy, setBusy] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  if (c.doctor_decision !== "revision") return null;
+  const done = !!c.revision_design_done;
+  const approved = !!c.revision_approved_by_tech;
+
+  async function uploadRevision(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (e.target) e.target.value = "";
+    if (!f) return;
+    if (!RAR_RE.test(f.name)) { toast.error("الملف يجب أن يكون .rar"); return; }
+    setBusy(true);
+    try {
+      const up = await uploadAttachment(f, c, "revision");
+      if (!up) return;
+      // Notify the technician
+      const conv = await ensureConv(c, "designer", "technician", doctorName);
+      if (conv) await supabase.from("chat_messages").insert({
+        conversation_id: conv, sender: "designer", sender_name: actorName,
+        content: `🔁 تعديل تصميم نهائي — الحالة ${c.case_code} (${c.patient_name})`,
+        message_type: "file",
+        attachment_path: up.url, attachment_name: f.name,
+        attachment_mime: f.type || "application/vnd.rar", attachment_size: f.size,
+      });
+      // Notify the doctor
+      const dconv = await ensureConv(c, "designer", "doctor", doctorName);
+      if (dconv) await supabase.from("chat_messages").insert({
+        conversation_id: dconv, sender: "designer", sender_name: actorName,
+        content: `✏️ تم إنجاز التعديل المطلوب وإرساله للفني — الحالة ${c.case_code}`,
+        message_type: "text",
+      });
+      await supabase.from("slot_cases").update({
+        revision_design_file_path: up.url,
+        revision_design_file_name: f.name,
+        revision_design_done: true,
+      }).eq("id", c.id);
+      toast.success("تم إرسال التعديل للفني");
+    } catch (err: any) { toast.error(err.message || "فشل الإرسال"); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <div className="rounded-lg border border-amber-500/50 bg-amber-50/60 p-3 space-y-2">
+      <div className="text-xs font-bold text-amber-800 flex items-center gap-1.5">
+        <Pencil className="size-3.5" /> تعديل مطلوب من الطبيب
+      </div>
+      {c.revision_notes && (
+        <div className="text-xs whitespace-pre-wrap rounded border border-amber-300 bg-white/70 p-2">
+          {c.revision_notes}
+        </div>
+      )}
+      <div className="flex items-center gap-2 flex-wrap">
+        <label className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold cursor-pointer transition border
+          ${done ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-border bg-card hover:border-gold"}`}>
+          {busy ? <Loader2 className="size-3.5 animate-spin" /> : <FileArchive className="size-3.5" />}
+          {done ? "تم إرسال ملف التعديل" : "رفع ملف التعديل (.rar)"}
+          <input ref={fileRef} type="file" accept=".rar" className="hidden"
+            onChange={uploadRevision} disabled={busy || done} />
+        </label>
+        {done && !approved && (
+          <span className="text-[11px] text-amber-700 font-bold">بانتظار اعتماد الفني…</span>
+        )}
+        {approved && (
+          <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold">
+            <Check className="size-3.5" /> اعتمد الفني التعديل
+          </span>
+        )}
+      </div>
     </div>
   );
 }
@@ -374,7 +467,105 @@ function TechnicianControls({ c, actorName, doctorName, target }: {
           )}
           {shipped && (
             <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold">
-              <Check className="size-3.5" /> تم الترحيل
+              <Check className="size-3.5" /> تم ترحيل المؤقت
+            </span>
+          )}
+        </div>
+      )}
+
+      <TechnicianPermanentSection c={c} actorName={actorName} doctorName={doctorName} target={target} />
+    </div>
+  );
+}
+
+// ---------- Technician: permanent-cycle (after doctor decision) ----------
+function TechnicianPermanentSection({ c, actorName, doctorName, target }: {
+  c: WorkflowCase; actorName: string; doctorName: string; target: RoleKey | null;
+}) {
+  const [busy, setBusy] = useState(false);
+  const decision = c.doctor_decision;
+  // Show only after doctor has decided OR revision design is back.
+  const approved = decision === "approved";
+  const revisionReady = decision === "revision" && c.revision_design_done;
+  const revisionApproved = !!c.revision_approved_by_tech;
+  const permDone = !!c.permanent_fabrication_done;
+  const permSent = !!c.permanent_shipped_to_secretary;
+  if (!approved && !revisionReady && !permDone && !permSent) return null;
+
+  async function approveRevision() {
+    setBusy(true);
+    const { error } = await supabase.from("slot_cases")
+      .update({ revision_approved_by_tech: true }).eq("id", c.id);
+    if (!error) {
+      const conv = await ensureConv(c, "technician", "designer", doctorName);
+      if (conv) await supabase.from("chat_messages").insert({
+        conversation_id: conv, sender: "technician", sender_name: actorName,
+        content: `✅ تم اعتماد التعديل النهائي — الحالة ${c.case_code} (${c.patient_name}). يبدأ تصنيع الأسنان الدائمة.`,
+        message_type: "text",
+      });
+      toast.success("تم اعتماد التعديل");
+    } else toast.error(error.message);
+    setBusy(false);
+  }
+
+  async function togglePermDone() {
+    setBusy(true);
+    const next = !permDone;
+    const { error } = await supabase.from("slot_cases")
+      .update({ permanent_fabrication_done: next }).eq("id", c.id);
+    setBusy(false);
+    if (error) toast.error(error.message);
+    else toast.success(next ? "✅ تم تصنيع الأسنان الدائمة" : "تم إلغاء العلامة");
+  }
+
+  async function sendPermToSecretary() {
+    if (!target) { toast.error("لا يوجد فرع سكرتارية محدد"); return; }
+    setBusy(true);
+    const conv = await ensureConv(c, "technician", target, doctorName);
+    if (conv) await supabase.from("chat_messages").insert({
+      conversation_id: conv, sender: "technician", sender_name: actorName,
+      content: `🦷 الأسنان الدائمة جاهزة للترحيل\nرمز: ${c.case_code}\nالطبيب: ${doctorName}\nالمريض: ${c.patient_name}`,
+      message_type: "text",
+    });
+    const { error } = await supabase.from("slot_cases")
+      .update({ permanent_shipped_to_secretary: true }).eq("id", c.id);
+    setBusy(false);
+    if (error) toast.error(error.message);
+    else toast.success(`تم إشعار ${ROLE_LABEL[target]} بجاهزية الدائم`);
+  }
+
+  return (
+    <div className="rounded-lg border border-emerald-500/40 bg-emerald-50/40 p-3 space-y-2">
+      <div className="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
+        <ThumbsUp className="size-3.5" />
+        {approved ? "تم الاعتماد النهائي من الطبيب — جاهز لتصنيع الدائم"
+                  : revisionReady && !revisionApproved ? "تعديل تصميم جاهز للاعتماد"
+                  : "تصنيع الأسنان الدائمة"}
+      </div>
+      {revisionReady && !revisionApproved && (
+        <button onClick={approveRevision} disabled={busy}
+          className="inline-flex items-center gap-2 rounded-lg gradient-brown px-3 py-2 text-xs font-bold shadow-luxury">
+          {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
+          اعتماد التعديل لتصنيع الدائم
+        </button>
+      )}
+      {(approved || revisionApproved) && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={togglePermDone} disabled={busy}
+            className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold transition border
+              ${permDone ? "gradient-gold text-gold-foreground border-gold shadow-gold" : "border-border bg-card hover:border-gold"}`}>
+            {busy ? <Loader2 className="size-3.5 animate-spin" /> : permDone ? <CheckSquare className="size-3.5" /> : <Square className="size-3.5" />}
+            تم تصنيع الدائم
+          </button>
+          {permDone && !permSent && target && (
+            <button onClick={sendPermToSecretary} disabled={busy}
+              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 text-white px-3 py-2 text-xs font-bold">
+              <Send className="size-3.5" /> إشعار {ROLE_LABEL[target]}
+            </button>
+          )}
+          {permSent && (
+            <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold">
+              <Check className="size-3.5" /> تم الإشعار بجاهزية الدائم
             </span>
           )}
         </div>
@@ -384,28 +575,35 @@ function TechnicianControls({ c, actorName, doctorName, target }: {
 }
 
 // ============== SECRETARY ==============
-function SecretaryControls({ c, actorName, actor }: {
-  c: WorkflowCase; actorName: string; actor: "secretary_sanaa" | "secretary_ibb";
+function SecretaryControls({ c, actorName, actor, doctorName }: {
+  c: WorkflowCase; actorName: string; actor: "secretary_sanaa" | "secretary_ibb"; doctorName: string;
 }) {
   const [busy, setBusy] = useState(false);
   const received = !!c.secretary_received;
   const shipped = !!c.shipped_to_doctor;
   const tempOk = !!c.received_temporary;
   const permOk = !!c.received_permanent;
+  const permSent = !!c.permanent_shipped_to_secretary;
+  const permDelivered = !!c.permanent_delivered_to_doctor;
+  const archived = !!c.final_archived;
 
   async function markReceived() {
     setBusy(true);
     const { error } = await supabase.from("slot_cases")
       .update({ secretary_received: true }).eq("id", c.id);
     if (!error) {
-      const convId = await ensureConv(c, actor, "technician", "");
-      if (convId) {
-        await supabase.from("chat_messages").insert({
-          conversation_id: convId, sender: actor, sender_name: actorName,
-          content: `✅ استلمت السكرتارية بيانات الحالة ${c.case_code} (${c.patient_name}).`,
-          message_type: "text",
-        });
-      }
+      const convId = await ensureConv(c, actor, "technician", doctorName);
+      if (convId) await supabase.from("chat_messages").insert({
+        conversation_id: convId, sender: actor, sender_name: actorName,
+        content: `✅ استلمت السكرتارية بيانات الحالة ${c.case_code} (${c.patient_name}).`,
+        message_type: "text",
+      });
+      const dconv = await ensureConv(c, actor, "doctor", doctorName);
+      if (dconv) await supabase.from("chat_messages").insert({
+        conversation_id: dconv, sender: actor, sender_name: actorName,
+        content: `🦷 تم استلام الأسنان المؤقتة (للتجربة) — الحالة ${c.case_code} (${c.patient_name}). جاهزة للترحيل إليكم.`,
+        message_type: "text",
+      });
       toast.success("تم استلام البيانات");
     } else toast.error(error.message);
     setBusy(false);
@@ -419,6 +617,32 @@ function SecretaryControls({ c, actorName, actor }: {
     const { error } = await supabase.from("slot_cases").update(patch).eq("id", c.id);
     setBusy(false);
     if (error) toast.error(error.message);
+  }
+
+  async function deliverPermanent() {
+    setBusy(true);
+    const { error } = await supabase.from("slot_cases")
+      .update({ permanent_delivered_to_doctor: true }).eq("id", c.id);
+    if (!error) {
+      const dconv = await ensureConv(c, actor, "doctor", doctorName);
+      if (dconv) await supabase.from("chat_messages").insert({
+        conversation_id: dconv, sender: actor, sender_name: actorName,
+        content: `🚚 تم ترحيل الأسنان الدائمة — الحالة ${c.case_code} (${c.patient_name}).`,
+        message_type: "text",
+      });
+      toast.success("تم ترحيل الدائم للطبيب");
+    } else toast.error(error.message);
+    setBusy(false);
+  }
+
+  async function archiveFinal() {
+    if (!confirm("أرشفة الحالة نهائياً؟")) return;
+    setBusy(true);
+    const { error } = await supabase.from("slot_cases")
+      .update({ final_archived: true, archived: true }).eq("id", c.id);
+    setBusy(false);
+    if (error) toast.error(error.message);
+    else toast.success("تمت الأرشفة النهائية");
   }
 
   return (
@@ -437,7 +661,7 @@ function SecretaryControls({ c, actorName, actor }: {
         )}
         {shipped && (
           <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold border border-emerald-500 bg-emerald-50 rounded-lg px-2 py-1">
-            <Truck className="size-3.5" /> تم الترحيل
+            <Truck className="size-3.5" /> تم ترحيل المؤقت
           </span>
         )}
       </div>
@@ -454,6 +678,182 @@ function SecretaryControls({ c, actorName, actor }: {
           أسنان دائمة {permOk && <Check className="size-3 text-emerald-600" />}
         </label>
       </div>
+
+      {(permSent || permDelivered || archived) && (
+        <div className="rounded-lg border border-emerald-500/40 bg-emerald-50/40 p-3 space-y-2">
+          <div className="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
+            <Truck className="size-3.5" /> الأسنان الدائمة
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            {permSent && !permDelivered && (
+              <button onClick={deliverPermanent} disabled={busy}
+                className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 text-white px-3 py-2 text-xs font-bold">
+                <Truck className="size-3.5" /> تأكيد ترحيل الدائم للطبيب
+              </button>
+            )}
+            {permDelivered && (
+              <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold">
+                <Check className="size-3.5" /> تم ترحيل الدائم
+              </span>
+            )}
+            {permDelivered && !archived && (
+              <button onClick={archiveFinal} disabled={busy}
+                className="inline-flex items-center gap-2 rounded-lg gradient-brown px-3 py-2 text-xs font-bold shadow-luxury">
+                <Archive className="size-3.5" /> أرشفة نهائية
+              </button>
+            )}
+            {archived && (
+              <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold">
+                <Archive className="size-3.5" /> مؤرشفة نهائياً
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============== DOCTOR ==============
+function DoctorControls({ c, actorName, doctorName }: {
+  c: WorkflowCase; actorName: string; doctorName: string;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [revOpen, setRevOpen] = useState(false);
+  const [notes, setNotes] = useState("");
+
+  const shipped = !!c.shipped_to_doctor;
+  const delivered = !!c.temporary_delivered;
+  const decision = c.doctor_decision;
+  const permDelivered = !!c.permanent_delivered_to_doctor;
+
+  if (!shipped && !decision && !permDelivered) return null;
+
+  async function confirmDelivered() {
+    setBusy(true);
+    const { error } = await supabase.from("slot_cases")
+      .update({ temporary_delivered: true }).eq("id", c.id);
+    setBusy(false);
+    if (error) toast.error(error.message);
+    else toast.success("تم تأكيد استلام المؤقت");
+  }
+
+  async function approve() {
+    setBusy(true);
+    const { error } = await supabase.from("slot_cases")
+      .update({ doctor_decision: "approved" }).eq("id", c.id);
+    if (!error) {
+      const msg = `✅ اعتماد نهائي للتصميم — الحالة ${c.case_code} (${c.patient_name}). يبدأ تصنيع الأسنان الدائمة.`;
+      for (const role of ["designer", "technician"] as RoleKey[]) {
+        const conv = await ensureConv(c, "doctor", role, doctorName);
+        if (conv) await supabase.from("chat_messages").insert({
+          conversation_id: conv, sender: "doctor", sender_name: actorName,
+          content: msg, message_type: "text",
+        });
+      }
+      toast.success("تم إرسال اعتماد نهائي");
+    } else toast.error(error.message);
+    setBusy(false);
+  }
+
+  async function requestRevision() {
+    if (notes.trim().length < 3) { toast.error("اكتب ملاحظات التعديل"); return; }
+    setBusy(true);
+    const { error } = await supabase.from("slot_cases")
+      .update({ doctor_decision: "revision", revision_notes: notes.trim() }).eq("id", c.id);
+    if (!error) {
+      const conv = await ensureConv(c, "doctor", "designer", doctorName);
+      if (conv) await supabase.from("chat_messages").insert({
+        conversation_id: conv, sender: "doctor", sender_name: actorName,
+        content: `🔁 طلب تعديل تصميم — الحالة ${c.case_code} (${c.patient_name})\nملاحظات:\n${notes.trim()}`,
+        message_type: "text",
+      });
+      toast.success("تم إرسال طلب التعديل للمصمم");
+      setRevOpen(false);
+      setNotes("");
+    } else toast.error(error.message);
+    setBusy(false);
+  }
+
+  return (
+    <div className="rounded-xl border border-border bg-muted/30 p-3 mt-3 space-y-2">
+      {shipped && !delivered && (
+        <button onClick={confirmDelivered} disabled={busy}
+          className="inline-flex items-center gap-2 rounded-lg gradient-brown px-3 py-2 text-xs font-bold shadow-luxury">
+          {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
+          تأكيد استلام الأسنان المؤقتة
+        </button>
+      )}
+
+      {delivered && !decision && (
+        <div className="space-y-2">
+          <div className="text-xs font-bold text-foreground">قرار الطبيب بعد المراجعة:</div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button onClick={approve} disabled={busy}
+              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 text-white px-3 py-2 text-xs font-bold shadow">
+              <ThumbsUp className="size-3.5" /> اعتماد نهائي
+            </button>
+            <button onClick={() => setRevOpen(true)} disabled={busy}
+              className="inline-flex items-center gap-2 rounded-lg bg-amber-600 text-white px-3 py-2 text-xs font-bold shadow">
+              <Pencil className="size-3.5" /> طلب تعديل
+            </button>
+          </div>
+        </div>
+      )}
+
+      {decision === "approved" && (
+        <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold">
+          <ThumbsUp className="size-3.5" /> تم الاعتماد النهائي — قيد تصنيع الدائم
+        </span>
+      )}
+
+      {decision === "revision" && (
+        <div className="rounded-lg border border-amber-500/40 bg-amber-50/50 p-2 text-xs">
+          <div className="font-bold text-amber-800 flex items-center gap-1.5 mb-1">
+            <Pencil className="size-3.5" /> تم إرسال طلب التعديل
+          </div>
+          {c.revision_notes && (
+            <div className="whitespace-pre-wrap text-amber-900">{c.revision_notes}</div>
+          )}
+          {c.revision_design_done && (
+            <div className="mt-1 text-emerald-700 font-bold flex items-center gap-1">
+              <Check className="size-3" /> أنجز المصمم التعديل
+            </div>
+          )}
+        </div>
+      )}
+
+      {permDelivered && (
+        <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold border border-emerald-500 bg-emerald-50 rounded-lg px-2 py-1">
+          <Truck className="size-3.5" /> تم ترحيل الأسنان الدائمة
+        </span>
+      )}
+
+      {revOpen && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-card border border-border p-5 shadow-luxury">
+            <div className="flex items-center justify-between mb-3">
+              <div className="font-bold">ملاحظات التعديل المطلوب</div>
+              <button onClick={() => setRevOpen(false)} className="rounded-lg p-1 hover:bg-muted">
+                <X className="size-4" />
+              </button>
+            </div>
+            <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={5}
+              placeholder="اكتب الملاحظات التفصيلية للتعديل…"
+              className="w-full rounded-xl border border-input bg-background p-3 text-sm outline-none focus:border-gold" />
+            <div className="flex justify-end gap-2 mt-3">
+              <button onClick={() => setRevOpen(false)} className="rounded-lg border border-border px-3 py-2 text-xs font-bold">
+                إلغاء
+              </button>
+              <button onClick={requestRevision} disabled={busy}
+                className="inline-flex items-center gap-2 rounded-lg gradient-brown px-4 py-2 text-xs font-bold shadow-luxury">
+                {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
+                إرسال للمصمم
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

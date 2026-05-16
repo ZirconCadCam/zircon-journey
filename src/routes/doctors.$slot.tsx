@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { STAGES, getStage, deriveStageKey, notifyRoleAboutCase, localNotify, type CaseStage } from "@/lib/case-stages";
+import { CaseWorkflowControls } from "@/components/case-workflow-controls";
 import { Z } from "@/lib/z-index";
 
 export const Route = createFileRoute("/doctors/$slot")({
@@ -578,7 +579,7 @@ function CasesPanel({ doctor }: { doctor: Doctor }) {
       ) : (
         <div className="grid md:grid-cols-2 gap-4">
           {visible.map(c => (
-            <CaseCard key={c.id} c={c}
+            <CaseCard key={c.id} c={c} doctorName={doctor.name}
               onEdit={() => setEditing(c)}
               onPin={() => togglePin(c)}
               onArchive={() => toggleArchive(c)}
@@ -592,8 +593,8 @@ function CasesPanel({ doctor }: { doctor: Doctor }) {
   );
 }
 
-function CaseCard({ c, onEdit, onPin, onArchive, onDelete }: {
-  c: SlotCase;
+function CaseCard({ c, doctorName, onEdit, onPin, onArchive, onDelete }: {
+  c: SlotCase; doctorName: string;
   onEdit: () => void; onPin: () => void; onArchive: () => void; onDelete: () => void;
 }) {
   const stage = getStage(deriveStageKey(c));
