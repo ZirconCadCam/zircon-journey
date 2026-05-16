@@ -624,7 +624,31 @@ function SecretaryControls({ c, actorName, actor, doctorName }: {
     if (error) toast.error(error.message);
   }
 
+  async function confirmPermReceipt() {
+    if (!window.confirm("تأكيد استلام الأسنان الدائمة من الفني؟")) return;
+    setBusy(true);
+    const { error } = await supabase.from("slot_cases")
+      .update({ permanent_received_by_secretary: true, received_permanent: true }).eq("id", c.id);
+    if (!error) {
+      const tconv = await ensureConv(c, actor, "technician", doctorName);
+      if (tconv) await supabase.from("chat_messages").insert({
+        conversation_id: tconv, sender: actor, sender_name: actorName,
+        content: `✅ تم استلام الأسنان الدائمة — الحالة ${c.case_code} (${c.patient_name}).`,
+        message_type: "text",
+      });
+      const dconv = await ensureConv(c, actor, "doctor", doctorName);
+      if (dconv) await supabase.from("chat_messages").insert({
+        conversation_id: dconv, sender: actor, sender_name: actorName,
+        content: `🦷 الأسنان الدائمة جاهزة للإرسال إليكم — الحالة ${c.case_code} (${c.patient_name}).`,
+        message_type: "text",
+      });
+      toast.success("✅ تم تأكيد استلام الدائم");
+    } else toast.error(error.message);
+    setBusy(false);
+  }
+
   async function deliverPermanent() {
+    if (!window.confirm("تأكيد إرسال الأسنان الدائمة للطبيب؟")) return;
     setBusy(true);
     const { error } = await supabase.from("slot_cases")
       .update({ permanent_delivered_to_doctor: true }).eq("id", c.id);
