@@ -849,9 +849,10 @@ function DoctorControls({ c, actorName, doctorName }: {
   // Status pill shown when no action is currently available (e.g. new case).
   const hasAction = (shipped && !delivered) || (delivered && !decision) || (permDelivered && !installed);
   const stageHint =
+    archived || installed ? "تمت أرشفة الحالة نهائياً ✅" :
+    permDelivered ? "وصلت الأسنان الدائمة — أكد التركيب" :
     decision === "approved" ? "تم الاعتماد النهائي — قيد نحت الدائم" :
     decision === "revision" ? "تم إرسال طلب التعديل — بانتظار المصمم" :
-    permDelivered ? "تم إرسال الأسنان الدائمة" :
     delivered ? "قيد المراجعة — بانتظار قرارك" :
     shipped ? "وصلت الأسنان المؤقتة — أكد الاستلام" :
     "الحالة قيد التنفيذ — تابع مستوى التقدم";
