@@ -3,7 +3,10 @@ import type { RoleKey } from "@/lib/chat";
 
 export type CaseStage =
   | "new" | "designer" | "design_done"
-  | "technician" | "fab_done" | "delivered";
+  | "technician" | "temp_done" | "temp_shipped"
+  | "doctor_review" | "revision" | "revision_done" | "approved"
+  | "permanent_fab" | "permanent_done" | "permanent_shipped"
+  | "final_archived";
 
 export interface StageInfo {
   key: CaseStage;
@@ -13,12 +16,20 @@ export interface StageInfo {
 }
 
 export const STAGES: StageInfo[] = [
-  { key: "new",         label: "حالة جديدة",   percent: 8,   ownerRole: "designer" },
-  { key: "designer",    label: "قيد التصميم",  percent: 25,  ownerRole: "designer" },
-  { key: "design_done", label: "تم التصميم",   percent: 45,  ownerRole: "designer" },
-  { key: "technician",  label: "قيد التصنيع",  percent: 65,  ownerRole: "technician" },
-  { key: "fab_done",    label: "تم التصنيع",   percent: 85,  ownerRole: "technician" },
-  { key: "delivered",   label: "تم الترحيل",   percent: 100, ownerRole: null },
+  { key: "new",               label: "حالة جديدة",         percent: 6,   ownerRole: "designer" },
+  { key: "designer",          label: "قيد التصميم",        percent: 14,  ownerRole: "designer" },
+  { key: "design_done",       label: "تم التصميم",         percent: 22,  ownerRole: "designer" },
+  { key: "technician",        label: "قيد التصنيع",        percent: 30,  ownerRole: "technician" },
+  { key: "temp_done",         label: "تم تصنيع المؤقت",    percent: 38,  ownerRole: "technician" },
+  { key: "temp_shipped",      label: "تم ترحيل المؤقت",    percent: 46,  ownerRole: "doctor" },
+  { key: "doctor_review",     label: "قيد المراجعة",       percent: 54,  ownerRole: "doctor" },
+  { key: "revision",          label: "يتطلب تعديل",        percent: 62,  ownerRole: "designer" },
+  { key: "revision_done",     label: "تم اعتماد التعديل",  percent: 70,  ownerRole: "technician" },
+  { key: "approved",          label: "اعتماد نهائي",       percent: 70,  ownerRole: "technician" },
+  { key: "permanent_fab",     label: "قيد تصنيع الدائم",   percent: 80,  ownerRole: "technician" },
+  { key: "permanent_done",    label: "تم تصنيع الدائم",    percent: 88,  ownerRole: null },
+  { key: "permanent_shipped", label: "تم ترحيل الدائم",    percent: 96,  ownerRole: null },
+  { key: "final_archived",    label: "مؤرشف نهائياً",      percent: 100, ownerRole: null },
 ];
 
 export function getStage(key: string | null | undefined): StageInfo {
@@ -41,10 +52,30 @@ export function deriveStageKey(c: {
   fabrication_done?: boolean | null;
   fabrication_file_sent?: boolean | null;
   tech_data_sent_to_secretary?: boolean | null;
+  secretary_received?: boolean | null;
   shipped_to_doctor?: boolean | null;
+  temporary_delivered?: boolean | null;
+  doctor_decision?: string | null;
+  revision_design_done?: boolean | null;
+  revision_approved_by_tech?: boolean | null;
+  permanent_fabrication_done?: boolean | null;
+  permanent_shipped_to_secretary?: boolean | null;
+  permanent_delivered_to_doctor?: boolean | null;
+  final_archived?: boolean | null;
 }): CaseStage {
-  if (c.shipped_to_doctor) return "delivered";
-  if (c.fabrication_done || c.tech_data_sent_to_secretary) return "fab_done";
+  if (c.final_archived) return "final_archived";
+  if (c.permanent_delivered_to_doctor) return "permanent_shipped";
+  if (c.permanent_shipped_to_secretary) return "permanent_done";
+  if (c.permanent_fabrication_done) return "permanent_done";
+  if (c.revision_approved_by_tech) return "permanent_fab";
+  if (c.doctor_decision === "approved") {
+    return "approved";
+  }
+  if (c.revision_design_done) return "revision_done";
+  if (c.doctor_decision === "revision") return "revision";
+  if (c.temporary_delivered) return "doctor_review";
+  if (c.shipped_to_doctor) return "temp_shipped";
+  if (c.fabrication_done || c.tech_data_sent_to_secretary) return "temp_done";
   if (c.design_received_by_tech) return "technician";
   if (c.design_done && c.design_file_sent && c.design_html_sent) return "design_done";
   if (c.status === "new" && !c.design_done) return "new";
@@ -53,9 +84,7 @@ export function deriveStageKey(c: {
 
 /**
  * Ensure a chat conversation exists between the doctor and a target role,
- * then post an automated case-handoff message. This piggy-backs on the
- * existing chat-notification system, which beeps + shows toasts + browser
- * notifications to recipients.
+ * then post an automated case-handoff message.
  */
 export async function notifyRoleAboutCase(opts: {
   doctorSlot: number;
@@ -66,7 +95,7 @@ export async function notifyRoleAboutCase(opts: {
   stageLabel: string;
   body?: string;
   attachment?: {
-    path: string;        // public URL or storage path
+    path: string;
     name: string;
     mime?: string | null;
     size?: number | null;
@@ -76,7 +105,6 @@ export async function notifyRoleAboutCase(opts: {
   const participants: RoleKey[] = ["doctor", targetRole];
   const title = `حالة ${caseCode} — ${doctorName}`;
 
-  // Try to reuse an existing conversation between the doctor and that role.
   const { data: existing } = await supabase.from("chat_conversations")
     .select("id,participants")
     .eq("doctor_slot", doctorSlot);
