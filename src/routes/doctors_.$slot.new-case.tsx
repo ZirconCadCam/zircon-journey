@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ArrowRight, Sparkles, Upload, FileText, X, Loader2, ScanLine } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
+import { ToothQuadrantPicker } from "@/components/tooth-quadrant-picker";
 
 const patientSchema = z.object({
   patient_name: z.string().trim()
