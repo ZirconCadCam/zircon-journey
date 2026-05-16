@@ -253,9 +253,9 @@ function NewSlotCase() {
                 <input className="zinput" value={form.patient_name} maxLength={80}
                   onChange={e=>setForm({...form,patient_name:e.target.value})} required />
               </Field>
-              <Field label="رقم الهاتف" error={errors.patient_phone}>
+              <Field label="رقم الهاتف" required error={errors.patient_phone}>
                 <input dir="ltr" className="zinput" value={form.patient_phone} maxLength={15}
-                  onChange={e=>setForm({...form,patient_phone:e.target.value})} placeholder="7xxxxxxxx" />
+                  onChange={e=>setForm({...form,patient_phone:e.target.value})} placeholder="7xxxxxxxx" required />
               </Field>
               <Field label="العمر" error={errors.patient_age}>
                 <input type="number" min={0} max={120} className="zinput" value={form.patient_age}
