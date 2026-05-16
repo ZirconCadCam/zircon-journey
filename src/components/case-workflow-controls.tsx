@@ -764,6 +764,8 @@ function DoctorControls({ c, actorName, doctorName }: {
   const delivered = !!c.temporary_delivered;
   const decision = c.doctor_decision;
   const permDelivered = !!c.permanent_delivered_to_doctor;
+  const installed = !!c.permanent_installed_by_doctor;
+  const archived = !!c.final_archived;
   const log = Array.isArray(c.audit_log) ? c.audit_log : [];
 
   async function confirmDelivered() {
