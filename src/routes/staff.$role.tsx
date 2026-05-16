@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ChatModule } from "@/components/chat-module";
 import { DesignerCases } from "@/components/designer-cases";
 import { ROLE_LABEL, STAFF_PASSWORDS, type RoleKey } from "@/lib/chat";
+import { getStage, deriveStageKey } from "@/lib/case-stages";
 import { Sparkles, ArrowRight, Lock, Stethoscope, MessageSquare, ClipboardList } from "lucide-react";
 import { toast } from "sonner";
 
@@ -146,6 +147,15 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
         }
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "chat_conversations" }, refresh)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "slot_cases" }, (p: any) => {
+        try {
+          const oldStage = getStage(deriveStageKey(p.old ?? {})).label;
+          const newStage = getStage(deriveStageKey(p.new ?? {})).label;
+          if (oldStage !== newStage && p.new?.case_code) {
+            toast(`🔔 ${p.new.case_code}: ${newStage}`, { duration: 5000 });
+          }
+        } catch { /* noop */ }
+      })
       .subscribe();
     return () => { active = false; supabase.removeChannel(ch); };
   }, [doctors.length, role]);

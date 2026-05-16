@@ -454,6 +454,7 @@ export type Database = {
       slot_cases: {
         Row: {
           archived: boolean
+          audit_log: Json
           case_code: string
           case_type: string | null
           created_at: string
@@ -502,6 +503,7 @@ export type Database = {
         }
         Insert: {
           archived?: boolean
+          audit_log?: Json
           case_code?: string
           case_type?: string | null
           created_at?: string
@@ -550,6 +552,7 @@ export type Database = {
         }
         Update: {
           archived?: boolean
+          audit_log?: Json
           case_code?: string
           case_type?: string | null
           created_at?: string

@@ -526,7 +526,18 @@ function CasesPanel({ doctor }: { doctor: Doctor }) {
   useEffect(() => {
     load();
     const ch = supabase.channel(`slot-cases-${doctor.slot}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "slot_cases", filter: `doctor_slot=eq.${doctor.slot}` }, load)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "slot_cases", filter: `doctor_slot=eq.${doctor.slot}` }, (payload: any) => {
+        const oldRow = payload.old ?? {};
+        const newRow = payload.new ?? {};
+        const oldStage = getStage(deriveStageKey(oldRow)).label;
+        const newStage = getStage(deriveStageKey(newRow)).label;
+        if (oldStage !== newStage) {
+          toast(`🔔 تحديث الحالة ${newRow.case_code}: ${newStage}`, { duration: 5000 });
+        }
+        load();
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "slot_cases", filter: `doctor_slot=eq.${doctor.slot}` }, load)
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "slot_cases", filter: `doctor_slot=eq.${doctor.slot}` }, load)
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [doctor.slot, load]);
@@ -637,9 +648,9 @@ function CaseCard({ c, doctorName, onEdit, onPin, onArchive, onDelete }: {
           <div className="absolute inset-y-0 right-0 gradient-gold transition-all duration-700 shadow-gold"
             style={{ width: `${stage.percent}%` }} />
         </div>
-        <div className="flex justify-between text-[10px] text-muted-foreground font-bold">
+        <div className="flex flex-wrap gap-x-2 gap-y-1 text-[10px] text-muted-foreground font-bold">
           {STAGES.map((s, i) => (
-            <span key={s.key} className={i <= stageIdx ? "text-gold" : ""}>{s.label}</span>
+            <span key={s.key} className={`whitespace-nowrap ${i <= stageIdx ? "text-gold" : ""}`}>{s.label}</span>
           ))}
         </div>
       </div>

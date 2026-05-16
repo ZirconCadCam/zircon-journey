@@ -40,6 +40,7 @@ export interface WorkflowCase {
   permanent_shipped_to_secretary?: boolean | null;
   permanent_delivered_to_doctor?: boolean | null;
   final_archived?: boolean | null;
+  audit_log?: Array<{ at: string; actor: string; action: string; notes?: string }> | null;
   // For folded card display:
   patient_phone?: string | null;
   patient_age?: number | null;
@@ -715,34 +716,45 @@ function SecretaryControls({ c, actorName, actor, doctorName }: {
 }
 
 // ============== DOCTOR ==============
+async function appendAudit(c: WorkflowCase, entry: { actor: string; action: string; notes?: string }) {
+  const prev = Array.isArray(c.audit_log) ? c.audit_log : [];
+  const next = [...prev, { at: new Date().toISOString(), ...entry }];
+  await supabase.from("slot_cases").update({ audit_log: next as any }).eq("id", c.id);
+}
+
 function DoctorControls({ c, actorName, doctorName }: {
   c: WorkflowCase; actorName: string; doctorName: string;
 }) {
   const [busy, setBusy] = useState(false);
   const [revOpen, setRevOpen] = useState(false);
   const [notes, setNotes] = useState("");
+  const [logOpen, setLogOpen] = useState(false);
 
   const shipped = !!c.shipped_to_doctor;
   const delivered = !!c.temporary_delivered;
   const decision = c.doctor_decision;
   const permDelivered = !!c.permanent_delivered_to_doctor;
-
-  if (!shipped && !decision && !permDelivered) return null;
+  const log = Array.isArray(c.audit_log) ? c.audit_log : [];
 
   async function confirmDelivered() {
+    if (!window.confirm("هل تؤكد استلام الأسنان المؤقتة من السكرتارية؟")) return;
     setBusy(true);
     const { error } = await supabase.from("slot_cases")
       .update({ temporary_delivered: true }).eq("id", c.id);
+    if (!error) {
+      await appendAudit(c, { actor: actorName || "الطبيب", action: "تأكيد استلام الأسنان المؤقتة" });
+      toast.success("✅ تم تأكيد استلام الأسنان المؤقتة بنجاح");
+    } else toast.error(error.message);
     setBusy(false);
-    if (error) toast.error(error.message);
-    else toast.success("تم تأكيد استلام المؤقت");
   }
 
   async function approve() {
+    if (!window.confirm("اعتماد التصميم نهائياً والمتابعة لتصنيع الأسنان الدائمة؟")) return;
     setBusy(true);
     const { error } = await supabase.from("slot_cases")
       .update({ doctor_decision: "approved" }).eq("id", c.id);
     if (!error) {
+      await appendAudit(c, { actor: actorName || "الطبيب", action: "اعتماد نهائي للتصميم" });
       const msg = `✅ اعتماد نهائي للتصميم — الحالة ${c.case_code} (${c.patient_name}). يبدأ تصنيع الأسنان الدائمة.`;
       for (const role of ["designer", "technician"] as RoleKey[]) {
         const conv = await ensureConv(c, "doctor", role, doctorName);
@@ -751,32 +763,51 @@ function DoctorControls({ c, actorName, doctorName }: {
           content: msg, message_type: "text",
         });
       }
-      toast.success("تم إرسال اعتماد نهائي");
+      toast.success("✅ تم إرسال الاعتماد النهائي وإشعار المصمم والفني");
     } else toast.error(error.message);
     setBusy(false);
   }
 
   async function requestRevision() {
     if (notes.trim().length < 3) { toast.error("اكتب ملاحظات التعديل"); return; }
+    if (!window.confirm("إرسال طلب التعديل إلى المصمم؟")) return;
     setBusy(true);
+    const trimmed = notes.trim();
     const { error } = await supabase.from("slot_cases")
-      .update({ doctor_decision: "revision", revision_notes: notes.trim() }).eq("id", c.id);
+      .update({ doctor_decision: "revision", revision_notes: trimmed }).eq("id", c.id);
     if (!error) {
+      await appendAudit(c, { actor: actorName || "الطبيب", action: "طلب تعديل التصميم", notes: trimmed });
       const conv = await ensureConv(c, "doctor", "designer", doctorName);
       if (conv) await supabase.from("chat_messages").insert({
         conversation_id: conv, sender: "doctor", sender_name: actorName,
-        content: `🔁 طلب تعديل تصميم — الحالة ${c.case_code} (${c.patient_name})\nملاحظات:\n${notes.trim()}`,
+        content: `🔁 طلب تعديل تصميم — الحالة ${c.case_code} (${c.patient_name})\nملاحظات:\n${trimmed}`,
         message_type: "text",
       });
-      toast.success("تم إرسال طلب التعديل للمصمم");
+      toast.success("✅ تم إرسال طلب التعديل للمصمم");
       setRevOpen(false);
       setNotes("");
     } else toast.error(error.message);
     setBusy(false);
   }
 
+  // Status pill shown when no action is currently available (e.g. new case).
+  const hasAction = (shipped && !delivered) || (delivered && !decision);
+  const stageHint =
+    decision === "approved" ? "تم الاعتماد النهائي — قيد تصنيع الدائم" :
+    decision === "revision" ? "تم إرسال طلب التعديل — بانتظار المصمم" :
+    permDelivered ? "تم ترحيل الأسنان الدائمة" :
+    delivered ? "قيد المراجعة — بانتظار قرارك" :
+    shipped ? "وصلت الأسنان المؤقتة — أكد الاستلام" :
+    "الحالة قيد التنفيذ — تابع مستوى التقدم";
+
   return (
     <div className="rounded-xl border border-border bg-muted/30 p-3 mt-3 space-y-2">
+      {!hasAction && (
+        <div className="text-[11px] font-bold text-muted-foreground flex items-center gap-1.5">
+          <AlertCircle className="size-3.5 text-gold" /> {stageHint}
+        </div>
+      )}
+
       {shipped && !delivered && (
         <button onClick={confirmDelivered} disabled={busy}
           className="inline-flex items-center gap-2 rounded-lg gradient-brown px-3 py-2 text-xs font-bold shadow-luxury">
@@ -829,6 +860,36 @@ function DoctorControls({ c, actorName, doctorName }: {
         </span>
       )}
 
+      {/* Audit log */}
+      <div className="pt-2 border-t border-border/60">
+        <button onClick={() => setLogOpen(o => !o)}
+          className="w-full flex items-center justify-between text-[11px] font-bold text-muted-foreground hover:text-foreground transition">
+          <span className="flex items-center gap-1.5">
+            <FileCode className="size-3.5" /> سجل تدقيق قرارات الطبيب ({log.length})
+          </span>
+          {logOpen ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
+        </button>
+        {logOpen && (
+          <ul className="mt-2 space-y-1.5 max-h-48 overflow-auto">
+            {log.length === 0 && (
+              <li className="text-[11px] text-muted-foreground italic">لا توجد قرارات مسجلة بعد.</li>
+            )}
+            {log.slice().reverse().map((e, i) => (
+              <li key={i} className="rounded-md border border-border bg-card/60 p-2 text-[11px] space-y-0.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-bold text-gold">{e.action}</span>
+                  <span className="text-muted-foreground font-mono text-[10px]">
+                    {new Date(e.at).toLocaleString("ar")}
+                  </span>
+                </div>
+                <div className="text-muted-foreground">بواسطة: <b className="text-foreground">{e.actor}</b></div>
+                {e.notes && <div className="whitespace-pre-wrap text-foreground/90">📝 {e.notes}</div>}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
       {revOpen && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
           <div className="w-full max-w-md rounded-2xl bg-card border border-border p-5 shadow-luxury">
@@ -857,3 +918,4 @@ function DoctorControls({ c, actorName, doctorName }: {
     </div>
   );
 }
+
