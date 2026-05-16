@@ -279,9 +279,9 @@ function NewSlotCase() {
                     <input className="zinput" value={form.tooth_number}
                       onChange={e=>setForm({...form,tooth_number:e.target.value})} placeholder="مثال: 11، 24، 36" />
                   </Field>
-                  <Field label="عدد الأسنان">
+                  <Field label="عدد الأسنان" required>
                     <input className="zinput" value={form.teeth_count}
-                      onChange={e=>setForm({...form,teeth_count:e.target.value})} placeholder="مثال: 3" />
+                      onChange={e=>setForm({...form,teeth_count:e.target.value})} placeholder="مثال: 3" required />
                   </Field>
                   <Field label="اللون (Shade)">
                     <select className="zinput" value={form.shade}
