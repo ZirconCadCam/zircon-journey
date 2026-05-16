@@ -70,9 +70,7 @@ function NewSlotCase() {
     const required = [
       ["patient_name", form.patient_name, "اسم المريض"],
       ["patient_phone", form.patient_phone, "رقم الهاتف"],
-      ["patient_age", form.patient_age, "العمر"],
-      ["patient_gender", form.patient_gender, "الجنس"],
-      ["tooth_number", form.tooth_number, "رقم السن"],
+      ["tooth_number", form.tooth_number, "تحديد الأسنان على المخطط"],
       ["teeth_count", form.teeth_count, "عدد الأسنان"],
       ["shade", form.shade, "اللون"],
       ["case_type", form.case_type, "نوع الحالة"],
@@ -255,9 +253,9 @@ function NewSlotCase() {
                 <input className="zinput" value={form.patient_name} maxLength={80}
                   onChange={e=>setForm({...form,patient_name:e.target.value})} required />
               </Field>
-              <Field label="رقم الهاتف" error={errors.patient_phone}>
+              <Field label="رقم الهاتف" required error={errors.patient_phone}>
                 <input dir="ltr" className="zinput" value={form.patient_phone} maxLength={15}
-                  onChange={e=>setForm({...form,patient_phone:e.target.value})} placeholder="7xxxxxxxx" />
+                  onChange={e=>setForm({...form,patient_phone:e.target.value})} placeholder="7xxxxxxxx" required />
               </Field>
               <Field label="العمر" error={errors.patient_age}>
                 <input type="number" min={0} max={120} className="zinput" value={form.patient_age}
@@ -281,9 +279,9 @@ function NewSlotCase() {
                     <input className="zinput" value={form.tooth_number}
                       onChange={e=>setForm({...form,tooth_number:e.target.value})} placeholder="مثال: 11، 24، 36" />
                   </Field>
-                  <Field label="عدد الأسنان">
+                  <Field label="عدد الأسنان" required>
                     <input className="zinput" value={form.teeth_count}
-                      onChange={e=>setForm({...form,teeth_count:e.target.value})} placeholder="مثال: 3" />
+                      onChange={e=>setForm({...form,teeth_count:e.target.value})} placeholder="مثال: 3" required />
                   </Field>
                   <Field label="اللون (Shade)">
                     <select className="zinput" value={form.shade}
@@ -298,7 +296,7 @@ function NewSlotCase() {
                     </select>
                   </Field>
                 </div>
-                <Field label="تحديد الأسنان على المخطط">
+                <Field label="تحديد الأسنان على المخطط" required error={errors.tooth_number}>
                   <ToothQuadrantPicker
                     value={form.tooth_number}
                     onChange={(flat) => setForm((f) => ({ ...f, tooth_number: flat }))}
