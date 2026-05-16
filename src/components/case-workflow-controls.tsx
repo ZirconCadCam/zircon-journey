@@ -664,15 +664,6 @@ function SecretaryControls({ c, actorName, actor, doctorName }: {
     setBusy(false);
   }
 
-  async function archiveFinal() {
-    if (!confirm("أرشفة الحالة نهائياً؟")) return;
-    setBusy(true);
-    const { error } = await supabase.from("slot_cases")
-      .update({ final_archived: true, archived: true }).eq("id", c.id);
-    setBusy(false);
-    if (error) toast.error(error.message);
-    else toast.success("تمت الأرشفة النهائية");
-  }
 
   return (
     <div className="rounded-xl border border-border bg-muted/30 p-3 mt-3 space-y-2">
