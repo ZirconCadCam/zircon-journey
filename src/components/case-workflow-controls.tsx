@@ -227,6 +227,83 @@ function DesignerControls({ c, actorName, doctorName, target, blockedByPending }
           <span className="font-mono font-bold">{blockedByPending}</span>
         </div>
       )}
+      <DesignerRevisionSection c={c} actorName={actorName} doctorName={doctorName} />
+    </div>
+  );
+}
+
+// ---------- Designer: revision request from the doctor ----------
+function DesignerRevisionSection({ c, actorName, doctorName }: {
+  c: WorkflowCase; actorName: string; doctorName: string;
+}) {
+  const [busy, setBusy] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  if (c.doctor_decision !== "revision") return null;
+  const done = !!c.revision_design_done;
+  const approved = !!c.revision_approved_by_tech;
+
+  async function uploadRevision(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (e.target) e.target.value = "";
+    if (!f) return;
+    if (!RAR_RE.test(f.name)) { toast.error("الملف يجب أن يكون .rar"); return; }
+    setBusy(true);
+    try {
+      const up = await uploadAttachment(f, c, "revision");
+      if (!up) return;
+      // Notify the technician
+      const conv = await ensureConv(c, "designer", "technician", doctorName);
+      if (conv) await supabase.from("chat_messages").insert({
+        conversation_id: conv, sender: "designer", sender_name: actorName,
+        content: `🔁 تعديل تصميم نهائي — الحالة ${c.case_code} (${c.patient_name})`,
+        message_type: "file",
+        attachment_path: up.url, attachment_name: f.name,
+        attachment_mime: f.type || "application/vnd.rar", attachment_size: f.size,
+      });
+      // Notify the doctor
+      const dconv = await ensureConv(c, "designer", "doctor", doctorName);
+      if (dconv) await supabase.from("chat_messages").insert({
+        conversation_id: dconv, sender: "designer", sender_name: actorName,
+        content: `✏️ تم إنجاز التعديل المطلوب وإرساله للفني — الحالة ${c.case_code}`,
+        message_type: "text",
+      });
+      await supabase.from("slot_cases").update({
+        revision_design_file_path: up.url,
+        revision_design_file_name: f.name,
+        revision_design_done: true,
+      }).eq("id", c.id);
+      toast.success("تم إرسال التعديل للفني");
+    } catch (err: any) { toast.error(err.message || "فشل الإرسال"); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <div className="rounded-lg border border-amber-500/50 bg-amber-50/60 p-3 space-y-2">
+      <div className="text-xs font-bold text-amber-800 flex items-center gap-1.5">
+        <Pencil className="size-3.5" /> تعديل مطلوب من الطبيب
+      </div>
+      {c.revision_notes && (
+        <div className="text-xs whitespace-pre-wrap rounded border border-amber-300 bg-white/70 p-2">
+          {c.revision_notes}
+        </div>
+      )}
+      <div className="flex items-center gap-2 flex-wrap">
+        <label className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold cursor-pointer transition border
+          ${done ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-border bg-card hover:border-gold"}`}>
+          {busy ? <Loader2 className="size-3.5 animate-spin" /> : <FileArchive className="size-3.5" />}
+          {done ? "تم إرسال ملف التعديل" : "رفع ملف التعديل (.rar)"}
+          <input ref={fileRef} type="file" accept=".rar" className="hidden"
+            onChange={uploadRevision} disabled={busy || done} />
+        </label>
+        {done && !approved && (
+          <span className="text-[11px] text-amber-700 font-bold">بانتظار اعتماد الفني…</span>
+        )}
+        {approved && (
+          <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold">
+            <Check className="size-3.5" /> اعتمد الفني التعديل
+          </span>
+        )}
+      </div>
     </div>
   );
 }
