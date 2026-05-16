@@ -70,9 +70,7 @@ function NewSlotCase() {
     const required = [
       ["patient_name", form.patient_name, "اسم المريض"],
       ["patient_phone", form.patient_phone, "رقم الهاتف"],
-      ["patient_age", form.patient_age, "العمر"],
-      ["patient_gender", form.patient_gender, "الجنس"],
-      ["tooth_number", form.tooth_number, "رقم السن"],
+      ["tooth_number", form.tooth_number, "تحديد الأسنان على المخطط"],
       ["teeth_count", form.teeth_count, "عدد الأسنان"],
       ["shade", form.shade, "اللون"],
       ["case_type", form.case_type, "نوع الحالة"],
