@@ -390,7 +390,105 @@ function TechnicianControls({ c, actorName, doctorName, target }: {
           )}
           {shipped && (
             <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold">
-              <Check className="size-3.5" /> تم الترحيل
+              <Check className="size-3.5" /> تم ترحيل المؤقت
+            </span>
+          )}
+        </div>
+      )}
+
+      <TechnicianPermanentSection c={c} actorName={actorName} doctorName={doctorName} target={target} />
+    </div>
+  );
+}
+
+// ---------- Technician: permanent-cycle (after doctor decision) ----------
+function TechnicianPermanentSection({ c, actorName, doctorName, target }: {
+  c: WorkflowCase; actorName: string; doctorName: string; target: RoleKey | null;
+}) {
+  const [busy, setBusy] = useState(false);
+  const decision = c.doctor_decision;
+  // Show only after doctor has decided OR revision design is back.
+  const approved = decision === "approved";
+  const revisionReady = decision === "revision" && c.revision_design_done;
+  const revisionApproved = !!c.revision_approved_by_tech;
+  const permDone = !!c.permanent_fabrication_done;
+  const permSent = !!c.permanent_shipped_to_secretary;
+  if (!approved && !revisionReady && !permDone && !permSent) return null;
+
+  async function approveRevision() {
+    setBusy(true);
+    const { error } = await supabase.from("slot_cases")
+      .update({ revision_approved_by_tech: true }).eq("id", c.id);
+    if (!error) {
+      const conv = await ensureConv(c, "technician", "designer", doctorName);
+      if (conv) await supabase.from("chat_messages").insert({
+        conversation_id: conv, sender: "technician", sender_name: actorName,
+        content: `✅ تم اعتماد التعديل النهائي — الحالة ${c.case_code} (${c.patient_name}). يبدأ تصنيع الأسنان الدائمة.`,
+        message_type: "text",
+      });
+      toast.success("تم اعتماد التعديل");
+    } else toast.error(error.message);
+    setBusy(false);
+  }
+
+  async function togglePermDone() {
+    setBusy(true);
+    const next = !permDone;
+    const { error } = await supabase.from("slot_cases")
+      .update({ permanent_fabrication_done: next }).eq("id", c.id);
+    setBusy(false);
+    if (error) toast.error(error.message);
+    else toast.success(next ? "✅ تم تصنيع الأسنان الدائمة" : "تم إلغاء العلامة");
+  }
+
+  async function sendPermToSecretary() {
+    if (!target) { toast.error("لا يوجد فرع سكرتارية محدد"); return; }
+    setBusy(true);
+    const conv = await ensureConv(c, "technician", target, doctorName);
+    if (conv) await supabase.from("chat_messages").insert({
+      conversation_id: conv, sender: "technician", sender_name: actorName,
+      content: `🦷 الأسنان الدائمة جاهزة للترحيل\nرمز: ${c.case_code}\nالطبيب: ${doctorName}\nالمريض: ${c.patient_name}`,
+      message_type: "text",
+    });
+    const { error } = await supabase.from("slot_cases")
+      .update({ permanent_shipped_to_secretary: true }).eq("id", c.id);
+    setBusy(false);
+    if (error) toast.error(error.message);
+    else toast.success(`تم إشعار ${ROLE_LABEL[target]} بجاهزية الدائم`);
+  }
+
+  return (
+    <div className="rounded-lg border border-emerald-500/40 bg-emerald-50/40 p-3 space-y-2">
+      <div className="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
+        <ThumbsUp className="size-3.5" />
+        {approved ? "تم الاعتماد النهائي من الطبيب — جاهز لتصنيع الدائم"
+                  : revisionReady && !revisionApproved ? "تعديل تصميم جاهز للاعتماد"
+                  : "تصنيع الأسنان الدائمة"}
+      </div>
+      {revisionReady && !revisionApproved && (
+        <button onClick={approveRevision} disabled={busy}
+          className="inline-flex items-center gap-2 rounded-lg gradient-brown px-3 py-2 text-xs font-bold shadow-luxury">
+          {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
+          اعتماد التعديل لتصنيع الدائم
+        </button>
+      )}
+      {(approved || revisionApproved) && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={togglePermDone} disabled={busy}
+            className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold transition border
+              ${permDone ? "gradient-gold text-gold-foreground border-gold shadow-gold" : "border-border bg-card hover:border-gold"}`}>
+            {busy ? <Loader2 className="size-3.5 animate-spin" /> : permDone ? <CheckSquare className="size-3.5" /> : <Square className="size-3.5" />}
+            تم تصنيع الدائم
+          </button>
+          {permDone && !permSent && target && (
+            <button onClick={sendPermToSecretary} disabled={busy}
+              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 text-white px-3 py-2 text-xs font-bold">
+              <Send className="size-3.5" /> إشعار {ROLE_LABEL[target]}
+            </button>
+          )}
+          {permSent && (
+            <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold">
+              <Check className="size-3.5" /> تم الإشعار بجاهزية الدائم
             </span>
           )}
         </div>
