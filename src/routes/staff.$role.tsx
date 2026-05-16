@@ -149,9 +149,6 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
       .on("postgres_changes", { event: "*", schema: "public", table: "chat_conversations" }, refresh)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "slot_cases" }, (p: any) => {
         try {
-          // Lazy import to avoid circular deps in tree-shake
-          // eslint-disable-next-line @typescript-eslint/no-var-requires
-          const { getStage, deriveStageKey } = require("@/lib/case-stages");
           const oldStage = getStage(deriveStageKey(p.old ?? {})).label;
           const newStage = getStage(deriveStageKey(p.new ?? {})).label;
           if (oldStage !== newStage && p.new?.case_code) {
