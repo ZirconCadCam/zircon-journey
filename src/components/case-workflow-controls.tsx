@@ -68,6 +68,9 @@ const RAR_RE = /\.rar$/i;
 const HTML_RE = /\.html?$/i;
 
 export function CaseWorkflowControls({ c, actor, actorName, doctorName, target, blockedByPending }: Props) {
+  if (actor === "doctor") {
+    return <DoctorControls c={c} actorName={actorName} doctorName={doctorName} />;
+  }
   if (actor === "designer") {
     return <DesignerControls c={c} actorName={actorName} doctorName={doctorName}
       target={target ?? "technician"} blockedByPending={blockedByPending ?? null} />;
@@ -75,7 +78,7 @@ export function CaseWorkflowControls({ c, actor, actorName, doctorName, target, 
   if (actor === "technician") {
     return <TechnicianControls c={c} actorName={actorName} doctorName={doctorName} target={target ?? null} />;
   }
-  return <SecretaryControls c={c} actorName={actorName} actor={actor} />;
+  return <SecretaryControls c={c} actorName={actorName} actor={actor} doctorName={doctorName} />;
 }
 
 // ---------- helpers ----------
