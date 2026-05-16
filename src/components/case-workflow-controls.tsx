@@ -332,7 +332,7 @@ function TechnicianControls({ c, actorName, doctorName, target }: {
       if (designerConv) {
         await supabase.from("chat_messages").insert({
           conversation_id: designerConv, sender: "technician", sender_name: actorName,
-          content: `✅ تم استلام ملفات التصميم — الحالة ${c.case_code} (${c.patient_name})\nالحالة الآن: قيد التصنيع.`,
+          content: `✅ تم استلام ملفات التصميم — الحالة ${c.case_code} (${c.patient_name})\nالحالة الآن: قيد النحت.`,
           message_type: "text",
         });
       }
@@ -340,11 +340,11 @@ function TechnicianControls({ c, actorName, doctorName, target }: {
       if (docConv) {
         await supabase.from("chat_messages").insert({
           conversation_id: docConv, sender: "technician", sender_name: actorName,
-          content: `🔔 الحالة ${c.case_code} (${c.patient_name}) — قيد التصنيع.`,
+          content: `🔔 الحالة ${c.case_code} (${c.patient_name}) — قيد النحت.`,
           message_type: "text",
         });
       }
-      toast.success("تم تأكيد الاستلام — الحالة قيد التصنيع");
+      toast.success("تم تأكيد الاستلام — الحالة قيد النحت");
     } else toast.error(error.message);
     setBusy(false);
   }
@@ -356,14 +356,14 @@ function TechnicianControls({ c, actorName, doctorName, target }: {
       .update({ fabrication_done: !fabDone }).eq("id", c.id);
     setBusy(false);
     if (error) toast.error(error.message);
-    else toast.success(!fabDone ? "✅ تم التصنيع" : "تم إلغاء العلامة");
+    else toast.success(!fabDone ? "✅ تم النحت" : "تم إلغاء العلامة");
   }
 
   async function sendDataToSecretary() {
     if (!target) { toast.error("لا يوجد فرع سكرتارية محدد"); return; }
     setBusy(true);
     const lines = [
-      `📋 حالة جاهزة للترحيل`,
+      `📋 حالة جاهزة للإرسال`,
       `رمز: ${c.case_code}`,
       `الطبيب: ${doctorName}`,
       `المريض: ${c.patient_name}`,
@@ -399,11 +399,11 @@ function TechnicianControls({ c, actorName, doctorName, target }: {
       if (docConv) {
         await supabase.from("chat_messages").insert({
           conversation_id: docConv, sender: "technician", sender_name: actorName,
-          content: `🚚 تم ترحيل الحالة ${c.case_code} (${c.patient_name}).`,
+          content: `🚚 تم إرسال الحالة ${c.case_code} (${c.patient_name}).`,
           message_type: "text",
         });
       }
-      toast.success("تم وضع شارة: تم الترحيل");
+      toast.success("تم وضع شارة: تم الإرسال");
     } else toast.error(error.message);
     setBusy(false);
   }
@@ -447,7 +447,7 @@ function TechnicianControls({ c, actorName, doctorName, target }: {
             className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold transition border
               ${fabDone ? "gradient-gold text-gold-foreground border-gold shadow-gold" : "border-border bg-card hover:border-gold"}`}>
             {busy ? <Loader2 className="size-3.5 animate-spin" /> : fabDone ? <CheckSquare className="size-3.5" /> : <Square className="size-3.5" />}
-            تم التصنيع
+            تم النحت
           </button>
           {fabDone && !dataSent && target && (
             <button onClick={sendDataToSecretary} disabled={busy}
@@ -463,12 +463,12 @@ function TechnicianControls({ c, actorName, doctorName, target }: {
           {secReceived && !shipped && (
             <button onClick={markShipped} disabled={busy}
               className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 text-white px-3 py-2 text-xs font-bold">
-              <Truck className="size-3.5" /> تأكيد الترحيل (تم الترحيل)
+              <Truck className="size-3.5" /> تأكيد الإرسال (تم الإرسال)
             </button>
           )}
           {shipped && (
             <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold">
-              <Check className="size-3.5" /> تم ترحيل المؤقت
+              <Check className="size-3.5" /> تم إرسال المؤقت
             </span>
           )}
         </div>
@@ -501,7 +501,7 @@ function TechnicianPermanentSection({ c, actorName, doctorName, target }: {
       const conv = await ensureConv(c, "technician", "designer", doctorName);
       if (conv) await supabase.from("chat_messages").insert({
         conversation_id: conv, sender: "technician", sender_name: actorName,
-        content: `✅ تم اعتماد التعديل النهائي — الحالة ${c.case_code} (${c.patient_name}). يبدأ تصنيع الأسنان الدائمة.`,
+        content: `✅ تم اعتماد التعديل النهائي — الحالة ${c.case_code} (${c.patient_name}). يبدأ نحت الأسنان الدائمة.`,
         message_type: "text",
       });
       toast.success("تم اعتماد التعديل");
@@ -516,7 +516,7 @@ function TechnicianPermanentSection({ c, actorName, doctorName, target }: {
       .update({ permanent_fabrication_done: next }).eq("id", c.id);
     setBusy(false);
     if (error) toast.error(error.message);
-    else toast.success(next ? "✅ تم تصنيع الأسنان الدائمة" : "تم إلغاء العلامة");
+    else toast.success(next ? "✅ تم نحت الأسنان الدائمة" : "تم إلغاء العلامة");
   }
 
   async function sendPermToSecretary() {
@@ -525,7 +525,7 @@ function TechnicianPermanentSection({ c, actorName, doctorName, target }: {
     const conv = await ensureConv(c, "technician", target, doctorName);
     if (conv) await supabase.from("chat_messages").insert({
       conversation_id: conv, sender: "technician", sender_name: actorName,
-      content: `🦷 الأسنان الدائمة جاهزة للترحيل\nرمز: ${c.case_code}\nالطبيب: ${doctorName}\nالمريض: ${c.patient_name}`,
+      content: `🦷 الأسنان الدائمة جاهزة للإرسال\nرمز: ${c.case_code}\nالطبيب: ${doctorName}\nالمريض: ${c.patient_name}`,
       message_type: "text",
     });
     const { error } = await supabase.from("slot_cases")
@@ -539,15 +539,15 @@ function TechnicianPermanentSection({ c, actorName, doctorName, target }: {
     <div className="rounded-lg border border-emerald-500/40 bg-emerald-50/40 p-3 space-y-2">
       <div className="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
         <ThumbsUp className="size-3.5" />
-        {approved ? "تم الاعتماد النهائي من الطبيب — جاهز لتصنيع الدائم"
+        {approved ? "تم الاعتماد النهائي من الطبيب — جاهز لنحت الدائم"
                   : revisionReady && !revisionApproved ? "تعديل تصميم جاهز للاعتماد"
-                  : "تصنيع الأسنان الدائمة"}
+                  : "نحت الأسنان الدائمة"}
       </div>
       {revisionReady && !revisionApproved && (
         <button onClick={approveRevision} disabled={busy}
           className="inline-flex items-center gap-2 rounded-lg gradient-brown px-3 py-2 text-xs font-bold shadow-luxury">
           {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
-          اعتماد التعديل لتصنيع الدائم
+          اعتماد التعديل لنحت الدائم
         </button>
       )}
       {(approved || revisionApproved) && (
@@ -556,7 +556,7 @@ function TechnicianPermanentSection({ c, actorName, doctorName, target }: {
             className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold transition border
               ${permDone ? "gradient-gold text-gold-foreground border-gold shadow-gold" : "border-border bg-card hover:border-gold"}`}>
             {busy ? <Loader2 className="size-3.5 animate-spin" /> : permDone ? <CheckSquare className="size-3.5" /> : <Square className="size-3.5" />}
-            تم تصنيع الدائم
+            تم نحت الدائم
           </button>
           {permDone && !permSent && target && (
             <button onClick={sendPermToSecretary} disabled={busy}
@@ -602,7 +602,7 @@ function SecretaryControls({ c, actorName, actor, doctorName }: {
       const dconv = await ensureConv(c, actor, "doctor", doctorName);
       if (dconv) await supabase.from("chat_messages").insert({
         conversation_id: dconv, sender: actor, sender_name: actorName,
-        content: `🦷 تم استلام الأسنان المؤقتة (للتجربة) — الحالة ${c.case_code} (${c.patient_name}). جاهزة للترحيل إليكم.`,
+        content: `🦷 تم استلام الأسنان المؤقتة (للتجربة) — الحالة ${c.case_code} (${c.patient_name}). جاهزة للإرسال إليكم.`,
         message_type: "text",
       });
       toast.success("تم استلام البيانات");
@@ -628,10 +628,10 @@ function SecretaryControls({ c, actorName, actor, doctorName }: {
       const dconv = await ensureConv(c, actor, "doctor", doctorName);
       if (dconv) await supabase.from("chat_messages").insert({
         conversation_id: dconv, sender: actor, sender_name: actorName,
-        content: `🚚 تم ترحيل الأسنان الدائمة — الحالة ${c.case_code} (${c.patient_name}).`,
+        content: `🚚 تم إرسال الأسنان الدائمة — الحالة ${c.case_code} (${c.patient_name}).`,
         message_type: "text",
       });
-      toast.success("تم ترحيل الدائم للطبيب");
+      toast.success("تم إرسال الدائم للطبيب");
     } else toast.error(error.message);
     setBusy(false);
   }
@@ -662,7 +662,7 @@ function SecretaryControls({ c, actorName, actor, doctorName }: {
         )}
         {shipped && (
           <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold border border-emerald-500 bg-emerald-50 rounded-lg px-2 py-1">
-            <Truck className="size-3.5" /> تم ترحيل المؤقت
+            <Truck className="size-3.5" /> تم إرسال المؤقت
           </span>
         )}
       </div>
@@ -689,12 +689,12 @@ function SecretaryControls({ c, actorName, actor, doctorName }: {
             {permSent && !permDelivered && (
               <button onClick={deliverPermanent} disabled={busy}
                 className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 text-white px-3 py-2 text-xs font-bold">
-                <Truck className="size-3.5" /> تأكيد ترحيل الدائم للطبيب
+                <Truck className="size-3.5" /> تأكيد إرسال الدائم للطبيب
               </button>
             )}
             {permDelivered && (
               <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold">
-                <Check className="size-3.5" /> تم ترحيل الدائم
+                <Check className="size-3.5" /> تم إرسال الدائم
               </span>
             )}
             {permDelivered && !archived && (
@@ -749,13 +749,13 @@ function DoctorControls({ c, actorName, doctorName }: {
   }
 
   async function approve() {
-    if (!window.confirm("اعتماد التصميم نهائياً والمتابعة لتصنيع الأسنان الدائمة؟")) return;
+    if (!window.confirm("اعتماد التصميم نهائياً والمتابعة لنحت الأسنان الدائمة؟")) return;
     setBusy(true);
     const { error } = await supabase.from("slot_cases")
       .update({ doctor_decision: "approved" }).eq("id", c.id);
     if (!error) {
       await appendAudit(c, { actor: actorName || "الطبيب", action: "اعتماد نهائي للتصميم" });
-      const msg = `✅ اعتماد نهائي للتصميم — الحالة ${c.case_code} (${c.patient_name}). يبدأ تصنيع الأسنان الدائمة.`;
+      const msg = `✅ اعتماد نهائي للتصميم — الحالة ${c.case_code} (${c.patient_name}). يبدأ نحت الأسنان الدائمة.`;
       for (const role of ["designer", "technician"] as RoleKey[]) {
         const conv = await ensureConv(c, "doctor", role, doctorName);
         if (conv) await supabase.from("chat_messages").insert({
@@ -793,9 +793,9 @@ function DoctorControls({ c, actorName, doctorName }: {
   // Status pill shown when no action is currently available (e.g. new case).
   const hasAction = (shipped && !delivered) || (delivered && !decision);
   const stageHint =
-    decision === "approved" ? "تم الاعتماد النهائي — قيد تصنيع الدائم" :
+    decision === "approved" ? "تم الاعتماد النهائي — قيد نحت الدائم" :
     decision === "revision" ? "تم إرسال طلب التعديل — بانتظار المصمم" :
-    permDelivered ? "تم ترحيل الأسنان الدائمة" :
+    permDelivered ? "تم إرسال الأسنان الدائمة" :
     delivered ? "قيد المراجعة — بانتظار قرارك" :
     shipped ? "وصلت الأسنان المؤقتة — أكد الاستلام" :
     "الحالة قيد التنفيذ — تابع مستوى التقدم";
@@ -834,7 +834,7 @@ function DoctorControls({ c, actorName, doctorName }: {
 
       {decision === "approved" && (
         <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold">
-          <ThumbsUp className="size-3.5" /> تم الاعتماد النهائي — قيد تصنيع الدائم
+          <ThumbsUp className="size-3.5" /> تم الاعتماد النهائي — قيد نحت الدائم
         </span>
       )}
 
@@ -856,7 +856,7 @@ function DoctorControls({ c, actorName, doctorName }: {
 
       {permDelivered && (
         <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold border border-emerald-500 bg-emerald-50 rounded-lg px-2 py-1">
-          <Truck className="size-3.5" /> تم ترحيل الأسنان الدائمة
+          <Truck className="size-3.5" /> تم إرسال الأسنان الدائمة
         </span>
       )}
 

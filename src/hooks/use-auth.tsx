@@ -63,7 +63,7 @@ export const STATUS_LABELS: Record<string, string> = {
   new: "جديدة",
   designing: "قيد التصميم",
   design_ready: "تم التصميم",
-  milling: "قيد التصنيع",
+  milling: "قيد النحت",
   ready: "جاهزة للتسليم",
   delivered: "تم التسليم",
   archived: "مؤرشفة",
