@@ -8,11 +8,12 @@ import {
   Sparkles, ArrowRight, Lock, Upload, FileText, Download, Archive,
   Trash2, Share2, MessageSquare, Files as FilesIcon, ArchiveRestore, Copy, Check, Search, Plus,
   ClipboardList, MoreHorizontal, Pencil, Pin, PinOff, Send, X, Loader2,
-  Palette, Shield, Building2,
+  Palette, Shield, Building2, FileSpreadsheet,
 } from "lucide-react";
 import { toast } from "sonner";
 import { STAGES, getStage, deriveStageKey, notifyRoleAboutCase, localNotify, type CaseStage } from "@/lib/case-stages";
 import { CaseWorkflowControls } from "@/components/case-workflow-controls";
+import { DoctorReportsPanel } from "@/components/doctor-reports-panel";
 import { Z } from "@/lib/z-index";
 
 export const Route = createFileRoute("/doctors/$slot")({
@@ -161,7 +162,7 @@ function PasswordGate({ doctor, onOk }: { doctor: Doctor; onOk: () => void }) {
 
 function Portal({ doctor, actor, actorName, onLogout }: { doctor: Doctor; actor: Sender; actorName: string; onLogout: () => void }) {
   const { branch } = useAuth();
-  const [tab, setTab] = useState<"cases" | "files" | "chat">("cases");
+  const [tab, setTab] = useState<"cases" | "files" | "chat" | "reports">("cases");
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
@@ -202,16 +203,18 @@ function Portal({ doctor, actor, actorName, onLogout }: { doctor: Doctor; actor:
           </div>
         </div>
 
-        <div className="mt-6 flex items-center gap-2 border-b border-border overflow-x-auto">
+        <div className="mt-6 grid grid-cols-4 gap-1 border-b border-border">
           <TabBtn active={tab==="cases"} onClick={()=>setTab("cases")} icon={<ClipboardList className="size-4" />} label="الحالات" />
           <TabBtn active={tab==="files"} onClick={()=>setTab("files")} icon={<FilesIcon className="size-4" />} label="الملفات" />
           <TabBtn active={tab==="chat"} onClick={()=>{ setTab("chat"); setUnread(0); }} icon={<MessageSquare className="size-4" />} label="المحادثة" badge={unread} />
+          <TabBtn active={tab==="reports"} onClick={()=>setTab("reports")} icon={<FileSpreadsheet className="size-4" />} label="الكشوفات" />
         </div>
 
         <div className="mt-6">
           {tab === "cases" && <CasesPanel doctor={doctor} />}
           {tab === "files" && <FilesPanel doctor={doctor} actor={actor} />}
           {tab === "chat" && <ChatModule doctorSlot={doctor.slot} doctorName={doctor.name} me={chatRole} myName={actorName || doctor.name} />}
+          {tab === "reports" && <DoctorReportsPanel doctor={doctor} />}
         </div>
 
         <ChatNotificationsListener doctorSlot={doctor.slot} me={chatRole}
@@ -271,8 +274,8 @@ function ChatNotificationsListener({ doctorSlot, me, onUnread }: { doctorSlot: n
 function TabBtn({ active, onClick, icon, label, badge }: any) {
   return (
     <button onClick={onClick}
-      className={`relative flex items-center gap-2 px-5 py-3 text-sm font-bold border-b-2 -mb-px transition ${active?"border-gold text-gold":"border-transparent text-muted-foreground hover:text-foreground"}`}>
-      {icon} {label}
+      className={`relative flex items-center justify-center gap-1.5 px-2 sm:px-4 py-3 text-xs sm:text-sm font-bold border-b-2 -mb-px transition ${active?"border-gold text-gold":"border-transparent text-muted-foreground hover:text-foreground"}`}>
+      {icon} <span className="truncate">{label}</span>
       {badge > 0 && <span className="rounded-full gradient-gold text-[10px] font-bold px-1.5 min-w-[18px] h-[18px] grid place-items-center shadow-gold">{badge}</span>}
     </button>
   );
