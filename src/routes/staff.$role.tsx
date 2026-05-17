@@ -111,7 +111,7 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [selected, setSelected] = useState<Doctor | null>(null);
   const [unread, setUnread] = useState<Record<number, number>>({});
-  const [tab, setTab] = useState<"chat" | "cases">("chat");
+  const [tab, setTab] = useState<"chat" | "cases" | "settings">("chat");
 
   useEffect(() => {
     (async () => {
