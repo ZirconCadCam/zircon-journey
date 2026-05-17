@@ -274,8 +274,8 @@ function ChatNotificationsListener({ doctorSlot, me, onUnread }: { doctorSlot: n
 function TabBtn({ active, onClick, icon, label, badge }: any) {
   return (
     <button onClick={onClick}
-      className={`relative flex items-center gap-2 px-5 py-3 text-sm font-bold border-b-2 -mb-px transition ${active?"border-gold text-gold":"border-transparent text-muted-foreground hover:text-foreground"}`}>
-      {icon} {label}
+      className={`relative flex items-center justify-center gap-1.5 px-2 sm:px-4 py-3 text-xs sm:text-sm font-bold border-b-2 -mb-px transition ${active?"border-gold text-gold":"border-transparent text-muted-foreground hover:text-foreground"}`}>
+      {icon} <span className="truncate">{label}</span>
       {badge > 0 && <span className="rounded-full gradient-gold text-[10px] font-bold px-1.5 min-w-[18px] h-[18px] grid place-items-center shadow-gold">{badge}</span>}
     </button>
   );
