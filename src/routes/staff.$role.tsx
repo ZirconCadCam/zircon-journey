@@ -189,21 +189,31 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
         </div>
 
 
-        {(role === "designer" || role === "technician" || role === "secretary_sanaa" || role === "secretary_ibb") && (
-          <div className="mt-6 inline-flex rounded-xl border border-border bg-card p-1 shadow-luxury">
+        {(role === "designer" || role === "technician" || role === "secretary_sanaa" || role === "secretary_ibb" || role === "admin") && (
+          <div className="mt-6 inline-flex flex-wrap rounded-xl border border-border bg-card p-1 shadow-luxury">
             <button onClick={() => setTab("chat")}
               className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "chat" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
               <MessageSquare className="size-4" /> المحادثات
             </button>
-            <button onClick={() => setTab("cases")}
-              className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "cases" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
-              <ClipboardList className="size-4" /> الحالات
-            </button>
+            {role !== "admin" && (
+              <button onClick={() => setTab("cases")}
+                className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "cases" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
+                <ClipboardList className="size-4" /> الحالات
+              </button>
+            )}
+            {role === "admin" && (
+              <button onClick={() => setTab("settings")}
+                className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "settings" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
+                <Settings className="size-4" /> الإعدادات
+              </button>
+            )}
           </div>
         )}
 
         <div className="mt-6">
-          {(role === "designer" || role === "technician" || role === "secretary_sanaa" || role === "secretary_ibb") && tab === "cases" ? (
+          {tab === "settings" && role === "admin" ? (
+            <AdminSettingsPanel />
+          ) : (role === "designer" || role === "technician" || role === "secretary_sanaa" || role === "secretary_ibb") && tab === "cases" ? (
             <DesignerCases actor={role as any} actorName={ROLE_LABEL[role]} />
           ) : (
             <div className="grid lg:grid-cols-[320px_1fr] gap-5">
