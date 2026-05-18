@@ -562,6 +562,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
+                  </div>
 
                   {/* Workflow controls vary per actor */}
                   {(() => {
