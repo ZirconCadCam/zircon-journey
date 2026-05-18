@@ -695,10 +695,16 @@ function CaseCard({ c, doctorName, onEdit, onPin, onArchive, onDelete }: {
           <div className="absolute inset-y-0 right-0 gradient-gold transition-all duration-700 shadow-gold"
             style={{ width: `${stage.percent}%` }} />
         </div>
-        <div className="flex flex-wrap gap-x-2 gap-y-1 text-[10px] text-muted-foreground font-bold">
-          {STAGES.map((s, i) => (
-            <span key={s.key} className={`whitespace-nowrap ${i <= stageIdx ? "text-gold" : ""}`}>{s.label}</span>
-          ))}
+        <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-[10px] text-muted-foreground font-bold">
+          {STAGES.map((s, i) => {
+            const tick = stageTickState(s.key, c);
+            return (
+              <span key={s.key} className={`whitespace-nowrap inline-flex items-center gap-1 ${i <= stageIdx ? "text-gold" : ""}`}>
+                {s.label}
+                <StageTick state={tick} />
+              </span>
+            );
+          })}
         </div>
       </div>
 
