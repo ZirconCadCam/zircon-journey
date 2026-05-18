@@ -14,7 +14,51 @@ import { toast } from "sonner";
 import { STAGES, getStage, deriveStageKey, notifyRoleAboutCase, localNotify, type CaseStage } from "@/lib/case-stages";
 import { CaseWorkflowControls } from "@/components/case-workflow-controls";
 import { DoctorReportsPanel } from "@/components/doctor-reports-panel";
+import { StageTick, type TickState } from "@/components/stage-tick";
 import { Z } from "@/lib/z-index";
+
+/** Compute WhatsApp-style tick state for each visible stage from case flags + timing. */
+function stageTickState(stageKey: string, c: any): TickState {
+  switch (stageKey) {
+    case "new":
+      if (c.design_received_by_tech || c.design_file_sent) return "read";
+      if (c.new_read_at) return "read";
+      if (c.new_delivered_at) return "delivered";
+      return "sent"; // case exists → at least sent
+    case "design_done":
+      if (!(c.design_file_sent || c.design_done)) return "none";
+      if (c.design_read_at || c.design_received_by_tech || c.tech_data_sent_to_secretary) return "read";
+      if (c.design_delivered_at) return "delivered";
+      return "sent";
+    case "doctor_review":
+      if (!(c.tech_data_sent_to_secretary || c.shipped_to_doctor)) return "none";
+      if (c.review_read_at || c.temporary_delivered || c.doctor_decision) return "read";
+      if (c.review_delivered_at) return "delivered";
+      return "sent";
+    case "revision":
+      return c.doctor_decision === "revision" ? "read" : "none";
+    case "approved":
+      return (c.doctor_decision === "approved" || c.revision_approved_by_tech) ? "read" : "none";
+    case "permanent_done":
+      if (!c.permanent_fabrication_done) return "none";
+      if (c.perm_read_at || c.permanent_shipped_to_secretary) return "read";
+      if (c.perm_delivered_at) return "delivered";
+      return "sent";
+    case "permanent_shipped":
+      if (!(c.permanent_shipped_to_secretary || c.permanent_delivered_to_doctor)) return "none";
+      if (c.perm_ship_read_at || c.permanent_received_by_secretary) return "read";
+      if (c.perm_ship_delivered_at) return "delivered";
+      return "sent";
+    case "perm_received":
+      return c.permanent_received_by_secretary ? "read" : "none";
+    case "installed":
+      return c.permanent_installed_by_doctor ? "read" : "none";
+    case "final_archived":
+      return c.final_archived ? "read" : "none";
+    default:
+      return "none";
+  }
+}
 
 export const Route = createFileRoute("/doctors/$slot")({
   component: DoctorPortal,
