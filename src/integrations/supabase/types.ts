@@ -197,9 +197,11 @@ export type Database = {
           content: string
           conversation_id: string
           created_at: string
+          delivered_at: string | null
           edited_at: string | null
           id: string
           message_type: string
+          read_at: string | null
           read_by: string[]
           sender: string
           sender_name: string | null
@@ -212,9 +214,11 @@ export type Database = {
           content?: string
           conversation_id: string
           created_at?: string
+          delivered_at?: string | null
           edited_at?: string | null
           id?: string
           message_type?: string
+          read_at?: string | null
           read_by?: string[]
           sender: string
           sender_name?: string | null
@@ -227,9 +231,11 @@ export type Database = {
           content?: string
           conversation_id?: string
           created_at?: string
+          delivered_at?: string | null
           edited_at?: string | null
           id?: string
           message_type?: string
+          read_at?: string | null
           read_by?: string[]
           sender?: string
           sender_name?: string | null
@@ -459,23 +465,34 @@ export type Database = {
           case_type: string | null
           created_at: string
           created_by: string
+          design_delivered_at: string | null
           design_done: boolean
           design_file_sent: boolean
           design_html_name: string | null
           design_html_path: string | null
           design_html_sent: boolean
+          design_read_at: string | null
           design_received_by_tech: boolean
+          design_sent_at: string | null
           doctor_decision: string | null
           doctor_slot: number
           fabrication_done: boolean
           fabrication_file_sent: boolean
           final_archived: boolean
           id: string
+          new_delivered_at: string | null
+          new_read_at: string | null
           notes: string | null
           patient_age: number | null
           patient_gender: string | null
           patient_name: string
           patient_phone: string | null
+          perm_delivered_at: string | null
+          perm_read_at: string | null
+          perm_sent_at: string | null
+          perm_ship_delivered_at: string | null
+          perm_ship_read_at: string | null
+          perm_ship_sent_at: string | null
           permanent_delivered_to_doctor: boolean
           permanent_fabrication_done: boolean
           permanent_installed_by_doctor: boolean
@@ -484,6 +501,9 @@ export type Database = {
           pinned: boolean
           received_permanent: boolean
           received_temporary: boolean
+          review_delivered_at: string | null
+          review_read_at: string | null
+          review_sent_at: string | null
           revision_approved_by_tech: boolean
           revision_design_done: boolean
           revision_design_file_name: string | null
@@ -510,23 +530,34 @@ export type Database = {
           case_type?: string | null
           created_at?: string
           created_by?: string
+          design_delivered_at?: string | null
           design_done?: boolean
           design_file_sent?: boolean
           design_html_name?: string | null
           design_html_path?: string | null
           design_html_sent?: boolean
+          design_read_at?: string | null
           design_received_by_tech?: boolean
+          design_sent_at?: string | null
           doctor_decision?: string | null
           doctor_slot: number
           fabrication_done?: boolean
           fabrication_file_sent?: boolean
           final_archived?: boolean
           id?: string
+          new_delivered_at?: string | null
+          new_read_at?: string | null
           notes?: string | null
           patient_age?: number | null
           patient_gender?: string | null
           patient_name: string
           patient_phone?: string | null
+          perm_delivered_at?: string | null
+          perm_read_at?: string | null
+          perm_sent_at?: string | null
+          perm_ship_delivered_at?: string | null
+          perm_ship_read_at?: string | null
+          perm_ship_sent_at?: string | null
           permanent_delivered_to_doctor?: boolean
           permanent_fabrication_done?: boolean
           permanent_installed_by_doctor?: boolean
@@ -535,6 +566,9 @@ export type Database = {
           pinned?: boolean
           received_permanent?: boolean
           received_temporary?: boolean
+          review_delivered_at?: string | null
+          review_read_at?: string | null
+          review_sent_at?: string | null
           revision_approved_by_tech?: boolean
           revision_design_done?: boolean
           revision_design_file_name?: string | null
@@ -561,23 +595,34 @@ export type Database = {
           case_type?: string | null
           created_at?: string
           created_by?: string
+          design_delivered_at?: string | null
           design_done?: boolean
           design_file_sent?: boolean
           design_html_name?: string | null
           design_html_path?: string | null
           design_html_sent?: boolean
+          design_read_at?: string | null
           design_received_by_tech?: boolean
+          design_sent_at?: string | null
           doctor_decision?: string | null
           doctor_slot?: number
           fabrication_done?: boolean
           fabrication_file_sent?: boolean
           final_archived?: boolean
           id?: string
+          new_delivered_at?: string | null
+          new_read_at?: string | null
           notes?: string | null
           patient_age?: number | null
           patient_gender?: string | null
           patient_name?: string
           patient_phone?: string | null
+          perm_delivered_at?: string | null
+          perm_read_at?: string | null
+          perm_sent_at?: string | null
+          perm_ship_delivered_at?: string | null
+          perm_ship_read_at?: string | null
+          perm_ship_sent_at?: string | null
           permanent_delivered_to_doctor?: boolean
           permanent_fabrication_done?: boolean
           permanent_installed_by_doctor?: boolean
@@ -586,6 +631,9 @@ export type Database = {
           pinned?: boolean
           received_permanent?: boolean
           received_temporary?: boolean
+          review_delivered_at?: string | null
+          review_read_at?: string | null
+          review_sent_at?: string | null
           revision_approved_by_tech?: boolean
           revision_design_done?: boolean
           revision_design_file_name?: string | null
