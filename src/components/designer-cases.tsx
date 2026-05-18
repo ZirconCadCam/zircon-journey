@@ -143,14 +143,12 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
   // Filter cases each actor should see.
   const visibleForActor = useMemo(() => {
     if (actor === "technician") {
-      // Technician sees only cases where designer finished + sent both files.
+      // Technician sees cases where designer sent the .rar file (HTML no longer required).
       return filtered.filter(c =>
-        c.design_done && c.design_file_sent && c.design_html_sent
-        && !c.shipped_to_doctor
+        (c.design_file_sent || c.design_done) && !c.shipped_to_doctor
       );
     }
     if (actor === "secretary_sanaa" || actor === "secretary_ibb") {
-      // Secretaries see cases the technician forwarded matching their branch.
       const branch = actor === "secretary_sanaa" ? "sanaa" : "ibb";
       return filtered.filter(c => {
         if (!c.tech_data_sent_to_secretary) return false;
