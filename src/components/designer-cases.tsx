@@ -4,8 +4,11 @@ import { toast } from "sonner";
 import {
   Stethoscope, FileText, Download, Share2, Loader2,
   ScanLine, User, Phone, Hash, Palette, ClipboardList, Calendar,
-  Archive, Trash2,
+  Archive, MoreVertical,
 } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 
 /** Inject hex overrides for our oklch CSS variables into html2canvas's cloned doc. */
 const H2C_ONCLONE = (doc: Document) => {
@@ -140,14 +143,12 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
   // Filter cases each actor should see.
   const visibleForActor = useMemo(() => {
     if (actor === "technician") {
-      // Technician sees only cases where designer finished + sent both files.
+      // Technician sees cases where designer sent the .rar file (HTML no longer required).
       return filtered.filter(c =>
-        c.design_done && c.design_file_sent && c.design_html_sent
-        && !c.shipped_to_doctor
+        (c.design_file_sent || c.design_done) && !c.shipped_to_doctor
       );
     }
     if (actor === "secretary_sanaa" || actor === "secretary_ibb") {
-      // Secretaries see cases the technician forwarded matching their branch.
       const branch = actor === "secretary_sanaa" ? "sanaa" : "ibb";
       return filtered.filter(c => {
         if (!c.tech_data_sent_to_secretary) return false;
@@ -410,15 +411,8 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     toast.success("تم نقل الحالة إلى الأرشيف");
   }
 
-  async function deleteCase(c: Case) {
-    if (!confirm(`حذف الحالة ${c.case_code} نهائياً؟ لا يمكن التراجع.`)) return;
-    setBusyId(c.id);
-    const { error } = await supabase.from("slot_cases").delete().eq("id", c.id);
-    setBusyId(null);
-    if (error) { toast.error("تعذر الحذف"); return; }
-    setCases(prev => prev.filter(x => x.id !== c.id));
-    toast.success("تم حذف الحالة");
-  }
+  // delete removed from designer page per requirements
+
 
   if (loading) {
     return <div className="rounded-2xl bg-card border border-border p-12 text-center text-muted-foreground shadow-luxury">
@@ -538,33 +532,33 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                     </div>
 
                     <div className="flex flex-col gap-2 shrink-0">
-                      <button onClick={() => downloadPdf(c)} disabled={busy}
-                        className="inline-flex items-center gap-2 rounded-xl gradient-gold text-gold-foreground px-3 py-2 text-xs font-bold shadow-gold disabled:opacity-60 hover:shadow-luxury transition">
-                        {busy ? <Loader2 className="size-3.5 animate-spin" /> : <FileText className="size-3.5" />}
-                        تنزيل PDF
-                      </button>
-                      {c.scan_path && (
-                        <button onClick={() => downloadScan(c)} disabled={busy}
-                          className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-xs font-bold hover:border-gold transition disabled:opacity-60">
-                          {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
-                          تنزيل المسح
-                        </button>
-                      )}
-                      <button onClick={() => shareExternal(c)} disabled={busy}
-                        className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-xs font-bold hover:border-gold transition disabled:opacity-60">
-                        {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Share2 className="size-3.5" />}
-                        مشاركة
-                      </button>
-                      <button onClick={() => archiveCase(c)} disabled={busy}
-                        className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-xs font-bold hover:border-gold transition disabled:opacity-60">
-                        <Archive className="size-3.5" />
-                        أرشفة
-                      </button>
-                      <button onClick={() => deleteCase(c)} disabled={busy}
-                        className="inline-flex items-center gap-2 rounded-xl border border-destructive/40 bg-card text-destructive px-3 py-2 text-xs font-bold hover:bg-destructive hover:text-destructive-foreground transition disabled:opacity-60">
-                        <Trash2 className="size-3.5" />
-                        حذف
-                      </button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            disabled={busy}
+                            className="inline-flex items-center justify-center rounded-xl border border-border bg-card p-2 hover:border-gold transition disabled:opacity-60"
+                            aria-label="إجراءات الحالة"
+                          >
+                            {busy ? <Loader2 className="size-4 animate-spin" /> : <MoreVertical className="size-4" />}
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="min-w-[180px]">
+                          <DropdownMenuItem onClick={() => downloadPdf(c)}>
+                            <FileText className="size-4 ml-2" /> تنزيل PDF
+                          </DropdownMenuItem>
+                          {c.scan_path && (
+                            <DropdownMenuItem onClick={() => downloadScan(c)}>
+                              <Download className="size-4 ml-2" /> تنزيل المسح
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem onClick={() => shareExternal(c)}>
+                            <Share2 className="size-4 ml-2" /> مشاركة
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => archiveCase(c)}>
+                            <Archive className="size-4 ml-2" /> أرشفة
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
 

@@ -17,25 +17,35 @@ export interface StageInfo {
 }
 
 export const STAGES: StageInfo[] = [
-  { key: "new",               label: "حالة جديدة",         percent: 5,   ownerRole: "designer" },
-  { key: "designer",          label: "قيد التصميم",        percent: 12,  ownerRole: "designer" },
-  { key: "design_done",       label: "تم التصميم",         percent: 19,  ownerRole: "designer" },
-  { key: "technician",        label: "قيد النحت",          percent: 26,  ownerRole: "technician" },
-  { key: "temp_done",         label: "تم نحت المؤقت",      percent: 33,  ownerRole: "technician" },
-  { key: "temp_shipped",      label: "تم إرسال المؤقت",    percent: 40,  ownerRole: "doctor" },
-  { key: "doctor_review",     label: "قيد المراجعة",       percent: 47,  ownerRole: "doctor" },
-  { key: "revision",          label: "يتطلب تعديل",        percent: 54,  ownerRole: "designer" },
-  { key: "revision_done",     label: "تم اعتماد التعديل",  percent: 61,  ownerRole: "technician" },
-  { key: "approved",          label: "اعتماد نهائي",       percent: 61,  ownerRole: "technician" },
-  { key: "permanent_fab",     label: "قيد نحت الدائم",     percent: 68,  ownerRole: "technician" },
-  { key: "permanent_done",    label: "تم نحت الدائم",      percent: 75,  ownerRole: null },
-  { key: "permanent_shipped", label: "تم إرسال الدائم",    percent: 83,  ownerRole: "secretary_sanaa" },
+  { key: "new",               label: "حالة جديدة",         percent: 8,   ownerRole: "designer" },
+  { key: "design_done",       label: "تم التصميم",         percent: 22,  ownerRole: "technician" },
+  { key: "doctor_review",     label: "قيد المراجعة",       percent: 38,  ownerRole: "doctor" },
+  { key: "revision",          label: "يتطلب تعديل",        percent: 50,  ownerRole: "designer" },
+  { key: "approved",          label: "اعتماد نهائي",       percent: 55,  ownerRole: "technician" },
+  { key: "permanent_done",    label: "تم نحت الدائم",      percent: 70,  ownerRole: "secretary_sanaa" },
+  { key: "permanent_shipped", label: "تم إرسال الدائم",    percent: 82,  ownerRole: "secretary_sanaa" },
   { key: "perm_received",     label: "تم استلام الدائم",   percent: 91,  ownerRole: "doctor" },
   { key: "installed",         label: "تم التركيب",         percent: 97,  ownerRole: null },
   { key: "final_archived",    label: "مؤرشف نهائياً",      percent: 100, ownerRole: null },
 ];
 
+/** Legacy keys kept for type compatibility but not shown in the timeline. */
+const HIDDEN_KEYS = new Set<CaseStage>(["designer", "technician", "temp_done", "temp_shipped", "revision_done", "permanent_fab"]);
+
 export function getStage(key: string | null | undefined): StageInfo {
+  // Promote hidden legacy keys to the next visible one.
+  if (key && HIDDEN_KEYS.has(key as CaseStage)) {
+    const map: Record<string, CaseStage> = {
+      designer: "new",
+      technician: "design_done",
+      temp_done: "doctor_review",
+      temp_shipped: "doctor_review",
+      revision_done: "approved",
+      permanent_fab: "approved",
+    };
+    const promoted = map[key] ?? "new";
+    return STAGES.find(s => s.key === promoted) ?? STAGES[0];
+  }
   return STAGES.find(s => s.key === key) ?? STAGES[0];
 }
 
@@ -45,7 +55,10 @@ export function nextStage(key: string | null | undefined): StageInfo | null {
   return STAGES[i + 1];
 }
 
-/** Derive the visible stage from boolean flags on a case row. */
+/** Derive the visible stage from boolean flags on a case row.
+ *  Note: explicit "in-progress" stages (designer/technician/temp_*) are
+ *  replaced by the file-event model — sending a file directly advances
+ *  to the next visible stage. */
 export function deriveStageKey(c: {
   status?: string | null;
   design_done?: boolean | null;
@@ -74,19 +87,13 @@ export function deriveStageKey(c: {
   if (c.permanent_delivered_to_doctor) return "permanent_shipped";
   if (c.permanent_shipped_to_secretary) return "permanent_shipped";
   if (c.permanent_fabrication_done) return "permanent_done";
-  if (c.revision_approved_by_tech) return "permanent_fab";
-  if (c.doctor_decision === "approved") {
-    return "approved";
-  }
-  if (c.revision_design_done) return "revision_done";
+  if (c.revision_approved_by_tech || c.doctor_decision === "approved") return "approved";
   if (c.doctor_decision === "revision") return "revision";
-  if (c.temporary_delivered) return "doctor_review";
-  if (c.shipped_to_doctor) return "temp_shipped";
-  if (c.fabrication_done || c.tech_data_sent_to_secretary) return "temp_done";
-  if (c.design_received_by_tech) return "technician";
-  if (c.design_done && c.design_file_sent && c.design_html_sent) return "design_done";
-  if (c.status === "new" && !c.design_done) return "new";
-  return "designer";
+  // Technician sent data → doctor review (replaces temp_done/temp_shipped)
+  if (c.tech_data_sent_to_secretary || c.shipped_to_doctor || c.temporary_delivered) return "doctor_review";
+  // Designer sent .rar → design done (replaces "قيد النحت" + tech confirm)
+  if (c.design_file_sent || c.design_done) return "design_done";
+  return "new";
 }
 
 /**

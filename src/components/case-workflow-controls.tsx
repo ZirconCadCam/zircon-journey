@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -119,22 +119,18 @@ function DesignerControls({ c, actorName, doctorName, target, blockedByPending }
 }) {
   const [busy, setBusy] = useState(false);
   const rarRef = useRef<HTMLInputElement>(null);
-  const htmlRef = useRef<HTMLInputElement>(null);
   const rarSent = !!c.design_file_sent;
-  const htmlSent = !!c.design_html_sent;
-  const bothSent = rarSent && htmlSent;
-  const doneFlag = !!c.design_done;
-  const blocked = !doneFlag && !!blockedByPending;
+  const blocked = !rarSent && !!blockedByPending;
 
-  async function sendFile(e: React.ChangeEvent<HTMLInputElement>, kind: "rar" | "html") {
+  async function sendRar(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     if (e.target) e.target.value = "";
     if (!f) return;
-    if (kind === "rar" && !RAR_RE.test(f.name)) { toast.error("ملف يجب أن يكون .rar"); return; }
-    if (kind === "html" && !HTML_RE.test(f.name)) { toast.error("ملف يجب أن يكون .html"); return; }
+    if (!RAR_RE.test(f.name)) { toast.error("الملف يجب أن يكون .rar"); return; }
+    if (blocked) { toast.error(`أرسل أولاً ملفات الحالة المعلّقة: ${blockedByPending}`); return; }
     setBusy(true);
     try {
-      const up = await uploadAttachment(f, c, `design-${kind}`);
+      const up = await uploadAttachment(f, c, "design-rar");
       if (!up) return;
       const convId = await ensureConv(c, "designer", target, doctorName);
       if (!convId) { toast.error("تعذر إنشاء المحادثة"); return; }
@@ -142,51 +138,23 @@ function DesignerControls({ c, actorName, doctorName, target, blockedByPending }
         conversation_id: convId,
         sender: "designer",
         sender_name: actorName,
-        content: `📦 ملف التصميم (${kind.toUpperCase()}) — الحالة ${c.case_code} (${c.patient_name})`,
+        content: `📦 ملف التصميم (RAR) — الحالة ${c.case_code} (${c.patient_name})`,
         message_type: "file",
         attachment_path: up.url,
         attachment_name: f.name,
-        attachment_mime: f.type || (kind === "rar" ? "application/vnd.rar" : "text/html"),
+        attachment_mime: f.type || "application/vnd.rar",
         attachment_size: f.size,
       });
-      const patch: any = kind === "rar"
-        ? { design_file_sent: true }
-        : { design_html_sent: true, design_html_path: up.url, design_html_name: f.name };
-      await supabase.from("slot_cases").update(patch).eq("id", c.id);
-      toast.success(`تم إرسال ملف ${kind.toUpperCase()} إلى ${ROLE_LABEL[target]}`);
+      // Auto-mark design as done. design_received_by_tech now flips when the
+      // technician opens the case (handled in TechnicianControls / list view).
+      await supabase.from("slot_cases").update({
+        design_file_sent: true,
+        design_done: true,
+        design_sent_at: new Date().toISOString(),
+      }).eq("id", c.id);
+      toast.success(`✅ تم إرسال ملف التصميم إلى ${ROLE_LABEL[target]}`);
     } catch (err: any) { toast.error(err.message || "فشل الإرسال"); }
     finally { setBusy(false); }
-  }
-
-  async function toggleDone() {
-    if (busy) return;
-    if (doneFlag) {
-      if (rarSent || htmlSent) { toast.error("لا يمكن إلغاء العلامة بعد إرسال أي ملف"); return; }
-      setBusy(true);
-      const { error } = await supabase.from("slot_cases").update({ design_done: false }).eq("id", c.id);
-      setBusy(false);
-      if (error) toast.error(error.message); else toast.success("تم إلغاء العلامة");
-      return;
-    }
-    if (blocked) { toast.error(`أرسل أولاً ملفات الحالة المعلّقة: ${blockedByPending}`); return; }
-    if (!bothSent) {
-      toast.error("يجب رفع ملف .rar وملف .html قبل وضع علامة تم التصميم");
-      return;
-    }
-    setBusy(true);
-    const { error } = await supabase.from("slot_cases").update({ design_done: true }).eq("id", c.id);
-    if (!error) {
-      const convId = await ensureConv(c, "designer", target, doctorName);
-      if (convId) {
-        await supabase.from("chat_messages").insert({
-          conversation_id: convId, sender: "designer", sender_name: actorName,
-          content: `✅ تم التصميم — الحالة ${c.case_code} (${c.patient_name})\nبانتظار تأكيد استلام الفني.`,
-          message_type: "text",
-        });
-      }
-      toast.success(`✅ تم التصميم — تم إشعار ${ROLE_LABEL[target]}`);
-    } else toast.error(error.message);
-    setBusy(false);
   }
 
   return (
@@ -195,35 +163,20 @@ function DesignerControls({ c, actorName, doctorName, target, blockedByPending }
         <label className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold cursor-pointer transition border
           ${rarSent ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-border bg-card hover:border-gold"}`}>
           {busy ? <Loader2 className="size-3.5 animate-spin" /> : <FileArchive className="size-3.5" />}
-          {rarSent ? "تم إرسال .rar" : "إرسال ملف .rar"}
+          {rarSent ? "تم إرسال ملف التصميم" : "إرسال ملف التصميم (.rar)"}
           <input ref={rarRef} type="file" accept=".rar" className="hidden"
-            onChange={(e) => sendFile(e, "rar")} disabled={busy || rarSent} />
+            onChange={sendRar} disabled={busy || rarSent} />
         </label>
-        <label className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold cursor-pointer transition border
-          ${htmlSent ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-border bg-card hover:border-gold"}`}>
-          {busy ? <Loader2 className="size-3.5 animate-spin" /> : <FileCode className="size-3.5" />}
-          {htmlSent ? "تم إرسال .html" : "إرسال ملف .html"}
-          <input ref={htmlRef} type="file" accept=".html,.htm" className="hidden"
-            onChange={(e) => sendFile(e, "html")} disabled={busy || htmlSent} />
-        </label>
-        <button onClick={toggleDone} disabled={busy || (!doneFlag && (!bothSent || blocked))}
-          className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold transition border
-            ${doneFlag ? "gradient-gold text-gold-foreground border-gold shadow-gold"
-                       : !bothSent ? "border-border text-muted-foreground cursor-not-allowed"
-                                   : "border-border bg-card hover:border-gold"}`}>
-          {doneFlag ? <CheckSquare className="size-3.5" /> : <Square className="size-3.5" />}
-          تم التصميم
-        </button>
-        {doneFlag && !c.design_received_by_tech && (
-          <span className="text-[11px] text-amber-700 font-bold">بانتظار تأكيد الفني…</span>
+        {rarSent && !c.design_received_by_tech && (
+          <span className="text-[11px] text-amber-700 font-bold">بانتظار فتح الفني للحالة…</span>
         )}
         {c.design_received_by_tech && (
           <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold">
-            <Check className="size-3.5" /> أكد الفني الاستلام
+            <Check className="size-3.5" /> فتح الفني الحالة
           </span>
         )}
       </div>
-      {blocked && !doneFlag && (
+      {blocked && !rarSent && (
         <div className="flex items-center gap-1.5 text-[11px] text-destructive">
           <AlertCircle className="size-3" />
           أرسل أولاً ملفات الحالة المعلّقة:
@@ -316,40 +269,30 @@ function TechnicianControls({ c, actorName, doctorName, target }: {
   c: WorkflowCase; actorName: string; doctorName: string; target: RoleKey | null;
 }) {
   const [busy, setBusy] = useState(false);
-  const [open, setOpen] = useState(false);
-  const designReady = !!(c.design_done && c.design_file_sent && c.design_html_sent);
+  const designReady = !!(c.design_file_sent || c.design_done);
   const confirmed = !!c.design_received_by_tech;
   const fabDone = !!c.fabrication_done;
   const dataSent = !!c.tech_data_sent_to_secretary;
-  const secReceived = !!c.secretary_received;
-  const shipped = !!c.shipped_to_doctor;
 
-  async function confirmReceipt() {
-    setBusy(true);
-    const { error } = await supabase.from("slot_cases")
-      .update({ design_received_by_tech: true }).eq("id", c.id);
-    if (!error) {
-      // notify designer + doctor
+  // Auto-confirm "read by technician" when this card mounts (technician opened it).
+  useEffect(() => {
+    if (!designReady || confirmed) return;
+    let cancelled = false;
+    (async () => {
+      const { error } = await supabase.from("slot_cases")
+        .update({ design_received_by_tech: true, design_read_at: new Date().toISOString() })
+        .eq("id", c.id);
+      if (cancelled || error) return;
       const designerConv = await ensureConv(c, "technician", "designer", doctorName);
-      if (designerConv) {
-        await supabase.from("chat_messages").insert({
-          conversation_id: designerConv, sender: "technician", sender_name: actorName,
-          content: `✅ تم استلام ملفات التصميم — الحالة ${c.case_code} (${c.patient_name})\nالحالة الآن: قيد النحت.`,
-          message_type: "text",
-        });
-      }
-      const docConv = await ensureConv(c, "technician", "doctor", doctorName);
-      if (docConv) {
-        await supabase.from("chat_messages").insert({
-          conversation_id: docConv, sender: "technician", sender_name: actorName,
-          content: `🔔 الحالة ${c.case_code} (${c.patient_name}) — قيد النحت.`,
-          message_type: "text",
-        });
-      }
-      toast.success("تم تأكيد الاستلام — الحالة قيد النحت");
-    } else toast.error(error.message);
-    setBusy(false);
-  }
+      if (designerConv) await supabase.from("chat_messages").insert({
+        conversation_id: designerConv, sender: "technician", sender_name: actorName,
+        content: `✅ فتح الفني ملف التصميم — الحالة ${c.case_code} (${c.patient_name}).`,
+        message_type: "text",
+      });
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [c.id, designReady, confirmed]);
 
   async function toggleFabDone() {
     if (busy) return;
@@ -378,103 +321,53 @@ function TechnicianControls({ c, actorName, doctorName, target }: {
       c.case_type ? `النوع: ${c.case_type}` : null,
       c.notes ? `ملاحظات: ${c.notes}` : null,
     ].filter(Boolean).join("\n");
+    // Notify secretary
     const convId = await ensureConv(c, "technician", target, doctorName);
-    if (convId) {
-      await supabase.from("chat_messages").insert({
-        conversation_id: convId, sender: "technician", sender_name: actorName,
-        content: lines, message_type: "text",
-      });
-    }
+    if (convId) await supabase.from("chat_messages").insert({
+      conversation_id: convId, sender: "technician", sender_name: actorName,
+      content: lines, message_type: "text",
+    });
+    // Also notify doctor (replaces "تم إرسال المؤقت" confirmation)
+    const docConv = await ensureConv(c, "technician", "doctor", doctorName);
+    if (docConv) await supabase.from("chat_messages").insert({
+      conversation_id: docConv, sender: "technician", sender_name: actorName,
+      content: `🦷 تم نحت المؤقت — الحالة ${c.case_code} (${c.patient_name}) جاهزة للمراجعة.`,
+      message_type: "text",
+    });
+    // Auto-flip the stage to "doctor_review" by setting both flags.
     const { error } = await supabase.from("slot_cases")
-      .update({ tech_data_sent_to_secretary: true }).eq("id", c.id);
+      .update({
+        tech_data_sent_to_secretary: true,
+        fabrication_done: true,
+        shipped_to_doctor: true,
+        review_sent_at: new Date().toISOString(),
+      }).eq("id", c.id);
     setBusy(false);
     if (error) toast.error(error.message);
-    else toast.success(`تم إرسال بيانات الحالة إلى ${ROLE_LABEL[target]}`);
-  }
-
-  async function markShipped() {
-    setBusy(true);
-    const { error } = await supabase.from("slot_cases")
-      .update({ shipped_to_doctor: true }).eq("id", c.id);
-    if (!error) {
-      const docConv = await ensureConv(c, "technician", "doctor", doctorName);
-      if (docConv) {
-        await supabase.from("chat_messages").insert({
-          conversation_id: docConv, sender: "technician", sender_name: actorName,
-          content: `🚚 تم إرسال الحالة ${c.case_code} (${c.patient_name}).`,
-          message_type: "text",
-        });
-      }
-      toast.success("تم وضع شارة: تم الإرسال");
-    } else toast.error(error.message);
-    setBusy(false);
+    else toast.success(`تم إرسال بيانات الحالة إلى ${ROLE_LABEL[target]} والطبيب`);
   }
 
   return (
     <div className="rounded-xl border border-border bg-muted/30 p-3 mt-3 space-y-2">
-      {/* Receipt confirmation card */}
-      {designReady && !confirmed && (
-        <div className="rounded-lg border border-gold/40 bg-gold/5 p-3">
-          <button onClick={() => setOpen(!open)} className="w-full flex items-center justify-between text-xs font-bold">
-            <span className="flex items-center gap-2">
-              <FileArchive className="size-3.5 text-gold" /> ملفات الحالة من المصمم
-            </span>
-            {open ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+      <div className="flex items-center gap-2 flex-wrap">
+        <button onClick={toggleFabDone} disabled={busy}
+          className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold transition border
+            ${fabDone ? "gradient-gold text-gold-foreground border-gold shadow-gold" : "border-border bg-card hover:border-gold"}`}>
+          {busy ? <Loader2 className="size-3.5 animate-spin" /> : fabDone ? <CheckSquare className="size-3.5" /> : <Square className="size-3.5" />}
+          تم النحت
+        </button>
+        {!dataSent && target && (
+          <button onClick={sendDataToSecretary} disabled={busy || !confirmed}
+            className="inline-flex items-center gap-2 rounded-lg gradient-brown px-3 py-2 text-xs font-bold shadow-luxury disabled:opacity-50">
+            <Send className="size-3.5" /> إرسال البيانات إلى {ROLE_LABEL[target]}
           </button>
-          {open && (
-            <div className="mt-2 space-y-1 text-xs">
-              <div><span className="text-muted-foreground">المريض:</span> <b>{c.patient_name}</b></div>
-              {c.tooth_number && <div><span className="text-muted-foreground">السن:</span> {c.tooth_number}</div>}
-              {c.shade && <div><span className="text-muted-foreground">اللون:</span> {c.shade}</div>}
-              {c.case_type && <div><span className="text-muted-foreground">النوع:</span> {c.case_type}</div>}
-              <div className="text-emerald-700 font-bold flex items-center gap-1"><Check className="size-3" /> ملف .rar مُرسل</div>
-              <div className="text-emerald-700 font-bold flex items-center gap-1"><Check className="size-3" /> ملف .html مُرسل</div>
-              {c.design_html_path && (
-                <a href={c.design_html_path} target="_blank" rel="noreferrer"
-                  className="inline-block underline text-gold">فتح ملف HTML</a>
-              )}
-            </div>
-          )}
-          <button onClick={confirmReceipt} disabled={busy}
-            className="mt-2 inline-flex items-center gap-2 rounded-lg gradient-brown px-3 py-2 text-xs font-bold shadow-luxury">
-            {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
-            تأكيد استلام
-          </button>
-        </div>
-      )}
-
-      {confirmed && (
-        <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={toggleFabDone} disabled={busy}
-            className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold transition border
-              ${fabDone ? "gradient-gold text-gold-foreground border-gold shadow-gold" : "border-border bg-card hover:border-gold"}`}>
-            {busy ? <Loader2 className="size-3.5 animate-spin" /> : fabDone ? <CheckSquare className="size-3.5" /> : <Square className="size-3.5" />}
-            تم النحت
-          </button>
-          {fabDone && !dataSent && target && (
-            <button onClick={sendDataToSecretary} disabled={busy}
-              className="inline-flex items-center gap-2 rounded-lg gradient-brown px-3 py-2 text-xs font-bold shadow-luxury">
-              <Send className="size-3.5" /> إرسال البيانات إلى {ROLE_LABEL[target]}
-            </button>
-          )}
-          {dataSent && !secReceived && (
-            <span className="inline-flex items-center gap-1 text-[11px] text-amber-700 font-bold">
-              بانتظار استلام السكرتارية…
-            </span>
-          )}
-          {secReceived && !shipped && (
-            <button onClick={markShipped} disabled={busy}
-              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 text-white px-3 py-2 text-xs font-bold">
-              <Truck className="size-3.5" /> تأكيد الإرسال (تم الإرسال)
-            </button>
-          )}
-          {shipped && (
-            <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold">
-              <Check className="size-3.5" /> تم إرسال المؤقت
-            </span>
-          )}
-        </div>
-      )}
+        )}
+        {dataSent && (
+          <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold">
+            <Check className="size-3.5" /> تم إرسال بيانات الحالة
+          </span>
+        )}
+      </div>
 
       <TechnicianPermanentSection c={c} actorName={actorName} doctorName={doctorName} target={target} />
     </div>
