@@ -42,6 +42,8 @@ export interface WorkflowCase {
   permanent_received_by_secretary?: boolean | null;
   permanent_installed_by_doctor?: boolean | null;
   final_archived?: boolean | null;
+  perm_delivered_at?: string | null;
+  perm_read_at?: string | null;
   audit_log?: Array<{ at: string; actor: string; action: string; notes?: string }> | null;
   // For folded card display:
   patient_phone?: string | null;
