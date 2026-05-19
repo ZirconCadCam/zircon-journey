@@ -653,6 +653,23 @@ function DoctorControls({ c, actorName, doctorName }: {
   const archived = !!c.final_archived;
   const log = Array.isArray(c.audit_log) ? c.audit_log : [];
 
+  // Auto-mark the "permanent done" notification as delivered+read when the
+  // doctor's card mounts and the technician has carved the permanent.
+  useEffect(() => {
+    if (!permReady || installed) return;
+    if (c.perm_read_at) return;
+    let cancelled = false;
+    (async () => {
+      const now = new Date().toISOString();
+      const patch: any = { perm_read_at: now };
+      if (!c.perm_delivered_at) patch.perm_delivered_at = now;
+      await supabase.from("slot_cases").update(patch).eq("id", c.id);
+      if (cancelled) return;
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [c.id, permReady, installed]);
+
   async function approve() {
     setBusy(true);
     const { error } = await supabase.from("slot_cases")
