@@ -698,9 +698,10 @@ function CaseCard({ c, doctorName, onEdit, onPin, onArchive, onDelete }: {
         <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-[10px] text-muted-foreground font-bold">
           {STAGES.map((s, i) => {
             const tick = stageTickState(s.key, c);
+            const label = s.key === "doctor_review" && (c as any).doctor_decision ? "تمت المراجعة" : s.label;
             return (
               <span key={s.key} className={`whitespace-nowrap inline-flex items-center gap-1 ${i <= stageIdx ? "text-gold" : ""}`}>
-                {s.label}
+                {label}
                 <StageTick state={tick} />
               </span>
             );
