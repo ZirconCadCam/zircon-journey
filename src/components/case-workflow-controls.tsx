@@ -375,18 +375,16 @@ function TechnicianControls({ c, actorName, doctorName, target }: {
 }
 
 // ---------- Technician: permanent-cycle (after doctor decision) ----------
-function TechnicianPermanentSection({ c, actorName, doctorName, target }: {
-  c: WorkflowCase; actorName: string; doctorName: string; target: RoleKey | null;
+function TechnicianPermanentSection({ c, actorName, doctorName }: {
+  c: WorkflowCase; actorName: string; doctorName: string;
 }) {
   const [busy, setBusy] = useState(false);
   const decision = c.doctor_decision;
-  // Show only after doctor has decided OR revision design is back.
   const approved = decision === "approved";
   const revisionReady = decision === "revision" && c.revision_design_done;
   const revisionApproved = !!c.revision_approved_by_tech;
   const permDone = !!c.permanent_fabrication_done;
-  const permSent = !!c.permanent_shipped_to_secretary;
-  if (!approved && !revisionReady && !permDone && !permSent) return null;
+  if (!approved && !revisionReady && !permDone) return null;
 
   async function approveRevision() {
     setBusy(true);
@@ -404,30 +402,33 @@ function TechnicianPermanentSection({ c, actorName, doctorName, target }: {
     setBusy(false);
   }
 
+  /** Single-checkbox flow: when ticked, mark permanent done AND notify
+   *  the doctor + both secretaries (sanaa & ibb) automatically. */
   async function togglePermDone() {
+    if (busy) return;
     setBusy(true);
     const next = !permDone;
-    const { error } = await supabase.from("slot_cases")
-      .update({ permanent_fabrication_done: next }).eq("id", c.id);
+    const patch: any = { permanent_fabrication_done: next };
+    if (next) {
+      patch.permanent_shipped_to_secretary = true;
+      patch.perm_sent_at = new Date().toISOString();
+    }
+    const { error } = await supabase.from("slot_cases").update(patch).eq("id", c.id);
+    if (error) { setBusy(false); toast.error(error.message); return; }
+    if (next) {
+      const msg = `🦷 تم نحت الأسنان الدائمة — الحالة ${c.case_code} (${c.patient_name}).\nالطبيب: ${doctorName}.\nالأسنان قيد الترحيل.`;
+      for (const role of ["doctor", "secretary_sanaa", "secretary_ibb"] as RoleKey[]) {
+        const conv = await ensureConv(c, "technician", role, doctorName);
+        if (conv) await supabase.from("chat_messages").insert({
+          conversation_id: conv, sender: "technician", sender_name: actorName,
+          content: msg, message_type: "text",
+        });
+      }
+      toast.success("✅ تم تسجيل نحت الدائم وإشعار الطبيب والسكرتارية");
+    } else {
+      toast.success("تم إلغاء العلامة");
+    }
     setBusy(false);
-    if (error) toast.error(error.message);
-    else toast.success(next ? "✅ تم نحت الأسنان الدائمة" : "تم إلغاء العلامة");
-  }
-
-  async function sendPermToSecretary() {
-    if (!target) { toast.error("لا يوجد فرع سكرتارية محدد"); return; }
-    setBusy(true);
-    const conv = await ensureConv(c, "technician", target, doctorName);
-    if (conv) await supabase.from("chat_messages").insert({
-      conversation_id: conv, sender: "technician", sender_name: actorName,
-      content: `🦷 الأسنان الدائمة جاهزة للإرسال\nرمز: ${c.case_code}\nالطبيب: ${doctorName}\nالمريض: ${c.patient_name}`,
-      message_type: "text",
-    });
-    const { error } = await supabase.from("slot_cases")
-      .update({ permanent_shipped_to_secretary: true }).eq("id", c.id);
-    setBusy(false);
-    if (error) toast.error(error.message);
-    else toast.success(`تم إشعار ${ROLE_LABEL[target]} بجاهزية الدائم`);
   }
 
   return (
@@ -446,25 +447,13 @@ function TechnicianPermanentSection({ c, actorName, doctorName, target }: {
         </button>
       )}
       {(approved || revisionApproved) && (
-        <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={togglePermDone} disabled={busy}
-            className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold transition border
-              ${permDone ? "gradient-gold text-gold-foreground border-gold shadow-gold" : "border-border bg-card hover:border-gold"}`}>
-            {busy ? <Loader2 className="size-3.5 animate-spin" /> : permDone ? <CheckSquare className="size-3.5" /> : <Square className="size-3.5" />}
-            تم نحت الدائم
-          </button>
-          {permDone && !permSent && target && (
-            <button onClick={sendPermToSecretary} disabled={busy}
-              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 text-white px-3 py-2 text-xs font-bold">
-              <Send className="size-3.5" /> إشعار {ROLE_LABEL[target]}
-            </button>
-          )}
-          {permSent && (
-            <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold">
-              <Check className="size-3.5" /> تم الإشعار بجاهزية الدائم
-            </span>
-          )}
-        </div>
+        <label className="inline-flex items-center gap-2 cursor-pointer text-xs font-bold rounded-lg border border-border bg-card px-3 py-2 hover:border-gold">
+          <input type="checkbox" checked={permDone} onChange={togglePermDone} disabled={busy}
+            className="size-4 accent-gold" />
+          {busy && <Loader2 className="size-3.5 animate-spin" />}
+          تم نحت الدائم
+          {permDone && <Check className="size-3.5 text-emerald-600" />}
+        </label>
       )}
     </div>
   );
