@@ -641,54 +641,67 @@ function DoctorControls({ c, actorName, doctorName }: {
   const [revOpen, setRevOpen] = useState(false);
   const [notes, setNotes] = useState("");
   const [logOpen, setLogOpen] = useState(false);
+  const [confirmApprove, setConfirmApprove] = useState(false);
 
-  const shipped = !!c.shipped_to_doctor;
-  const delivered = !!c.temporary_delivered;
+  // Review is ready as soon as the technician dispatches the data.
+  // The doctor no longer needs to confirm receipt of the temporary first.
+  const reviewReady = !!(c.tech_data_sent_to_secretary || c.shipped_to_doctor);
   const decision = c.doctor_decision;
-  const permDelivered = !!c.permanent_delivered_to_doctor;
+  // Permanent is "ready for install" once the technician marks it carved.
+  const permReady = !!c.permanent_fabrication_done;
   const installed = !!c.permanent_installed_by_doctor;
   const archived = !!c.final_archived;
   const log = Array.isArray(c.audit_log) ? c.audit_log : [];
 
-  async function confirmDelivered() {
-    if (!window.confirm("هل تؤكد استلام الأسنان المؤقتة من السكرتارية؟")) return;
-    setBusy(true);
-    const { error } = await supabase.from("slot_cases")
-      .update({ temporary_delivered: true }).eq("id", c.id);
-    if (!error) {
-      await appendAudit(c, { actor: actorName || "الطبيب", action: "تأكيد استلام الأسنان المؤقتة" });
-      toast.success("✅ تم تأكيد استلام الأسنان المؤقتة بنجاح");
-    } else toast.error(error.message);
-    setBusy(false);
-  }
-
   async function approve() {
-    if (!window.confirm("اعتماد التصميم نهائياً والمتابعة لنحت الأسنان الدائمة؟")) return;
     setBusy(true);
     const { error } = await supabase.from("slot_cases")
-      .update({ doctor_decision: "approved" }).eq("id", c.id);
+      .update({
+        doctor_decision: "approved",
+        temporary_delivered: true,
+        review_read_at: new Date().toISOString(),
+      }).eq("id", c.id);
     if (!error) {
-      await appendAudit(c, { actor: actorName || "الطبيب", action: "اعتماد نهائي للتصميم" });
-      const msg = `✅ اعتماد نهائي للتصميم — الحالة ${c.case_code} (${c.patient_name}). يبدأ نحت الأسنان الدائمة.`;
-      for (const role of ["designer", "technician"] as RoleKey[]) {
-        const conv = await ensureConv(c, "doctor", role, doctorName);
-        if (conv) await supabase.from("chat_messages").insert({
-          conversation_id: conv, sender: "doctor", sender_name: actorName,
-          content: msg, message_type: "text",
-        });
-      }
-      toast.success("✅ تم إرسال الاعتماد النهائي وإشعار المصمم والفني");
+      await appendAudit(c, { actor: actorName || "الطبيب", action: "اعتماد التصميم للدائم" });
+      const details = [
+        `الحالة ${c.case_code}`,
+        `المريض: ${c.patient_name}`,
+        c.tooth_number ? `السن: ${c.tooth_number}` : null,
+        c.teeth_count ? `عدد الأسنان: ${c.teeth_count}` : null,
+        c.shade ? `اللون: ${c.shade}` : null,
+        c.case_type ? `النوع: ${c.case_type}` : null,
+      ].filter(Boolean).join(" — ");
+      // 1) Designer: approval + archive prompt
+      const dConv = await ensureConv(c, "doctor", "designer", doctorName);
+      if (dConv) await supabase.from("chat_messages").insert({
+        conversation_id: dConv, sender: "doctor", sender_name: actorName,
+        content: `✅ تم اعتماد التصميم للحالة ${details}. بإمكانك أرشفتها.`,
+        message_type: "text",
+      });
+      // 2) Technician: carve the permanent as-is
+      const tConv = await ensureConv(c, "doctor", "technician", doctorName);
+      if (tConv) await supabase.from("chat_messages").insert({
+        conversation_id: tConv, sender: "doctor", sender_name: actorName,
+        content: `لا تعديل، قم بنحت الدائم وفق التصميم الحالي — ${details}.`,
+        message_type: "text",
+      });
+      toast.success("✅ تم الاعتماد وإشعار المصمم والفني");
+      setConfirmApprove(false);
     } else toast.error(error.message);
     setBusy(false);
   }
 
   async function requestRevision() {
     if (notes.trim().length < 3) { toast.error("اكتب ملاحظات التعديل"); return; }
-    if (!window.confirm("إرسال طلب التعديل إلى المصمم؟")) return;
     setBusy(true);
     const trimmed = notes.trim();
     const { error } = await supabase.from("slot_cases")
-      .update({ doctor_decision: "revision", revision_notes: trimmed }).eq("id", c.id);
+      .update({
+        doctor_decision: "revision",
+        revision_notes: trimmed,
+        temporary_delivered: true,
+        review_read_at: new Date().toISOString(),
+      }).eq("id", c.id);
     if (!error) {
       await appendAudit(c, { actor: actorName || "الطبيب", action: "طلب تعديل التصميم", notes: trimmed });
       const conv = await ensureConv(c, "doctor", "designer", doctorName);
@@ -704,16 +717,20 @@ function DoctorControls({ c, actorName, doctorName }: {
     setBusy(false);
   }
 
-  async function confirmInstalled() {
-    if (!window.confirm("هل تؤكد تركيب الأسنان الدائمة للمريض؟ سيتم أرشفة الحالة تلقائياً.")) return;
+  async function toggleInstalled() {
+    if (busy) return;
     setBusy(true);
-    const { error } = await supabase.from("slot_cases")
-      .update({
-        permanent_installed_by_doctor: true,
-        final_archived: true,
-        archived: true,
-      }).eq("id", c.id);
-    if (!error) {
+    const next = !installed;
+    const patch: any = { permanent_installed_by_doctor: next };
+    if (next) {
+      patch.final_archived = true;
+      patch.archived = true;
+      patch.permanent_delivered_to_doctor = true; // mark delivered implicitly
+      patch.perm_ship_read_at = new Date().toISOString();
+    }
+    const { error } = await supabase.from("slot_cases").update(patch).eq("id", c.id);
+    if (error) { setBusy(false); toast.error(error.message); return; }
+    if (next) {
       await appendAudit(c, { actor: actorName || "الطبيب", action: "تأكيد تركيب الأسنان الدائمة وأرشفة الحالة" });
       const msg = `🦷✅ تم تركيب الأسنان الدائمة للمريض — الحالة ${c.case_code} (${c.patient_name}). الحالة مؤرشفة نهائياً.`;
       for (const role of ["designer", "technician", "secretary_sanaa", "secretary_ibb"] as RoleKey[]) {
@@ -724,19 +741,19 @@ function DoctorControls({ c, actorName, doctorName }: {
         });
       }
       toast.success("✅ تم تأكيد التركيب — أُرشفت الحالة تلقائياً");
-    } else toast.error(error.message);
+    } else {
+      toast.success("تم إلغاء العلامة");
+    }
     setBusy(false);
   }
 
-  // Status pill shown when no action is currently available (e.g. new case).
-  const hasAction = (shipped && !delivered) || (delivered && !decision) || (permDelivered && !installed);
+  const hasAction = (reviewReady && !decision) || (permReady && !installed);
   const stageHint =
     archived || installed ? "تمت أرشفة الحالة نهائياً ✅" :
-    permDelivered ? "وصلت الأسنان الدائمة — أكد التركيب" :
-    decision === "approved" ? "تم الاعتماد النهائي — قيد نحت الدائم" :
+    permReady ? "تم نحت الأسنان الدائمة — أكد التركيب عند الانتهاء" :
+    decision === "approved" ? "تم الاعتماد — بانتظار نحت الدائم من الفني" :
     decision === "revision" ? "تم إرسال طلب التعديل — بانتظار المصمم" :
-    delivered ? "قيد المراجعة — بانتظار قرارك" :
-    shipped ? "وصلت الأسنان المؤقتة — أكد الاستلام" :
+    reviewReady ? "تمت المراجعة قيد قرارك — اختر معتمد للدائم أو يلزم تعديل" :
     "الحالة قيد التنفيذ — تابع مستوى التقدم";
 
   return (
@@ -747,33 +764,44 @@ function DoctorControls({ c, actorName, doctorName }: {
         </div>
       )}
 
-      {shipped && !delivered && (
-        <button onClick={confirmDelivered} disabled={busy}
-          className="inline-flex items-center gap-2 rounded-lg gradient-brown px-3 py-2 text-xs font-bold shadow-luxury">
-          {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
-          تأكيد استلام الأسنان المؤقتة
-        </button>
-      )}
-
-      {delivered && !decision && (
+      {reviewReady && !decision && !confirmApprove && (
         <div className="space-y-2">
           <div className="text-xs font-bold text-foreground">قرار الطبيب بعد المراجعة:</div>
           <div className="flex items-center gap-2 flex-wrap">
-            <button onClick={approve} disabled={busy}
+            <button onClick={() => setConfirmApprove(true)} disabled={busy}
               className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 text-white px-3 py-2 text-xs font-bold shadow">
-              <ThumbsUp className="size-3.5" /> اعتماد نهائي
+              <ThumbsUp className="size-3.5" /> معتمد للدائم
             </button>
             <button onClick={() => setRevOpen(true)} disabled={busy}
               className="inline-flex items-center gap-2 rounded-lg bg-amber-600 text-white px-3 py-2 text-xs font-bold shadow">
-              <Pencil className="size-3.5" /> طلب تعديل
+              <Pencil className="size-3.5" /> يلزم تعديل
             </button>
           </div>
         </div>
       )}
 
-      {decision === "approved" && (
+      {reviewReady && !decision && confirmApprove && (
+        <div className="rounded-lg border border-emerald-500/60 bg-emerald-50/70 p-3 space-y-2 animate-in fade-in zoom-in-95">
+          <div className="text-xs font-bold text-emerald-900">
+            هل أنت متأكد أن التصميم لا يتطلب تعديل؟
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button onClick={() => setConfirmApprove(false)} disabled={busy}
+              className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-bold hover:border-gold">
+              <X className="size-3.5" /> تراجع
+            </button>
+            <button onClick={approve} disabled={busy}
+              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 text-white px-3 py-2 text-xs font-bold shadow">
+              {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
+              تأكيد الاعتماد
+            </button>
+          </div>
+        </div>
+      )}
+
+      {decision === "approved" && !permReady && (
         <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold">
-          <ThumbsUp className="size-3.5" /> تم الاعتماد النهائي — قيد نحت الدائم
+          <ThumbsUp className="size-3.5" /> تم الاعتماد — بانتظار نحت الدائم
         </span>
       )}
 
@@ -793,12 +821,13 @@ function DoctorControls({ c, actorName, doctorName }: {
         </div>
       )}
 
-      {permDelivered && !installed && (
-        <button onClick={confirmInstalled} disabled={busy}
-          className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 text-white px-3 py-2 text-xs font-bold shadow">
-          {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
-          تأكيد التركيب وأرشفة الحالة
-        </button>
+      {permReady && !installed && (
+        <label className="inline-flex items-center gap-2 cursor-pointer text-xs font-bold rounded-lg border border-emerald-500/60 bg-emerald-50/60 px-3 py-2 hover:border-emerald-600">
+          <input type="checkbox" checked={installed} onChange={toggleInstalled} disabled={busy}
+            className="size-4 accent-emerald-600" />
+          {busy && <Loader2 className="size-3.5 animate-spin" />}
+          تم تركيب الأسنان الدائمة للمريض (أرشفة تلقائية)
+        </label>
       )}
 
       {installed && (
