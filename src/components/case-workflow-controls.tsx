@@ -369,7 +369,7 @@ function TechnicianControls({ c, actorName, doctorName, target }: {
         )}
       </div>
 
-      <TechnicianPermanentSection c={c} actorName={actorName} doctorName={doctorName} target={target} />
+      <TechnicianPermanentSection c={c} actorName={actorName} doctorName={doctorName} />
     </div>
   );
 }
