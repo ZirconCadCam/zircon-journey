@@ -17,20 +17,25 @@ export interface StageInfo {
 }
 
 export const STAGES: StageInfo[] = [
-  { key: "new",               label: "حالة جديدة",         percent: 8,   ownerRole: "designer" },
-  { key: "design_done",       label: "تم التصميم",         percent: 22,  ownerRole: "technician" },
-  { key: "doctor_review",     label: "قيد المراجعة",       percent: 38,  ownerRole: "doctor" },
-  { key: "revision",          label: "يتطلب تعديل",        percent: 50,  ownerRole: "designer" },
-  { key: "approved",          label: "اعتماد نهائي",       percent: 55,  ownerRole: "technician" },
-  { key: "permanent_done",    label: "تم نحت الدائم",      percent: 70,  ownerRole: "secretary_sanaa" },
-  { key: "permanent_shipped", label: "تم إرسال الدائم",    percent: 82,  ownerRole: "secretary_sanaa" },
-  { key: "perm_received",     label: "تم استلام الدائم",   percent: 91,  ownerRole: "doctor" },
-  { key: "installed",         label: "تم التركيب",         percent: 97,  ownerRole: null },
+  { key: "new",               label: "حالة جديدة",         percent: 10,  ownerRole: "designer" },
+  { key: "design_done",       label: "تم التصميم",         percent: 28,  ownerRole: "technician" },
+  { key: "doctor_review",     label: "قيد المراجعة",       percent: 45,  ownerRole: "doctor" },
+  { key: "approved",          label: "اعتماد نهائي",       percent: 62,  ownerRole: "technician" },
+  { key: "permanent_done",    label: "تم نحت الدائم",      percent: 82,  ownerRole: "doctor" },
+  { key: "installed",         label: "تم التركيب",         percent: 95,  ownerRole: null },
   { key: "final_archived",    label: "مؤرشف نهائياً",      percent: 100, ownerRole: null },
 ];
 
-/** Legacy keys kept for type compatibility but not shown in the timeline. */
-const HIDDEN_KEYS = new Set<CaseStage>(["designer", "technician", "temp_done", "temp_shipped", "revision_done", "permanent_fab"]);
+/** Legacy keys kept for type compatibility but not shown in the timeline.
+ *  "revision" merges back into doctor_review/approved once a decision is taken.
+ *  "permanent_shipped" / "perm_received" are removed: the secretary role is
+ *  marginalised — the technician notifies the doctor + both secretaries
+ *  directly when the permanent is carved. */
+const HIDDEN_KEYS = new Set<CaseStage>([
+  "designer", "technician", "temp_done", "temp_shipped",
+  "revision", "revision_done", "permanent_fab",
+  "permanent_shipped", "perm_received",
+]);
 
 export function getStage(key: string | null | undefined): StageInfo {
   // Promote hidden legacy keys to the next visible one.
@@ -40,8 +45,11 @@ export function getStage(key: string | null | undefined): StageInfo {
       technician: "design_done",
       temp_done: "doctor_review",
       temp_shipped: "doctor_review",
+      revision: "doctor_review",
       revision_done: "approved",
       permanent_fab: "approved",
+      permanent_shipped: "permanent_done",
+      perm_received: "permanent_done",
     };
     const promoted = map[key] ?? "new";
     return STAGES.find(s => s.key === promoted) ?? STAGES[0];
