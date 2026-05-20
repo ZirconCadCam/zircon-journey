@@ -4,11 +4,12 @@ import { toast } from "sonner";
 import {
   Stethoscope, FileText, Download, Share2, Loader2,
   ScanLine, User, Phone, Hash, Palette, ClipboardList, Calendar,
-  Archive, MoreVertical,
+  Archive, MoreVertical, FileArchive,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import { CaseChatButton } from "@/components/case-chat-dialog";
 
 /** Inject hex overrides for our oklch CSS variables into html2canvas's cloned doc. */
 const H2C_ONCLONE = (doc: Document) => {
