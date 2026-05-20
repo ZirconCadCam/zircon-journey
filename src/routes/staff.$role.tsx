@@ -111,7 +111,9 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [selected, setSelected] = useState<Doctor | null>(null);
   const [unread, setUnread] = useState<Record<number, number>>({});
-  const [tab, setTab] = useState<"chat" | "cases" | "settings">("chat");
+  // Default tab: roles with a case list land on "cases"; admin stays on "chat".
+  const initialTab: "chat" | "cases" | "settings" = role === "admin" ? "chat" : "cases";
+  const [tab, setTab] = useState<"chat" | "cases" | "settings">(initialTab);
 
   useEffect(() => {
     (async () => {
@@ -191,10 +193,12 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
 
         {(role === "designer" || role === "technician" || role === "secretary_sanaa" || role === "secretary_ibb" || role === "admin") && (
           <div className="mt-6 inline-flex flex-wrap rounded-xl border border-border bg-card p-1 shadow-luxury">
-            <button onClick={() => setTab("chat")}
-              className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "chat" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
-              <MessageSquare className="size-4" /> المحادثات
-            </button>
+            {role === "admin" && (
+              <button onClick={() => setTab("chat")}
+                className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "chat" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
+                <MessageSquare className="size-4" /> المحادثات
+              </button>
+            )}
             {role !== "admin" && (
               <button onClick={() => setTab("cases")}
                 className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "cases" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>

@@ -15,6 +15,7 @@ import { STAGES, getStage, deriveStageKey, notifyRoleAboutCase, localNotify, typ
 import { CaseWorkflowControls } from "@/components/case-workflow-controls";
 import { DoctorReportsPanel } from "@/components/doctor-reports-panel";
 import { StageTick, type TickState } from "@/components/stage-tick";
+import { CaseChatButton } from "@/components/case-chat-dialog";
 import { Z } from "@/lib/z-index";
 
 /** Compute WhatsApp-style tick state for each visible stage from case flags + timing. */
@@ -206,7 +207,7 @@ function PasswordGate({ doctor, onOk }: { doctor: Doctor; onOk: () => void }) {
 
 function Portal({ doctor, actor, actorName, onLogout }: { doctor: Doctor; actor: Sender; actorName: string; onLogout: () => void }) {
   const { branch } = useAuth();
-  const [tab, setTab] = useState<"cases" | "files" | "chat" | "reports">("cases");
+  const [tab, setTab] = useState<"cases" | "files" | "reports">("cases");
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
@@ -247,22 +248,20 @@ function Portal({ doctor, actor, actorName, onLogout }: { doctor: Doctor; actor:
           </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-4 gap-1 border-b border-border">
-          <TabBtn active={tab==="cases"} onClick={()=>setTab("cases")} icon={<ClipboardList className="size-4" />} label="الحالات" />
+        <div className="mt-6 grid grid-cols-3 gap-1 border-b border-border">
+          <TabBtn active={tab==="cases"} onClick={()=>setTab("cases")} icon={<ClipboardList className="size-4" />} label="الحالات" badge={unread} />
           <TabBtn active={tab==="files"} onClick={()=>setTab("files")} icon={<FilesIcon className="size-4" />} label="الملفات" />
-          <TabBtn active={tab==="chat"} onClick={()=>{ setTab("chat"); setUnread(0); }} icon={<MessageSquare className="size-4" />} label="المحادثة" badge={unread} />
           <TabBtn active={tab==="reports"} onClick={()=>setTab("reports")} icon={<FileSpreadsheet className="size-4" />} label="الكشوفات" />
         </div>
 
         <div className="mt-6">
-          {tab === "cases" && <CasesPanel doctor={doctor} />}
+          {tab === "cases" && <CasesPanel doctor={doctor} me={chatRole} myName={actorName || doctor.name} />}
           {tab === "files" && <FilesPanel doctor={doctor} actor={actor} />}
-          {tab === "chat" && <ChatModule doctorSlot={doctor.slot} doctorName={doctor.name} me={chatRole} myName={actorName || doctor.name} />}
           {tab === "reports" && <DoctorReportsPanel doctor={doctor} />}
         </div>
 
         <ChatNotificationsListener doctorSlot={doctor.slot} me={chatRole}
-          onUnread={(n) => { if (tab !== "chat") setUnread(n); }} />
+          onUnread={(n) => setUnread(n)} />
       </main>
     </ShellHeader>
   );
@@ -555,7 +554,7 @@ interface SlotCase {
   created_at: string; updated_at: string;
 }
 
-function CasesPanel({ doctor }: { doctor: Doctor }) {
+function CasesPanel({ doctor, me, myName }: { doctor: Doctor; me: RoleKey; myName: string }) {
   const [cases, setCases] = useState<SlotCase[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"active" | "archived">("active");
@@ -638,6 +637,7 @@ function CasesPanel({ doctor }: { doctor: Doctor }) {
         <div className="grid md:grid-cols-2 gap-4">
           {visible.map(c => (
             <CaseCard key={c.id} c={c} doctorName={doctor.name}
+              doctorSlot={doctor.slot} me={me} myName={myName}
               onEdit={() => setEditing(c)}
               onPin={() => togglePin(c)}
               onArchive={() => toggleArchive(c)}
@@ -651,8 +651,8 @@ function CasesPanel({ doctor }: { doctor: Doctor }) {
   );
 }
 
-function CaseCard({ c, doctorName, onEdit, onPin, onArchive, onDelete }: {
-  c: SlotCase; doctorName: string;
+function CaseCard({ c, doctorName, doctorSlot, me, myName, onEdit, onPin, onArchive, onDelete }: {
+  c: SlotCase; doctorName: string; doctorSlot: number; me: RoleKey; myName: string;
   onEdit: () => void; onPin: () => void; onArchive: () => void; onDelete: () => void;
 }) {
   const stage = getStage(deriveStageKey(c));
@@ -713,10 +713,13 @@ function CaseCard({ c, doctorName, onEdit, onPin, onArchive, onDelete }: {
         <CaseWorkflowControls c={c as any} actor="doctor" actorName={doctorName} doctorName={doctorName} />
       </div>
 
-      <footer className="flex items-center justify-between mt-4 pt-3 border-t border-border">
+      <footer className="flex items-center justify-between mt-4 pt-3 border-t border-border gap-2 flex-wrap">
         <div className="text-[11px] text-muted-foreground">
           آخر تحديث: {new Date(c.updated_at).toLocaleString("ar")}
         </div>
+        <div className="flex items-center gap-2">
+          <CaseChatButton doctorSlot={doctorSlot} doctorName={doctorName}
+            me={me} myName={myName} caseCode={c.case_code} caseLabel={c.patient_name} />
         <div ref={menuRef} className="relative">
           <button onClick={() => setMenuOpen(o => !o)} aria-haspopup="menu" aria-expanded={menuOpen}
             className={`rounded-lg border p-2 transition ${menuOpen ? "border-gold gradient-gold text-gold-foreground" : "border-border hover:border-gold"}`}
@@ -749,6 +752,7 @@ function CaseCard({ c, doctorName, onEdit, onPin, onArchive, onDelete }: {
               })()}
             </div>
           )}
+        </div>
         </div>
       </footer>
     </article>

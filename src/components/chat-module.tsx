@@ -20,6 +20,10 @@ interface Props {
   doctorName: string;
   me: RoleKey;
   myName: string;
+  /** When set, only show conversations whose title starts with `[caseCode]`,
+   * and auto-prefix new conversations with that tag. */
+  caseCode?: string;
+  caseLabel?: string;
 }
 
 type LocalMsg = ChatMessage & {
@@ -37,7 +41,7 @@ function newId() {
     : `tmp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-export function ChatModule({ doctorSlot, doctorName, me, myName }: Props) {
+export function ChatModule({ doctorSlot, doctorName, me, myName, caseCode, caseLabel }: Props) {
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [view, setView] = useState<"active" | "archived">("active");
   const [filterRole, setFilterRole] = useState<RoleKey | "all">("all");
@@ -45,24 +49,27 @@ export function ChatModule({ doctorSlot, doctorName, me, myName }: Props) {
   const [composing, setComposing] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  const titlePrefix = caseCode ? `[${caseCode}]` : null;
+
   const load = useCallback(async () => {
     const { data } = await supabase
       .from("chat_conversations").select("*")
       .eq("doctor_slot", doctorSlot)
       .order("last_message_at", { ascending: false });
     const list = ((data ?? []) as ChatConversation[]).filter(c =>
-      me === "admin" ? true : c.participants.includes(me)
+      (me === "admin" ? true : c.participants.includes(me))
+      && (!titlePrefix || (c.title ?? "").startsWith(titlePrefix))
     );
     setConversations(list);
-  }, [doctorSlot, me]);
+  }, [doctorSlot, me, titlePrefix]);
 
   useEffect(() => {
     load();
-    const ch = supabase.channel(`chat-conv-${doctorSlot}`)
+    const ch = supabase.channel(`chat-conv-${doctorSlot}${titlePrefix ? "-" + titlePrefix : ""}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "chat_conversations", filter: `doctor_slot=eq.${doctorSlot}` }, load)
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [doctorSlot, load]);
+  }, [doctorSlot, load, titlePrefix]);
 
   const visible = useMemo(() => conversations.filter(c =>
     (view === "active" ? !c.archived : c.archived)
@@ -109,6 +116,7 @@ export function ChatModule({ doctorSlot, doctorName, me, myName }: Props) {
 
       {composing && (
         <ComposeNew doctorSlot={doctorSlot} me={me} myName={myName}
+          titlePrefix={titlePrefix} caseLabel={caseLabel}
           onClose={()=>setComposing(false)}
           onCreated={(id)=>{ setComposing(false); setSelectedId(id); load(); }} />
       )}
@@ -203,12 +211,13 @@ function ConversationRow({ conv, me, onOpen, onChange }: { conv: ChatConversatio
   );
 }
 
-function ComposeNew({ doctorSlot, me, myName, onClose, onCreated }: {
+function ComposeNew({ doctorSlot, me, myName, onClose, onCreated, titlePrefix, caseLabel }: {
   doctorSlot: number; me: RoleKey; myName: string;
   onClose: () => void; onCreated: (id: string) => void;
+  titlePrefix?: string | null; caseLabel?: string;
 }) {
   const [selected, setSelected] = useState<Set<RoleKey>>(new Set());
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(titlePrefix && caseLabel ? caseLabel : "");
   const [busy, setBusy] = useState(false);
 
   const choices: RoleKey[] = me === "doctor" ? STAFF_ROLES : ["doctor", ...STAFF_ROLES.filter(r => r !== me)];
@@ -223,9 +232,12 @@ function ComposeNew({ doctorSlot, me, myName, onClose, onCreated }: {
     if (selected.size === 0) { toast.error("اختر مسؤولاً واحداً على الأقل"); return; }
     setBusy(true);
     const participants = Array.from(new Set<RoleKey>([me, ...selected]));
+    const composedTitle = titlePrefix
+      ? `${titlePrefix} ${title.trim() || caseLabel || ""}`.trim()
+      : (title.trim() || null);
     const { data, error } = await supabase.from("chat_conversations").insert({
       doctor_slot: doctorSlot, participants,
-      title: title.trim() || null, created_by: me,
+      title: composedTitle, created_by: me,
     }).select("id").single();
     setBusy(false);
     if (error || !data) { toast.error(error?.message ?? "تعذر إنشاء المحادثة"); return; }

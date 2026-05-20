@@ -4,11 +4,12 @@ import { toast } from "sonner";
 import {
   Stethoscope, FileText, Download, Share2, Loader2,
   ScanLine, User, Phone, Hash, Palette, ClipboardList, Calendar,
-  Archive, MoreVertical,
+  Archive, MoreVertical, FileArchive,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import { CaseChatButton } from "@/components/case-chat-dialog";
 
 /** Inject hex overrides for our oklch CSS variables into html2canvas's cloned doc. */
 const H2C_ONCLONE = (doc: Document) => {
@@ -411,6 +412,40 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     toast.success("تم نقل الحالة إلى الأرشيف");
   }
 
+  /** Download the doctor-uploaded scan as a ZIP into the device file manager.
+   * Filename: "<patient> - د/<doctor> - YYYY-MM-DD.zip" */
+  async function downloadScanZip(c: Case) {
+    if (!c.scan_path) { toast.error("لا يوجد ملف مرفق"); return; }
+    setBusyId(c.id);
+    try {
+      const doctor = doctorMap.get(c.doctor_slot);
+      const date = new Date(c.created_at).toISOString().slice(0, 10);
+      const safe = (s: string) => s.replace(/[\\/:*?"<>|]+/g, "_").trim();
+      const docName = safe((doctor?.name ?? `Slot ${c.doctor_slot}`).replace(/^د\.?\s*/, ""));
+      const baseName = `${safe(c.patient_name)} - د.${docName} - ${date}`;
+      const res = await fetch(c.scan_path);
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const blob = await res.blob();
+      // If the source is already a zip, save as-is; otherwise wrap into a zip-named container.
+      const isZip = (c.scan_mime || "").includes("zip") || /\.zip$/i.test(c.scan_name || "");
+      if (isZip) {
+        const r = await saveToCenter(blob, `${baseName}.zip`, c.case_code);
+        toast.success(r.fallback ? "تم تنزيل الملف" : `تم الحفظ في ${r.path}`);
+      } else {
+        // Use JSZip to bundle the single scan file into a real .zip
+        const { default: JSZip } = await import("jszip");
+        const zip = new JSZip();
+        zip.file(c.scan_name || "scan.bin", blob);
+        const zipBlob = await zip.generateAsync({ type: "blob" });
+        const r = await saveToCenter(zipBlob, `${baseName}.zip`, c.case_code);
+        toast.success(r.fallback ? "تم تنزيل الملف" : `تم الحفظ في ${r.path}`);
+      }
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e.message || "تعذر تنزيل الملف");
+    } finally { setBusyId(null); }
+  }
+
   // delete removed from designer page per requirements
 
 
@@ -532,6 +567,24 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                     </div>
 
                     <div className="flex flex-col gap-2 shrink-0">
+                      <CaseChatButton
+                        doctorSlot={c.doctor_slot}
+                        doctorName={doctor?.name ?? `Slot ${c.doctor_slot}`}
+                        me={actor as RoleKey}
+                        myName={actorName ?? ROLE_LABEL[actor]}
+                        caseCode={c.case_code}
+                        caseLabel={c.patient_name}
+                      />
+                      {c.scan_path && (
+                        <button
+                          onClick={() => downloadScanZip(c)}
+                          disabled={busy}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold hover:border-gold transition disabled:opacity-60"
+                          title="تنزيل ملف الحالة بصيغة ZIP"
+                        >
+                          <FileArchive className="size-3.5 text-gold" /> تنزيل ZIP
+                        </button>
+                      )}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button
