@@ -41,7 +41,7 @@ function newId() {
     : `tmp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-export function ChatModule({ doctorSlot, doctorName, me, myName }: Props) {
+export function ChatModule({ doctorSlot, doctorName, me, myName, caseCode, caseLabel }: Props) {
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [view, setView] = useState<"active" | "archived">("active");
   const [filterRole, setFilterRole] = useState<RoleKey | "all">("all");
@@ -49,24 +49,27 @@ export function ChatModule({ doctorSlot, doctorName, me, myName }: Props) {
   const [composing, setComposing] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  const titlePrefix = caseCode ? `[${caseCode}]` : null;
+
   const load = useCallback(async () => {
     const { data } = await supabase
       .from("chat_conversations").select("*")
       .eq("doctor_slot", doctorSlot)
       .order("last_message_at", { ascending: false });
     const list = ((data ?? []) as ChatConversation[]).filter(c =>
-      me === "admin" ? true : c.participants.includes(me)
+      (me === "admin" ? true : c.participants.includes(me))
+      && (!titlePrefix || (c.title ?? "").startsWith(titlePrefix))
     );
     setConversations(list);
-  }, [doctorSlot, me]);
+  }, [doctorSlot, me, titlePrefix]);
 
   useEffect(() => {
     load();
-    const ch = supabase.channel(`chat-conv-${doctorSlot}`)
+    const ch = supabase.channel(`chat-conv-${doctorSlot}${titlePrefix ? "-" + titlePrefix : ""}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "chat_conversations", filter: `doctor_slot=eq.${doctorSlot}` }, load)
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [doctorSlot, load]);
+  }, [doctorSlot, load, titlePrefix]);
 
   const visible = useMemo(() => conversations.filter(c =>
     (view === "active" ? !c.archived : c.archived)
