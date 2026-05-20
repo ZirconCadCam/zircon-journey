@@ -211,12 +211,13 @@ function ConversationRow({ conv, me, onOpen, onChange }: { conv: ChatConversatio
   );
 }
 
-function ComposeNew({ doctorSlot, me, myName, onClose, onCreated }: {
+function ComposeNew({ doctorSlot, me, myName, onClose, onCreated, titlePrefix, caseLabel }: {
   doctorSlot: number; me: RoleKey; myName: string;
   onClose: () => void; onCreated: (id: string) => void;
+  titlePrefix?: string | null; caseLabel?: string;
 }) {
   const [selected, setSelected] = useState<Set<RoleKey>>(new Set());
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(titlePrefix && caseLabel ? caseLabel : "");
   const [busy, setBusy] = useState(false);
 
   const choices: RoleKey[] = me === "doctor" ? STAFF_ROLES : ["doctor", ...STAFF_ROLES.filter(r => r !== me)];
@@ -231,9 +232,12 @@ function ComposeNew({ doctorSlot, me, myName, onClose, onCreated }: {
     if (selected.size === 0) { toast.error("اختر مسؤولاً واحداً على الأقل"); return; }
     setBusy(true);
     const participants = Array.from(new Set<RoleKey>([me, ...selected]));
+    const composedTitle = titlePrefix
+      ? `${titlePrefix} ${title.trim() || caseLabel || ""}`.trim()
+      : (title.trim() || null);
     const { data, error } = await supabase.from("chat_conversations").insert({
       doctor_slot: doctorSlot, participants,
-      title: title.trim() || null, created_by: me,
+      title: composedTitle, created_by: me,
     }).select("id").single();
     setBusy(false);
     if (error || !data) { toast.error(error?.message ?? "تعذر إنشاء المحادثة"); return; }
