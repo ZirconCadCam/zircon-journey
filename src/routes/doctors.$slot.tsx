@@ -650,8 +650,8 @@ function CasesPanel({ doctor, me, myName }: { doctor: Doctor; me: RoleKey; myNam
   );
 }
 
-function CaseCard({ c, doctorName, onEdit, onPin, onArchive, onDelete }: {
-  c: SlotCase; doctorName: string;
+function CaseCard({ c, doctorName, doctorSlot, me, myName, onEdit, onPin, onArchive, onDelete }: {
+  c: SlotCase; doctorName: string; doctorSlot: number; me: RoleKey; myName: string;
   onEdit: () => void; onPin: () => void; onArchive: () => void; onDelete: () => void;
 }) {
   const stage = getStage(deriveStageKey(c));
