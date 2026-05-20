@@ -553,7 +553,7 @@ interface SlotCase {
   created_at: string; updated_at: string;
 }
 
-function CasesPanel({ doctor }: { doctor: Doctor }) {
+function CasesPanel({ doctor, me, myName }: { doctor: Doctor; me: RoleKey; myName: string }) {
   const [cases, setCases] = useState<SlotCase[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"active" | "archived">("active");
