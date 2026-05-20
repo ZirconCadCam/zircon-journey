@@ -752,6 +752,7 @@ function CaseCard({ c, doctorName, doctorSlot, me, myName, onEdit, onPin, onArch
             </div>
           )}
         </div>
+        </div>
       </footer>
     </article>
   );
