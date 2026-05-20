@@ -567,6 +567,24 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                     </div>
 
                     <div className="flex flex-col gap-2 shrink-0">
+                      <CaseChatButton
+                        doctorSlot={c.doctor_slot}
+                        doctorName={doctor?.name ?? `Slot ${c.doctor_slot}`}
+                        me={actor as RoleKey}
+                        myName={actorName ?? ROLE_LABEL[actor]}
+                        caseCode={c.case_code}
+                        caseLabel={c.patient_name}
+                      />
+                      {c.scan_path && (
+                        <button
+                          onClick={() => downloadScanZip(c)}
+                          disabled={busy}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold hover:border-gold transition disabled:opacity-60"
+                          title="تنزيل ملف الحالة بصيغة ZIP"
+                        >
+                          <FileArchive className="size-3.5 text-gold" /> تنزيل ZIP
+                        </button>
+                      )}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button
