@@ -116,6 +116,7 @@ export function ChatModule({ doctorSlot, doctorName, me, myName, caseCode, caseL
 
       {composing && (
         <ComposeNew doctorSlot={doctorSlot} me={me} myName={myName}
+          titlePrefix={titlePrefix} caseLabel={caseLabel}
           onClose={()=>setComposing(false)}
           onCreated={(id)=>{ setComposing(false); setSelectedId(id); load(); }} />
       )}
