@@ -712,10 +712,13 @@ function CaseCard({ c, doctorName, doctorSlot, me, myName, onEdit, onPin, onArch
         <CaseWorkflowControls c={c as any} actor="doctor" actorName={doctorName} doctorName={doctorName} />
       </div>
 
-      <footer className="flex items-center justify-between mt-4 pt-3 border-t border-border">
+      <footer className="flex items-center justify-between mt-4 pt-3 border-t border-border gap-2 flex-wrap">
         <div className="text-[11px] text-muted-foreground">
           آخر تحديث: {new Date(c.updated_at).toLocaleString("ar")}
         </div>
+        <div className="flex items-center gap-2">
+          <CaseChatButton doctorSlot={doctorSlot} doctorName={doctorName}
+            me={me} myName={myName} caseCode={c.case_code} caseLabel={c.patient_name} />
         <div ref={menuRef} className="relative">
           <button onClick={() => setMenuOpen(o => !o)} aria-haspopup="menu" aria-expanded={menuOpen}
             className={`rounded-lg border p-2 transition ${menuOpen ? "border-gold gradient-gold text-gold-foreground" : "border-border hover:border-gold"}`}
