@@ -206,7 +206,7 @@ function PasswordGate({ doctor, onOk }: { doctor: Doctor; onOk: () => void }) {
 
 function Portal({ doctor, actor, actorName, onLogout }: { doctor: Doctor; actor: Sender; actorName: string; onLogout: () => void }) {
   const { branch } = useAuth();
-  const [tab, setTab] = useState<"cases" | "files" | "chat" | "reports">("cases");
+  const [tab, setTab] = useState<"cases" | "files" | "reports">("cases");
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
@@ -247,22 +247,20 @@ function Portal({ doctor, actor, actorName, onLogout }: { doctor: Doctor; actor:
           </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-4 gap-1 border-b border-border">
-          <TabBtn active={tab==="cases"} onClick={()=>setTab("cases")} icon={<ClipboardList className="size-4" />} label="الحالات" />
+        <div className="mt-6 grid grid-cols-3 gap-1 border-b border-border">
+          <TabBtn active={tab==="cases"} onClick={()=>setTab("cases")} icon={<ClipboardList className="size-4" />} label="الحالات" badge={unread} />
           <TabBtn active={tab==="files"} onClick={()=>setTab("files")} icon={<FilesIcon className="size-4" />} label="الملفات" />
-          <TabBtn active={tab==="chat"} onClick={()=>{ setTab("chat"); setUnread(0); }} icon={<MessageSquare className="size-4" />} label="المحادثة" badge={unread} />
           <TabBtn active={tab==="reports"} onClick={()=>setTab("reports")} icon={<FileSpreadsheet className="size-4" />} label="الكشوفات" />
         </div>
 
         <div className="mt-6">
-          {tab === "cases" && <CasesPanel doctor={doctor} />}
+          {tab === "cases" && <CasesPanel doctor={doctor} me={chatRole} myName={actorName || doctor.name} />}
           {tab === "files" && <FilesPanel doctor={doctor} actor={actor} />}
-          {tab === "chat" && <ChatModule doctorSlot={doctor.slot} doctorName={doctor.name} me={chatRole} myName={actorName || doctor.name} />}
           {tab === "reports" && <DoctorReportsPanel doctor={doctor} />}
         </div>
 
         <ChatNotificationsListener doctorSlot={doctor.slot} me={chatRole}
-          onUnread={(n) => { if (tab !== "chat") setUnread(n); }} />
+          onUnread={(n) => setUnread(n)} />
       </main>
     </ShellHeader>
   );
