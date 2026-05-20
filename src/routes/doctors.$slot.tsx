@@ -636,6 +636,7 @@ function CasesPanel({ doctor, me, myName }: { doctor: Doctor; me: RoleKey; myNam
         <div className="grid md:grid-cols-2 gap-4">
           {visible.map(c => (
             <CaseCard key={c.id} c={c} doctorName={doctor.name}
+              doctorSlot={doctor.slot} me={me} myName={myName}
               onEdit={() => setEditing(c)}
               onPin={() => togglePin(c)}
               onArchive={() => toggleArchive(c)}
