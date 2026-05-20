@@ -15,6 +15,7 @@ import { STAGES, getStage, deriveStageKey, notifyRoleAboutCase, localNotify, typ
 import { CaseWorkflowControls } from "@/components/case-workflow-controls";
 import { DoctorReportsPanel } from "@/components/doctor-reports-panel";
 import { StageTick, type TickState } from "@/components/stage-tick";
+import { CaseChatButton } from "@/components/case-chat-dialog";
 import { Z } from "@/lib/z-index";
 
 /** Compute WhatsApp-style tick state for each visible stage from case flags + timing. */
