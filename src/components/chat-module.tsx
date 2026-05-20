@@ -20,6 +20,10 @@ interface Props {
   doctorName: string;
   me: RoleKey;
   myName: string;
+  /** When set, only show conversations whose title starts with `[caseCode]`,
+   * and auto-prefix new conversations with that tag. */
+  caseCode?: string;
+  caseLabel?: string;
 }
 
 type LocalMsg = ChatMessage & {
