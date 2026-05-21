@@ -446,6 +446,55 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     } finally { setBusyId(null); }
   }
 
+  /** Technician: download the latest .rar from the designer for this case
+   * into the device file manager. Falls back to a normal download. */
+  async function downloadDesignRar(c: Case) {
+    setBusyId(c.id);
+    try {
+      const doctor = doctorMap.get(c.doctor_slot);
+      const date = new Date(c.created_at).toISOString().slice(0, 10);
+      const safe = (s: string) => s.replace(/[\\/:*?"<>|]+/g, "_").trim();
+      const docName = safe((doctor?.name ?? `Slot ${c.doctor_slot}`).replace(/^د\.?\s*/, ""));
+      const baseName = `${safe(c.patient_name)} - د.${docName} - ${date}`;
+
+      // Prefer the revision rar if present, otherwise locate the latest .rar
+      // attachment sent by the designer in this case's chat thread.
+      let url: string | null = null;
+      let name: string | null = null;
+      if ((c as any).revision_design_file_path) {
+        url = (c as any).revision_design_file_path as string;
+        name = (c as any).revision_design_file_name as string | null;
+      } else {
+        const { data: convs } = await supabase.from("chat_conversations")
+          .select("id, participants").eq("doctor_slot", c.doctor_slot);
+        const ids = ((convs ?? []) as any[])
+          .filter(cv => Array.isArray(cv.participants)
+            && cv.participants.includes("designer")
+            && cv.participants.includes("technician"))
+          .map(cv => cv.id);
+        if (ids.length) {
+          const { data: msgs } = await supabase.from("chat_messages")
+            .select("attachment_path, attachment_name, content, created_at")
+            .in("conversation_id", ids)
+            .eq("sender", "designer")
+            .eq("message_type", "file")
+            .order("created_at", { ascending: false }).limit(50);
+          const hit = ((msgs ?? []) as any[]).find(m =>
+            /\.rar$/i.test(m.attachment_name || "") &&
+            (m.content || "").includes(c.case_code));
+          if (hit) { url = hit.attachment_path; name = hit.attachment_name; }
+        }
+      }
+
+      if (!url) { toast.error("لم يصل ملف التصميم (.rar) بعد"); return; }
+      const r = await downloadUrlToCenter(url, `${baseName}.rar`, c.case_code);
+      toast.success(r.fallback ? "تم تنزيل الملف" : `تم الحفظ في ${r.path}`);
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e.message || "تعذر تنزيل ملف التصميم");
+    } finally { setBusyId(null); }
+  }
+
   // delete removed from designer page per requirements
 
 
@@ -575,7 +624,16 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                         caseCode={c.case_code}
                         caseLabel={c.patient_name}
                       />
-                      {c.scan_path && (
+                      {actor === "technician" ? (
+                        <button
+                          onClick={() => downloadDesignRar(c)}
+                          disabled={busy}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold hover:border-gold transition disabled:opacity-60"
+                          title="تنزيل ملف التصميم المرسل من المصمم بصيغة RAR"
+                        >
+                          <FileArchive className="size-3.5 text-gold" /> تنزيل RAR
+                        </button>
+                      ) : c.scan_path && (
                         <button
                           onClick={() => downloadScanZip(c)}
                           disabled={busy}
