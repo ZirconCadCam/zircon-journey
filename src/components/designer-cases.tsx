@@ -624,7 +624,16 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                         caseCode={c.case_code}
                         caseLabel={c.patient_name}
                       />
-                      {c.scan_path && (
+                      {actor === "technician" ? (
+                        <button
+                          onClick={() => downloadDesignRar(c)}
+                          disabled={busy}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold hover:border-gold transition disabled:opacity-60"
+                          title="تنزيل ملف التصميم المرسل من المصمم بصيغة RAR"
+                        >
+                          <FileArchive className="size-3.5 text-gold" /> تنزيل RAR
+                        </button>
+                      ) : c.scan_path && (
                         <button
                           onClick={() => downloadScanZip(c)}
                           disabled={busy}
