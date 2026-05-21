@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
-import { MessageSquare, X } from "lucide-react";
+import { MessageSquare, X, FileArchive, Download, Loader2, User, Phone, Hash, Palette } from "lucide-react";
 import { ChatModule } from "@/components/chat-module";
 import type { RoleKey } from "@/lib/chat";
 import { Z } from "@/lib/z-index";
 import { supabase } from "@/integrations/supabase/client";
+import { downloadUrlToCenter } from "@/lib/file-manager";
+import { toast } from "sonner";
 
 /**
  * Per-case chat trigger. Opens a modal hosting the standard ChatModule
