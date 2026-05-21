@@ -80,7 +80,8 @@ export function CaseChatButton(props: {
                 <X className="size-4" />
               </button>
             </div>
-            <div className="p-4">
+            <div className="p-4 space-y-4">
+              <CaseHeaderPanel doctorSlot={doctorSlot} doctorName={doctorName} caseCode={caseCode} />
               <ChatModule
                 doctorSlot={doctorSlot}
                 doctorName={doctorName}
@@ -95,4 +96,169 @@ export function CaseChatButton(props: {
       )}
     </>
   );
+}
+
+/* ---------- Case header: patient data + all sent files (zip/rar) ---------- */
+
+interface CaseAttachment {
+  url: string;
+  name: string;
+  source: "doctor-zip" | "designer-rar" | "designer-revision-rar" | "chat";
+  created_at?: string | null;
+}
+
+function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
+  doctorSlot: number; doctorName: string; caseCode: string;
+}) {
+  const [c, setC] = useState<any>(null);
+  const [files, setFiles] = useState<CaseAttachment[]>([]);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: row } = await supabase.from("slot_cases").select(
+        "id, case_code, patient_name, patient_phone, patient_age, patient_gender, tooth_number, shade, case_type, notes, scan_path, scan_name, revision_design_file_path, revision_design_file_name, created_at"
+      ).eq("doctor_slot", doctorSlot).eq("case_code", caseCode).maybeSingle();
+      if (cancelled) return;
+      setC(row);
+
+      const list: CaseAttachment[] = [];
+      if (row?.scan_path) list.push({
+        url: row.scan_path, name: row.scan_name || `${caseCode}.zip`,
+        source: "doctor-zip", created_at: row.created_at,
+      });
+      if (row?.revision_design_file_path) list.push({
+        url: row.revision_design_file_path,
+        name: row.revision_design_file_name || `${caseCode}-revision.rar`,
+        source: "designer-revision-rar",
+      });
+
+      // Pull any .rar/.zip attachments referencing this case from chat messages.
+      const { data: convs } = await supabase.from("chat_conversations")
+        .select("id").eq("doctor_slot", doctorSlot);
+      const ids = ((convs ?? []) as any[]).map(x => x.id);
+      if (ids.length) {
+        const { data: msgs } = await supabase.from("chat_messages")
+          .select("attachment_path, attachment_name, content, created_at, sender, message_type")
+          .in("conversation_id", ids).eq("message_type", "file")
+          .order("created_at", { ascending: false }).limit(200);
+        for (const m of (msgs ?? []) as any[]) {
+          const nm = m.attachment_name || "";
+          if (!/\.(rar|zip)$/i.test(nm)) continue;
+          if (!(m.content || "").includes(caseCode)) continue;
+          if (list.some(x => x.url === m.attachment_path)) continue;
+          list.push({
+            url: m.attachment_path, name: nm,
+            source: m.sender === "designer" ? "designer-rar" : "chat",
+            created_at: m.created_at,
+          });
+        }
+      }
+      if (!cancelled) setFiles(list);
+    })();
+    return () => { cancelled = true; };
+  }, [doctorSlot, caseCode]);
+
+  async function downloadOne(att: CaseAttachment) {
+    setBusy(att.url);
+    try {
+      const r = await downloadUrlToCenter(att.url, att.name, caseCode);
+      toast.success(r.fallback ? "تم تنزيل الملف" : `تم الحفظ في ${r.path}`);
+    } catch (e: any) {
+      toast.error(e?.message || "تعذر تنزيل الملف");
+    } finally { setBusy(null); }
+  }
+
+  if (!c) {
+    return <div className="rounded-xl border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+      جارٍ تحميل بيانات الحالة…
+    </div>;
+  }
+
+  return (
+    <div className="rounded-xl border border-gold/40 bg-gradient-to-br from-card to-muted/30 p-4 space-y-3 shadow-sm">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <div className="text-[11px] text-muted-foreground font-mono">{c.case_code}</div>
+          <div className="font-extrabold text-base">{c.patient_name}</div>
+          <div className="text-[11px] text-muted-foreground">د/ {doctorName}</div>
+        </div>
+        <div className="text-[11px] text-muted-foreground">
+          {new Date(c.created_at).toLocaleDateString("ar")}
+        </div>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+        {c.patient_phone && <Info icon={<Phone className="size-3" />} label="الهاتف" value={c.patient_phone} />}
+        {c.patient_age != null && <Info icon={<User className="size-3" />} label="العمر" value={String(c.patient_age)} />}
+        {c.tooth_number && <Info icon={<Hash className="size-3" />} label="السن" value={c.tooth_number} />}
+        {c.shade && <Info icon={<Palette className="size-3" />} label="اللون" value={c.shade} />}
+      </div>
+      {c.notes && (
+        <div className="text-[11px] rounded-lg border border-border bg-background/60 p-2 whitespace-pre-wrap">
+          {c.notes}
+        </div>
+      )}
+
+      <div>
+        <div className="text-[11px] font-bold mb-1.5 text-muted-foreground">
+          ملفات الحالة (ZIP / RAR)
+        </div>
+        {files.length === 0 ? (
+          <div className="text-[11px] text-muted-foreground py-2">لا توجد ملفات مرسلة بعد.</div>
+        ) : (
+          <ul className="divide-y divide-border rounded-lg border border-border overflow-hidden bg-background/60">
+            {files.map(f => {
+              const isRar = /\.rar$/i.test(f.name);
+              return (
+                <li key={f.url} className="flex items-center justify-between gap-2 p-2">
+                  <button
+                    onClick={() => downloadOne(f)}
+                    className="flex items-center gap-2 min-w-0 text-start hover:text-gold transition"
+                    title="حفظ في مدير ملفات الجهاز ثم فتحه"
+                  >
+                    <FileArchive className={`size-4 shrink-0 ${isRar ? "text-amber-700" : "text-gold"}`} />
+                    <span className="text-xs font-bold truncate">{f.name}</span>
+                    <span className="text-[10px] rounded-full bg-muted px-1.5 py-0.5 font-bold shrink-0">
+                      {sourceLabel(f.source)}
+                    </span>
+                  </button>
+                  <button onClick={() => downloadOne(f)} disabled={busy === f.url}
+                    className="rounded-lg border border-border p-1.5 hover:border-gold transition disabled:opacity-60"
+                    aria-label="تنزيل">
+                    {busy === f.url ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        <div className="text-[10px] text-muted-foreground mt-1">
+          الملفات تُحفظ تلقائياً داخل مجلد <span className="font-bold">مركز زركون CAD/CAM</span> على جهازك،
+          ثم يمكنك فتحها مباشرةً من مدير الملفات.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Info({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-border bg-background/60 p-2 flex items-start gap-1.5">
+      <span className="text-gold mt-0.5">{icon}</span>
+      <div className="min-w-0">
+        <div className="text-[10px] text-muted-foreground">{label}</div>
+        <div className="font-bold truncate">{value}</div>
+      </div>
+    </div>
+  );
+}
+
+function sourceLabel(s: CaseAttachment["source"]): string {
+  switch (s) {
+    case "doctor-zip": return "من الطبيب";
+    case "designer-rar": return "من المصمم";
+    case "designer-revision-rar": return "تعديل المصمم";
+    default: return "مرفق";
+  }
 }
