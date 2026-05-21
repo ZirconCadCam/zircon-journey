@@ -446,26 +446,25 @@ function TechnicianPermanentSection({ c, actorName, doctorName }: {
   }
 
   return (
-    <div className="rounded-lg border border-emerald-500/40 bg-emerald-50/40 p-3 space-y-2">
-      <div className="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
-        <ThumbsUp className="size-3.5" />
-        {approved ? "تم الاعتماد النهائي من الطبيب — جاهز لنحت الدائم"
-                  : revisionReady && !revisionApproved ? "تعديل تصميم جاهز للاعتماد"
-                  : "نحت الأسنان الدائمة"}
+    <div className={`rounded-lg border p-3 space-y-2 ${revisionPending ? "border-amber-500/60 bg-amber-50/70" : "border-emerald-500/40 bg-emerald-50/40"}`}>
+      <div className={`text-xs font-bold flex items-center gap-1.5 ${revisionPending ? "text-amber-900" : "text-emerald-800"}`}>
+        {revisionPending ? <Pencil className="size-3.5" /> : <ThumbsUp className="size-3.5" />}
+        {revisionPending ? "🔁 طلب تعديل من الطبيب — بانتظار ملف rar المعدل من المصمم"
+          : approved ? "تم الاعتماد النهائي من الطبيب — جاهز لنحت الدائم"
+          : revisionReady && !revisionApproved ? "جاري اعتماد التعديل تلقائياً…"
+          : "نحت الأسنان الدائمة"}
       </div>
-      {revisionReady && !revisionApproved && (
-        <button onClick={approveRevision} disabled={busy}
-          className="inline-flex items-center gap-2 rounded-lg gradient-brown px-3 py-2 text-xs font-bold shadow-luxury">
-          {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
-          اعتماد التعديل لنحت الدائم
-        </button>
+      {revisionPending && c.revision_notes && (
+        <div className="text-xs whitespace-pre-wrap rounded border border-amber-300 bg-white/70 p-2 text-amber-900">
+          ملاحظات الطبيب:{"\n"}{c.revision_notes}
+        </div>
       )}
       {(approved || revisionApproved) && (
         <label className="inline-flex items-center gap-2 cursor-pointer text-xs font-bold rounded-lg border border-border bg-card px-3 py-2 hover:border-gold">
           <input type="checkbox" checked={permDone} onChange={togglePermDone} disabled={busy}
             className="size-4 accent-gold" />
           {busy && <Loader2 className="size-3.5 animate-spin" />}
-          تم نحت الدائم
+          تم نحت الزركون الدائم
           {permDone && <Check className="size-3.5 text-emerald-600" />}
         </label>
       )}
