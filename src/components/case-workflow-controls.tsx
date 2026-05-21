@@ -718,18 +718,24 @@ function DoctorControls({ c, actorName, doctorName }: {
       .update({
         doctor_decision: "revision",
         revision_notes: trimmed,
+        revision_design_done: false,
+        revision_approved_by_tech: false,
         temporary_delivered: true,
         review_read_at: new Date().toISOString(),
       }).eq("id", c.id);
     if (!error) {
       await appendAudit(c, { actor: actorName || "الطبيب", action: "طلب تعديل التصميم", notes: trimmed });
-      const conv = await ensureConv(c, "doctor", "designer", doctorName);
-      if (conv) await supabase.from("chat_messages").insert({
-        conversation_id: conv, sender: "doctor", sender_name: actorName,
-        content: `🔁 طلب تعديل تصميم — الحالة ${c.case_code} (${c.patient_name})\nملاحظات:\n${trimmed}`,
-        message_type: "text",
-      });
-      toast.success("✅ تم إرسال طلب التعديل للمصمم");
+      const designerBody = `🔁 طلب تعديل تصميم — الحالة ${c.case_code} (${c.patient_name})\nملاحظات:\n${trimmed}`;
+      const techBody = `🔁 طلب تعديل من الطبيب — الحالة ${c.case_code} (${c.patient_name}). بانتظار وصول ملف rar المعدل من المصمم.\nملاحظات الطبيب:\n${trimmed}`;
+      for (const role of ["designer", "technician"] as RoleKey[]) {
+        const conv = await ensureConv(c, "doctor", role, doctorName);
+        if (conv) await supabase.from("chat_messages").insert({
+          conversation_id: conv, sender: "doctor", sender_name: actorName,
+          content: role === "designer" ? designerBody : techBody,
+          message_type: "text",
+        });
+      }
+      toast.success("✅ تم إرسال طلب التعديل للمصمم والفني");
       setRevOpen(false);
       setNotes("");
     } else toast.error(error.message);
