@@ -383,26 +383,38 @@ function TechnicianPermanentSection({ c, actorName, doctorName }: {
   const [busy, setBusy] = useState(false);
   const decision = c.doctor_decision;
   const approved = decision === "approved";
+  const revisionPending = decision === "revision" && !c.revision_design_done;
   const revisionReady = decision === "revision" && c.revision_design_done;
   const revisionApproved = !!c.revision_approved_by_tech;
   const permDone = !!c.permanent_fabrication_done;
-  if (!approved && !revisionReady && !permDone) return null;
+  if (!approved && !revisionPending && !revisionReady && !permDone) return null;
 
-  async function approveRevision() {
-    setBusy(true);
-    const { error } = await supabase.from("slot_cases")
-      .update({ revision_approved_by_tech: true }).eq("id", c.id);
-    if (!error) {
+  // Auto-approve the revision the moment the technician sees the revised rar file.
+  // This flips the stage badge from "قيد المراجعة" → "اعتماد نهائي" automatically.
+  useEffect(() => {
+    if (!revisionReady || revisionApproved) return;
+    let cancelled = false;
+    (async () => {
+      const { error } = await supabase.from("slot_cases")
+        .update({ revision_approved_by_tech: true }).eq("id", c.id);
+      if (cancelled || error) return;
       const conv = await ensureConv(c, "technician", "designer", doctorName);
       if (conv) await supabase.from("chat_messages").insert({
         conversation_id: conv, sender: "technician", sender_name: actorName,
-        content: `✅ تم اعتماد التعديل النهائي — الحالة ${c.case_code} (${c.patient_name}). يبدأ نحت الأسنان الدائمة.`,
+        content: `✅ استلم الفني ملف التعديل — الحالة ${c.case_code} (${c.patient_name}). يبدأ نحت الدائم.`,
         message_type: "text",
       });
-      toast.success("تم اعتماد التعديل");
-    } else toast.error(error.message);
-    setBusy(false);
-  }
+      const dconv = await ensureConv(c, "technician", "doctor", doctorName);
+      if (dconv) await supabase.from("chat_messages").insert({
+        conversation_id: dconv, sender: "technician", sender_name: actorName,
+        content: `✅ تم استلام التعديل — الحالة ${c.case_code} في مرحلة الاعتماد النهائي.`,
+        message_type: "text",
+      });
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [c.id, revisionReady, revisionApproved]);
+
 
   /** Single-checkbox flow: when ticked, mark permanent done AND notify
    *  the doctor + both secretaries (sanaa & ibb) automatically. */
@@ -434,26 +446,25 @@ function TechnicianPermanentSection({ c, actorName, doctorName }: {
   }
 
   return (
-    <div className="rounded-lg border border-emerald-500/40 bg-emerald-50/40 p-3 space-y-2">
-      <div className="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
-        <ThumbsUp className="size-3.5" />
-        {approved ? "تم الاعتماد النهائي من الطبيب — جاهز لنحت الدائم"
-                  : revisionReady && !revisionApproved ? "تعديل تصميم جاهز للاعتماد"
-                  : "نحت الأسنان الدائمة"}
+    <div className={`rounded-lg border p-3 space-y-2 ${revisionPending ? "border-amber-500/60 bg-amber-50/70" : "border-emerald-500/40 bg-emerald-50/40"}`}>
+      <div className={`text-xs font-bold flex items-center gap-1.5 ${revisionPending ? "text-amber-900" : "text-emerald-800"}`}>
+        {revisionPending ? <Pencil className="size-3.5" /> : <ThumbsUp className="size-3.5" />}
+        {revisionPending ? "🔁 طلب تعديل من الطبيب — بانتظار ملف rar المعدل من المصمم"
+          : approved ? "تم الاعتماد النهائي من الطبيب — جاهز لنحت الدائم"
+          : revisionReady && !revisionApproved ? "جاري اعتماد التعديل تلقائياً…"
+          : "نحت الأسنان الدائمة"}
       </div>
-      {revisionReady && !revisionApproved && (
-        <button onClick={approveRevision} disabled={busy}
-          className="inline-flex items-center gap-2 rounded-lg gradient-brown px-3 py-2 text-xs font-bold shadow-luxury">
-          {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
-          اعتماد التعديل لنحت الدائم
-        </button>
+      {revisionPending && c.revision_notes && (
+        <div className="text-xs whitespace-pre-wrap rounded border border-amber-300 bg-white/70 p-2 text-amber-900">
+          ملاحظات الطبيب:{"\n"}{c.revision_notes}
+        </div>
       )}
       {(approved || revisionApproved) && (
         <label className="inline-flex items-center gap-2 cursor-pointer text-xs font-bold rounded-lg border border-border bg-card px-3 py-2 hover:border-gold">
           <input type="checkbox" checked={permDone} onChange={togglePermDone} disabled={busy}
             className="size-4 accent-gold" />
           {busy && <Loader2 className="size-3.5 animate-spin" />}
-          تم نحت الدائم
+          تم نحت الزركون الدائم
           {permDone && <Check className="size-3.5 text-emerald-600" />}
         </label>
       )}
@@ -718,18 +729,24 @@ function DoctorControls({ c, actorName, doctorName }: {
       .update({
         doctor_decision: "revision",
         revision_notes: trimmed,
+        revision_design_done: false,
+        revision_approved_by_tech: false,
         temporary_delivered: true,
         review_read_at: new Date().toISOString(),
       }).eq("id", c.id);
     if (!error) {
       await appendAudit(c, { actor: actorName || "الطبيب", action: "طلب تعديل التصميم", notes: trimmed });
-      const conv = await ensureConv(c, "doctor", "designer", doctorName);
-      if (conv) await supabase.from("chat_messages").insert({
-        conversation_id: conv, sender: "doctor", sender_name: actorName,
-        content: `🔁 طلب تعديل تصميم — الحالة ${c.case_code} (${c.patient_name})\nملاحظات:\n${trimmed}`,
-        message_type: "text",
-      });
-      toast.success("✅ تم إرسال طلب التعديل للمصمم");
+      const designerBody = `🔁 طلب تعديل تصميم — الحالة ${c.case_code} (${c.patient_name})\nملاحظات:\n${trimmed}`;
+      const techBody = `🔁 طلب تعديل من الطبيب — الحالة ${c.case_code} (${c.patient_name}). بانتظار وصول ملف rar المعدل من المصمم.\nملاحظات الطبيب:\n${trimmed}`;
+      for (const role of ["designer", "technician"] as RoleKey[]) {
+        const conv = await ensureConv(c, "doctor", role, doctorName);
+        if (conv) await supabase.from("chat_messages").insert({
+          conversation_id: conv, sender: "doctor", sender_name: actorName,
+          content: role === "designer" ? designerBody : techBody,
+          message_type: "text",
+        });
+      }
+      toast.success("✅ تم إرسال طلب التعديل للمصمم والفني");
       setRevOpen(false);
       setNotes("");
     } else toast.error(error.message);
