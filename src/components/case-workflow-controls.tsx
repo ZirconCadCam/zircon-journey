@@ -383,26 +383,38 @@ function TechnicianPermanentSection({ c, actorName, doctorName }: {
   const [busy, setBusy] = useState(false);
   const decision = c.doctor_decision;
   const approved = decision === "approved";
+  const revisionPending = decision === "revision" && !c.revision_design_done;
   const revisionReady = decision === "revision" && c.revision_design_done;
   const revisionApproved = !!c.revision_approved_by_tech;
   const permDone = !!c.permanent_fabrication_done;
-  if (!approved && !revisionReady && !permDone) return null;
+  if (!approved && !revisionPending && !revisionReady && !permDone) return null;
 
-  async function approveRevision() {
-    setBusy(true);
-    const { error } = await supabase.from("slot_cases")
-      .update({ revision_approved_by_tech: true }).eq("id", c.id);
-    if (!error) {
+  // Auto-approve the revision the moment the technician sees the revised rar file.
+  // This flips the stage badge from "قيد المراجعة" → "اعتماد نهائي" automatically.
+  useEffect(() => {
+    if (!revisionReady || revisionApproved) return;
+    let cancelled = false;
+    (async () => {
+      const { error } = await supabase.from("slot_cases")
+        .update({ revision_approved_by_tech: true }).eq("id", c.id);
+      if (cancelled || error) return;
       const conv = await ensureConv(c, "technician", "designer", doctorName);
       if (conv) await supabase.from("chat_messages").insert({
         conversation_id: conv, sender: "technician", sender_name: actorName,
-        content: `✅ تم اعتماد التعديل النهائي — الحالة ${c.case_code} (${c.patient_name}). يبدأ نحت الأسنان الدائمة.`,
+        content: `✅ استلم الفني ملف التعديل — الحالة ${c.case_code} (${c.patient_name}). يبدأ نحت الدائم.`,
         message_type: "text",
       });
-      toast.success("تم اعتماد التعديل");
-    } else toast.error(error.message);
-    setBusy(false);
-  }
+      const dconv = await ensureConv(c, "technician", "doctor", doctorName);
+      if (dconv) await supabase.from("chat_messages").insert({
+        conversation_id: dconv, sender: "technician", sender_name: actorName,
+        content: `✅ تم استلام التعديل — الحالة ${c.case_code} في مرحلة الاعتماد النهائي.`,
+        message_type: "text",
+      });
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [c.id, revisionReady, revisionApproved]);
+
 
   /** Single-checkbox flow: when ticked, mark permanent done AND notify
    *  the doctor + both secretaries (sanaa & ibb) automatically. */
