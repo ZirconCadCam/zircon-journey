@@ -162,6 +162,37 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     return filtered;
   }, [filtered, actor, doctorMap]);
 
+  /* ------------------------------------------------------------------
+   * Voice arrival alerts (designer = new .zip, technician = new .rar)
+   * ------------------------------------------------------------------ */
+  const seenIds = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    if (loading) return;
+    if (actor !== "designer" && actor !== "technician") return;
+    const currentIds = new Set(visibleForActor.map(c => c.id));
+    if (seenIds.current === null) {
+      // First pass after load — establish baseline silently.
+      seenIds.current = currentIds;
+      return;
+    }
+    const prev = seenIds.current;
+    const today = new Date().toDateString();
+    const todaysCases = visibleForActor
+      .filter(c => new Date(c.created_at).toDateString() === today)
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    for (const c of visibleForActor) {
+      if (prev.has(c.id)) continue;
+      if (new Date(c.created_at).toDateString() !== today) continue;
+      const rank = todaysCases.findIndex(x => x.id === c.id) + 1;
+      const doctor = doctorMap.get(c.doctor_slot);
+      const doctorName = (doctor?.name ?? `Slot ${c.doctor_slot}`).replace(/^د\.?\s*/, "");
+      const ord = arabicOrdinal(rank);
+      speak(`لديك حالة جديدة من الدكتور ${doctorName}. الحالة رقم ${ord}.`);
+    }
+    seenIds.current = currentIds;
+  }, [visibleForActor, loading, actor, doctorMap]);
+
+
   async function downloadScan(c: Case) {
     setBusyId(c.id);
     try {
