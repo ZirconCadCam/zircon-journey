@@ -179,6 +179,8 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
       </>
     }>
       <main className="container mx-auto px-4 sm:px-6 py-6">
+        {role === "admin" && <AdminVoiceListener />}
+
         <div className="rounded-3xl gradient-brown text-primary-foreground p-6 sm:p-8 shadow-luxury flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-4">
             <div className="size-16 rounded-2xl gradient-gold grid place-items-center shadow-gold">
