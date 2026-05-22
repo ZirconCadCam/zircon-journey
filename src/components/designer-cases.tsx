@@ -77,6 +77,8 @@ import { CaseWorkflowControls } from "@/components/case-workflow-controls";
 import { deriveStageKey, getStage } from "@/lib/case-stages";
 import type { RoleKey } from "@/lib/chat";
 import { ROLE_LABEL } from "@/lib/chat";
+import { speak, arabicOrdinal } from "@/lib/voice-notify";
+
 
 interface DesignerCasesProps {
   /** Which actor view: designer, technician, or branch secretary */
