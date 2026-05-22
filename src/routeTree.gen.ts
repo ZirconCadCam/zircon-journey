@@ -17,6 +17,7 @@ import { Route as StaffRoleRouteImport } from './routes/staff.$role'
 import { Route as DoctorsSlotRouteImport } from './routes/doctors.$slot'
 import { Route as CasesNewRouteImport } from './routes/cases.new'
 import { Route as CasesIdRouteImport } from './routes/cases.$id'
+import { Route as ApiTtsRouteImport } from './routes/api/tts'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminArchiveRouteImport } from './routes/admin.archive'
 import { Route as DoctorsSlotNewCaseRouteImport } from './routes/doctors_.$slot.new-case'
@@ -61,6 +62,11 @@ const CasesIdRoute = CasesIdRouteImport.update({
   path: '/cases/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiTtsRoute = ApiTtsRouteImport.update({
+  id: '/api/tts',
+  path: '/api/tts',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminUsersRoute = AdminUsersRouteImport.update({
   id: '/admin/users',
   path: '/admin/users',
@@ -83,6 +89,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/admin/archive': typeof AdminArchiveRoute
   '/admin/users': typeof AdminUsersRoute
+  '/api/tts': typeof ApiTtsRoute
   '/cases/$id': typeof CasesIdRoute
   '/cases/new': typeof CasesNewRoute
   '/doctors/$slot': typeof DoctorsSlotRoute
@@ -96,6 +103,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/admin/archive': typeof AdminArchiveRoute
   '/admin/users': typeof AdminUsersRoute
+  '/api/tts': typeof ApiTtsRoute
   '/cases/$id': typeof CasesIdRoute
   '/cases/new': typeof CasesNewRoute
   '/doctors/$slot': typeof DoctorsSlotRoute
@@ -110,6 +118,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/admin/archive': typeof AdminArchiveRoute
   '/admin/users': typeof AdminUsersRoute
+  '/api/tts': typeof ApiTtsRoute
   '/cases/$id': typeof CasesIdRoute
   '/cases/new': typeof CasesNewRoute
   '/doctors/$slot': typeof DoctorsSlotRoute
@@ -125,6 +134,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/admin/archive'
     | '/admin/users'
+    | '/api/tts'
     | '/cases/$id'
     | '/cases/new'
     | '/doctors/$slot'
@@ -138,6 +148,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/admin/archive'
     | '/admin/users'
+    | '/api/tts'
     | '/cases/$id'
     | '/cases/new'
     | '/doctors/$slot'
@@ -151,6 +162,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/admin/archive'
     | '/admin/users'
+    | '/api/tts'
     | '/cases/$id'
     | '/cases/new'
     | '/doctors/$slot'
@@ -165,6 +177,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   AdminArchiveRoute: typeof AdminArchiveRoute
   AdminUsersRoute: typeof AdminUsersRoute
+  ApiTtsRoute: typeof ApiTtsRoute
   CasesIdRoute: typeof CasesIdRoute
   CasesNewRoute: typeof CasesNewRoute
   DoctorsSlotRoute: typeof DoctorsSlotRoute
@@ -231,6 +244,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CasesIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/tts': {
+      id: '/api/tts'
+      path: '/api/tts'
+      fullPath: '/api/tts'
+      preLoaderRoute: typeof ApiTtsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/users': {
       id: '/admin/users'
       path: '/admin/users'
@@ -261,6 +281,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   AdminArchiveRoute: AdminArchiveRoute,
   AdminUsersRoute: AdminUsersRoute,
+  ApiTtsRoute: ApiTtsRoute,
   CasesIdRoute: CasesIdRoute,
   CasesNewRoute: CasesNewRoute,
   DoctorsSlotRoute: DoctorsSlotRoute,
