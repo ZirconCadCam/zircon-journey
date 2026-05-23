@@ -39,7 +39,10 @@ function stageTickState(stageKey: string, c: any): TickState {
     case "revision":
       return c.doctor_decision === "revision" ? "read" : "none";
     case "approved":
-      return (c.doctor_decision === "approved" || c.revision_approved_by_tech) ? "read" : "none";
+      if (!(c.doctor_decision === "approved" || c.revision_approved_by_tech)) return "none";
+      // brown single check on approval → blue double-check once the technician carves the permanent.
+      if (c.permanent_fabrication_done) return "read";
+      return "sent";
     case "permanent_done":
       if (!c.permanent_fabrication_done) return "none";
       if (c.perm_read_at || c.permanent_shipped_to_secretary) return "read";
