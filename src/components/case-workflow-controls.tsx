@@ -693,34 +693,26 @@ function DoctorControls({ c, actorName, doctorName }: {
       }).eq("id", c.id);
     if (!error) {
       await appendAudit(c, { actor: actorName || "الطبيب", action: "اعتماد التصميم للدائم" });
-      const detailsParts = [
+      const details = [
+        `الحالة ${c.case_code}`,
+        `المريض: ${c.patient_name}`,
         c.tooth_number ? `السن: ${c.tooth_number}` : null,
         c.teeth_count ? `عدد الأسنان: ${c.teeth_count}` : null,
         c.shade ? `اللون: ${c.shade}` : null,
         c.case_type ? `النوع: ${c.case_type}` : null,
-        c.notes ? `ملاحظات: ${c.notes}` : null,
-      ].filter(Boolean).join(" — ");
-      const shortDetails = [
-        `الحالة ${c.case_code}`,
-        `المريض: ${c.patient_name}`,
-        detailsParts,
       ].filter(Boolean).join(" — ");
       // 1) Designer: approval + archive prompt
       const dConv = await ensureConv(c, "doctor", "designer", doctorName);
       if (dConv) await supabase.from("chat_messages").insert({
         conversation_id: dConv, sender: "doctor", sender_name: actorName,
-        content: `✅ تم اعتماد التصميم للحالة ${shortDetails}. بإمكانك أرشفتها.`,
+        content: `✅ تم اعتماد التصميم للحالة ${details}. بإمكانك أرشفتها.`,
         message_type: "text",
       });
-      // 2) Technician: carve the permanent as-is (exact required wording).
-      //    Case stays visible in the technician's list — no auto-archive here.
-      const techBody =
-        `لا تعديل، قم بنحت الدائم وفق التصميم الحالي:\n` +
-        `[ ${c.patient_name}${detailsParts ? ` ، ${detailsParts}` : ""} ]`;
+      // 2) Technician: carve the permanent as-is
       const tConv = await ensureConv(c, "doctor", "technician", doctorName);
       if (tConv) await supabase.from("chat_messages").insert({
         conversation_id: tConv, sender: "doctor", sender_name: actorName,
-        content: techBody,
+        content: `لا تعديل، قم بنحت الدائم وفق التصميم الحالي — ${details}.`,
         message_type: "text",
       });
       toast.success("✅ تم الاعتماد وإشعار المصمم والفني");
