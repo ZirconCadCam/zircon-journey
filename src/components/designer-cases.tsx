@@ -71,6 +71,7 @@ interface Case {
   shipped_to_doctor?: boolean | null;
   received_temporary?: boolean | null;
   received_permanent?: boolean | null;
+  final_archived?: boolean | null;
 }
 
 import { CaseWorkflowControls } from "@/components/case-workflow-controls";
