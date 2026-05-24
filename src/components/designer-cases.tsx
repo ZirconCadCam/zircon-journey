@@ -84,8 +84,8 @@ import { speak, arabicOrdinal } from "@/lib/voice-notify";
 
 
 interface DesignerCasesProps {
-  /** Which actor view: designer, technician, or branch secretary */
-  actor?: "designer" | "technician" | "secretary_sanaa" | "secretary_ibb";
+  /** Which actor view */
+  actor?: "designer" | "technician" | "secretary_sanaa" | "secretary_ibb" | "admin";
   /** When actor === technician, the secretary branch role to send to */
   technicianTarget?: RoleKey;
   actorName?: string;
