@@ -167,6 +167,32 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     return filtered;
   }, [filtered, actor, doctorMap]);
 
+  // Sort: pinned first (admin pins), then by created_at desc.
+  const sortedForActor = useMemo(() => {
+    return [...visibleForActor].sort((a, b) => {
+      const ap = a.pinned ? 1 : 0;
+      const bp = b.pinned ? 1 : 0;
+      if (ap !== bp) return bp - ap;
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+  }, [visibleForActor]);
+
+  /* Auto-archive cases on the technician page once they reach
+   * "مؤرشف نهائياً" (final_archived === true). */
+  const autoArchivedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (actor !== "technician") return;
+    for (const c of filtered) {
+      if (c.final_archived && !c.archived && !autoArchivedRef.current.has(c.id)) {
+        autoArchivedRef.current.add(c.id);
+        supabase.from("slot_cases").update({ archived: true }).eq("id", c.id).then(({ error }) => {
+          if (error) console.error("auto-archive failed", error);
+        });
+      }
+    }
+  }, [filtered, actor]);
+
+
   /* ------------------------------------------------------------------
    * Voice arrival alerts (designer = new .zip, technician = new .rar)
    * ------------------------------------------------------------------ */
