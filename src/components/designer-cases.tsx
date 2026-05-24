@@ -655,6 +655,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-mono text-xs rounded-md bg-muted px-2 py-0.5 font-bold">{c.case_code}</span>
                         <span className="text-[11px] rounded-full gradient-gold text-gold-foreground px-2 py-0.5 font-bold">{getStage(deriveStageKey(c)).label}</span>
+                        {c.pinned && <span className="text-[11px] rounded-full bg-gold/20 text-gold px-2 py-0.5 font-bold inline-flex items-center gap-1"><Pin className="size-3" /> مثبتة</span>}
                         <span className="text-[11px] text-muted-foreground flex items-center gap-1">
                           <Calendar className="size-3" /> {new Date(c.created_at).toLocaleDateString("ar-EG")}
                         </span>
