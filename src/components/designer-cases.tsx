@@ -529,6 +529,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
   }
 
 
+  /** Technician: download the latest .rar from the designer for this case
    * into the device file manager. Falls back to a normal download. */
   async function downloadDesignRar(c: Case) {
     setBusyId(c.id);
