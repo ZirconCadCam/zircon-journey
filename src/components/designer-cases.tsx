@@ -638,14 +638,14 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
           )}
         </div>
 
-        {visibleForActor.length === 0 ? (
+        {sortedForActor.length === 0 ? (
           <div className="rounded-2xl bg-card border border-border p-12 text-center text-muted-foreground shadow-luxury">
             <ClipboardList className="size-10 mx-auto mb-3 opacity-40" />
             لا توجد حالات لعرضها
           </div>
         ) : (
           <ul className="space-y-3">
-            {visibleForActor.map(c => {
+            {sortedForActor.map(c => {
               const doctor = doctorMap.get(c.doctor_slot);
               const busy = busyId === c.id;
               return (
