@@ -752,13 +752,26 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                           <DropdownMenuItem onClick={() => archiveCase(c)}>
                             <Archive className="size-4 ml-2" /> أرشفة
                           </DropdownMenuItem>
+                          {actor === "admin" && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => togglePin(c)}>
+                                {c.pinned
+                                  ? <><PinOff className="size-4 ml-2" /> إلغاء التثبيت</>
+                                  : <><Pin className="size-4 ml-2" /> تثبيت</>}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => deleteCase(c)} className="text-destructive focus:text-destructive">
+                                <Trash2 className="size-4 ml-2" /> حذف نهائي
+                              </DropdownMenuItem>
+                            </>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
                   </div>
 
-                  {/* Workflow controls vary per actor */}
-                  {(() => {
+                  {/* Workflow controls vary per actor — admin is view-only */}
+                  {actor !== "admin" && (() => {
                     let target: RoleKey | undefined = undefined;
                     if (actor === "designer") target = "technician";
                     else if (actor === "technician")
