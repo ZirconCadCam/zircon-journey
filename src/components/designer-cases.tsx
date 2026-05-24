@@ -4,10 +4,10 @@ import { toast } from "sonner";
 import {
   Stethoscope, FileText, Download, Share2, Loader2,
   ScanLine, User, Phone, Hash, Palette, ClipboardList, Calendar,
-  Archive, MoreVertical, FileArchive, Pin, PinOff, Trash2,
+  Archive, MoreVertical, FileArchive,
 } from "lucide-react";
 import {
-  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { CaseChatButton } from "@/components/case-chat-dialog";
 
@@ -72,8 +72,6 @@ interface Case {
   received_temporary?: boolean | null;
   received_permanent?: boolean | null;
   final_archived?: boolean | null;
-  pinned?: boolean | null;
-  archived?: boolean | null;
 }
 
 import { CaseWorkflowControls } from "@/components/case-workflow-controls";
@@ -84,8 +82,8 @@ import { speak, arabicOrdinal } from "@/lib/voice-notify";
 
 
 interface DesignerCasesProps {
-  /** Which actor view */
-  actor?: "designer" | "technician" | "secretary_sanaa" | "secretary_ibb" | "admin";
+  /** Which actor view: designer, technician, or branch secretary */
+  actor?: "designer" | "technician" | "secretary_sanaa" | "secretary_ibb";
   /** When actor === technician, the secretary branch role to send to */
   technicianTarget?: RoleKey;
   actorName?: string;
@@ -166,32 +164,6 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     }
     return filtered;
   }, [filtered, actor, doctorMap]);
-
-  // Sort: pinned first (admin pins), then by created_at desc.
-  const sortedForActor = useMemo(() => {
-    return [...visibleForActor].sort((a, b) => {
-      const ap = a.pinned ? 1 : 0;
-      const bp = b.pinned ? 1 : 0;
-      if (ap !== bp) return bp - ap;
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-    });
-  }, [visibleForActor]);
-
-  /* Auto-archive cases on the technician page once they reach
-   * "مؤرشف نهائياً" (final_archived === true). */
-  const autoArchivedRef = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    if (actor !== "technician") return;
-    for (const c of filtered) {
-      if (c.final_archived && !c.archived && !autoArchivedRef.current.has(c.id)) {
-        autoArchivedRef.current.add(c.id);
-        supabase.from("slot_cases").update({ archived: true }).eq("id", c.id).then(({ error }) => {
-          if (error) console.error("auto-archive failed", error);
-        });
-      }
-    }
-  }, [filtered, actor]);
-
 
   /* ------------------------------------------------------------------
    * Voice arrival alerts (designer = new .zip, technician = new .rar)
@@ -510,25 +482,6 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     } finally { setBusyId(null); }
   }
 
-  async function togglePin(c: Case) {
-    setBusyId(c.id);
-    const { error } = await supabase.from("slot_cases").update({ pinned: !c.pinned }).eq("id", c.id);
-    setBusyId(null);
-    if (error) { toast.error("تعذر التثبيت"); return; }
-    toast.success(c.pinned ? "تم إلغاء التثبيت" : "تم تثبيت الحالة");
-  }
-
-  async function deleteCase(c: Case) {
-    if (!confirm(`حذف الحالة ${c.case_code} نهائياً؟ لا يمكن التراجع.`)) return;
-    setBusyId(c.id);
-    const { error } = await supabase.from("slot_cases").delete().eq("id", c.id);
-    setBusyId(null);
-    if (error) { toast.error("تعذر الحذف"); return; }
-    setCases(prev => prev.filter(x => x.id !== c.id));
-    toast.success("تم حذف الحالة");
-  }
-
-
   /** Technician: download the latest .rar from the designer for this case
    * into the device file manager. Falls back to a normal download. */
   async function downloadDesignRar(c: Case) {
@@ -638,14 +591,14 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
           )}
         </div>
 
-        {sortedForActor.length === 0 ? (
+        {visibleForActor.length === 0 ? (
           <div className="rounded-2xl bg-card border border-border p-12 text-center text-muted-foreground shadow-luxury">
             <ClipboardList className="size-10 mx-auto mb-3 opacity-40" />
             لا توجد حالات لعرضها
           </div>
         ) : (
           <ul className="space-y-3">
-            {sortedForActor.map(c => {
+            {visibleForActor.map(c => {
               const doctor = doctorMap.get(c.doctor_slot);
               const busy = busyId === c.id;
               return (
@@ -655,7 +608,6 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-mono text-xs rounded-md bg-muted px-2 py-0.5 font-bold">{c.case_code}</span>
                         <span className="text-[11px] rounded-full gradient-gold text-gold-foreground px-2 py-0.5 font-bold">{getStage(deriveStageKey(c)).label}</span>
-                        {c.pinned && <span className="text-[11px] rounded-full bg-gold/20 text-gold px-2 py-0.5 font-bold inline-flex items-center gap-1"><Pin className="size-3" /> مثبتة</span>}
                         <span className="text-[11px] text-muted-foreground flex items-center gap-1">
                           <Calendar className="size-3" /> {new Date(c.created_at).toLocaleDateString("ar-EG")}
                         </span>
@@ -752,26 +704,13 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                           <DropdownMenuItem onClick={() => archiveCase(c)}>
                             <Archive className="size-4 ml-2" /> أرشفة
                           </DropdownMenuItem>
-                          {actor === "admin" && (
-                            <>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={() => togglePin(c)}>
-                                {c.pinned
-                                  ? <><PinOff className="size-4 ml-2" /> إلغاء التثبيت</>
-                                  : <><Pin className="size-4 ml-2" /> تثبيت</>}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => deleteCase(c)} className="text-destructive focus:text-destructive">
-                                <Trash2 className="size-4 ml-2" /> حذف نهائي
-                              </DropdownMenuItem>
-                            </>
-                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
                   </div>
 
-                  {/* Workflow controls vary per actor — admin is view-only */}
-                  {actor !== "admin" && (() => {
+                  {/* Workflow controls vary per actor */}
+                  {(() => {
                     let target: RoleKey | undefined = undefined;
                     if (actor === "designer") target = "technician";
                     else if (actor === "technician")

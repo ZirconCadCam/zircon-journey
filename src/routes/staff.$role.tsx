@@ -203,10 +203,12 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
                 <MessageSquare className="size-4" /> المحادثات
               </button>
             )}
-            <button onClick={() => setTab("cases")}
-              className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "cases" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
-              <ClipboardList className="size-4" /> الحالات
-            </button>
+            {role !== "admin" && (
+              <button onClick={() => setTab("cases")}
+                className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "cases" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
+                <ClipboardList className="size-4" /> الحالات
+              </button>
+            )}
             {role === "admin" && (
               <button onClick={() => setTab("settings")}
                 className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "settings" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
@@ -219,7 +221,7 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
         <div className="mt-6">
           {tab === "settings" && role === "admin" ? (
             <AdminSettingsPanel />
-          ) : (role === "designer" || role === "technician" || role === "secretary_sanaa" || role === "secretary_ibb" || role === "admin") && tab === "cases" ? (
+          ) : (role === "designer" || role === "technician" || role === "secretary_sanaa" || role === "secretary_ibb") && tab === "cases" ? (
             <DesignerCases actor={role as any} actorName={ROLE_LABEL[role]} />
           ) : (
             <div className="grid lg:grid-cols-[320px_1fr] gap-5">
