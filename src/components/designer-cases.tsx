@@ -510,7 +510,25 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     } finally { setBusyId(null); }
   }
 
-  /** Technician: download the latest .rar from the designer for this case
+  async function togglePin(c: Case) {
+    setBusyId(c.id);
+    const { error } = await supabase.from("slot_cases").update({ pinned: !c.pinned }).eq("id", c.id);
+    setBusyId(null);
+    if (error) { toast.error("تعذر التثبيت"); return; }
+    toast.success(c.pinned ? "تم إلغاء التثبيت" : "تم تثبيت الحالة");
+  }
+
+  async function deleteCase(c: Case) {
+    if (!confirm(`حذف الحالة ${c.case_code} نهائياً؟ لا يمكن التراجع.`)) return;
+    setBusyId(c.id);
+    const { error } = await supabase.from("slot_cases").delete().eq("id", c.id);
+    setBusyId(null);
+    if (error) { toast.error("تعذر الحذف"); return; }
+    setCases(prev => prev.filter(x => x.id !== c.id));
+    toast.success("تم حذف الحالة");
+  }
+
+
    * into the device file manager. Falls back to a normal download. */
   async function downloadDesignRar(c: Case) {
     setBusyId(c.id);
