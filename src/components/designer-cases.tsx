@@ -71,6 +71,7 @@ interface Case {
   shipped_to_doctor?: boolean | null;
   received_temporary?: boolean | null;
   received_permanent?: boolean | null;
+  final_archived?: boolean | null;
 }
 
 import { CaseWorkflowControls } from "@/components/case-workflow-controls";
@@ -146,9 +147,11 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
   // Filter cases each actor should see.
   const visibleForActor = useMemo(() => {
     if (actor === "technician") {
-      // Technician sees cases where designer sent the .rar file (HTML no longer required).
+      // Technician sees cases from the moment the designer sends the .rar file
+      // and keeps them visible/interactive through the entire workflow until
+      // the case is finally archived ("مؤرشف نهائياً").
       return filtered.filter(c =>
-        (c.design_file_sent || c.design_done) && !c.shipped_to_doctor
+        (c.design_file_sent || c.design_done) && !c.final_archived
       );
     }
     if (actor === "secretary_sanaa" || actor === "secretary_ibb") {
