@@ -72,6 +72,8 @@ interface Case {
   received_temporary?: boolean | null;
   received_permanent?: boolean | null;
   final_archived?: boolean | null;
+  archived?: boolean | null;
+  pinned?: boolean | null;
 }
 
 import { CaseWorkflowControls } from "@/components/case-workflow-controls";
