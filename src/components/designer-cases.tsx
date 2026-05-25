@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import {
   Stethoscope, FileText, Download, Share2, Loader2,
   ScanLine, User, Phone, Hash, Palette, ClipboardList, Calendar,
-  Archive, MoreVertical, FileArchive,
+  Archive, MoreVertical, FileArchive, Pin, PinOff, Trash2, ClipboardCheck,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
