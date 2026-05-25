@@ -795,7 +795,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                     return (
                       <CaseWorkflowControls
                         c={c}
-                        actor={actor}
+                        actor={actor as Exclude<typeof actor, "admin">}
                         actorName={actorName ?? ROLE_LABEL[actor]}
                         doctorName={doctor?.name ?? `Slot ${c.doctor_slot}`}
                         target={target}
