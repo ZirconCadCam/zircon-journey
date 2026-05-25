@@ -614,17 +614,33 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
 
       {/* Cases list */}
       <section className="space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="text-sm text-muted-foreground">
             عرض <span className="font-bold text-foreground">{visibleForActor.length}</span> حالة
+            {view === "archive" && <span className="text-gold font-bold"> (الأرشيف)</span>}
             {filterSlot !== "all" && doctorMap.get(filterSlot) && <> — {doctorMap.get(filterSlot)!.name}</>}
           </div>
-          {fileManagerSupported() && (
-            <div className="text-[11px] text-muted-foreground">
-              تُحفظ التنزيلات في مجلد <span className="font-bold text-gold">{CENTER_FOLDER_NAME}</span>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            {(actor === "technician" || actor === "admin") && (
+              <div className="inline-flex rounded-xl border border-border bg-card p-1 shadow-luxury">
+                <button onClick={() => setView("active")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition ${view === "active" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
+                  <ClipboardCheck className="size-3.5" /> النشطة
+                </button>
+                <button onClick={() => setView("archive")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition ${view === "archive" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
+                  <Archive className="size-3.5" /> الأرشيف
+                </button>
+              </div>
+            )}
+            {fileManagerSupported() && (
+              <div className="text-[11px] text-muted-foreground">
+                تُحفظ التنزيلات في مجلد <span className="font-bold text-gold">{CENTER_FOLDER_NAME}</span>
+              </div>
+            )}
+          </div>
         </div>
+
 
         {visibleForActor.length === 0 ? (
           <div className="rounded-2xl bg-card border border-border p-12 text-center text-muted-foreground shadow-luxury">
