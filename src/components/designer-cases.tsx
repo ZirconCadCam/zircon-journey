@@ -97,12 +97,13 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
   const [filterSlot, setFilterSlot] = useState<number | "all">("all");
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [view, setView] = useState<"active" | "archive">("active");
 
   useEffect(() => {
     (async () => {
       const [{ data: docs }, { data: cs }] = await Promise.all([
         supabase.from("doctor_profiles").select("slot,name,branch,active").order("slot"),
-        supabase.from("slot_cases").select("*").eq("archived", false).order("created_at", { ascending: false }),
+        supabase.from("slot_cases").select("*").order("created_at", { ascending: false }),
       ]);
       setDoctors(((docs ?? []) as Doctor[]).filter(d => d.active));
       setCases((cs ?? []) as Case[]);
@@ -111,7 +112,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
 
     const ch = supabase.channel("designer-cases-stream")
       .on("postgres_changes", { event: "*", schema: "public", table: "slot_cases" }, async () => {
-        const { data: cs } = await supabase.from("slot_cases").select("*").eq("archived", false).order("created_at", { ascending: false });
+        const { data: cs } = await supabase.from("slot_cases").select("*").order("created_at", { ascending: false });
         setCases((cs ?? []) as Case[]);
       })
       .subscribe();
