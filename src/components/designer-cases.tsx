@@ -460,6 +460,29 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     toast.success("تم نقل الحالة إلى الأرشيف");
   }
 
+  /** Admin: toggle pin on an archived case. */
+  async function togglePin(c: Case) {
+    setBusyId(c.id);
+    const next = !c.pinned;
+    const { error } = await supabase.from("slot_cases").update({ pinned: next }).eq("id", c.id);
+    setBusyId(null);
+    if (error) { toast.error("تعذر التثبيت"); return; }
+    setCases(prev => prev.map(x => x.id === c.id ? { ...x, pinned: next } : x));
+    toast.success(next ? "تم تثبيت الحالة" : "تم إلغاء التثبيت");
+  }
+
+  /** Admin: permanently delete an archived case. */
+  async function deleteCase(c: Case) {
+    if (!confirm(`حذف الحالة ${c.case_code} نهائياً؟ لا يمكن التراجع.`)) return;
+    setBusyId(c.id);
+    const { error } = await supabase.from("slot_cases").delete().eq("id", c.id);
+    setBusyId(null);
+    if (error) { toast.error("تعذر الحذف"); return; }
+    setCases(prev => prev.filter(x => x.id !== c.id));
+    toast.success("تم حذف الحالة نهائياً");
+  }
+
+
   /** Download the doctor-uploaded scan as a ZIP into the device file manager.
    * Filename: "<patient> - د/<doctor> - YYYY-MM-DD.zip" */
   async function downloadScanZip(c: Case) {
