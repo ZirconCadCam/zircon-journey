@@ -149,24 +149,33 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
 
   // Filter cases each actor should see.
   const visibleForActor = useMemo(() => {
+    // Archive view: show finally-archived cases (technician + admin only),
+    // pinned-first then newest.
+    if (view === "archive") {
+      const arch = filtered.filter(c => c.final_archived);
+      return [...arch].sort((a, b) => {
+        const ap = a.pinned ? 1 : 0;
+        const bp = b.pinned ? 1 : 0;
+        if (ap !== bp) return bp - ap;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
+    }
+    // Active view: hide final_archived + manually archived.
+    const active = filtered.filter(c => !c.final_archived && !c.archived);
     if (actor === "technician") {
-      // Technician sees cases from the moment the designer sends the .rar file
-      // and keeps them visible/interactive through the entire workflow until
-      // the case is finally archived ("مؤرشف نهائياً").
-      return filtered.filter(c =>
-        (c.design_file_sent || c.design_done) && !c.final_archived
-      );
+      return active.filter(c => (c.design_file_sent || c.design_done));
     }
     if (actor === "secretary_sanaa" || actor === "secretary_ibb") {
       const branch = actor === "secretary_sanaa" ? "sanaa" : "ibb";
-      return filtered.filter(c => {
+      return active.filter(c => {
         if (!c.tech_data_sent_to_secretary) return false;
         const d = doctorMap.get(c.doctor_slot);
         return d?.branch === branch;
       });
     }
-    return filtered;
-  }, [filtered, actor, doctorMap]);
+    return active;
+  }, [filtered, actor, doctorMap, view]);
+
 
   /* ------------------------------------------------------------------
    * Voice arrival alerts (designer = new .zip, technician = new .rar)
