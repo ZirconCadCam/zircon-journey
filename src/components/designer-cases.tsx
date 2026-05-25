@@ -653,12 +653,17 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
               const doctor = doctorMap.get(c.doctor_slot);
               const busy = busyId === c.id;
               return (
-                <li key={c.id} className="rounded-2xl bg-card border border-border p-5 shadow-luxury hover:border-gold/60 transition">
+                <li key={c.id} className={`rounded-2xl bg-card border p-5 shadow-luxury hover:border-gold/60 transition ${c.pinned && view === "archive" ? "border-gold ring-1 ring-gold/40" : "border-border"}`}>
                   <div className="flex items-start justify-between flex-wrap gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-mono text-xs rounded-md bg-muted px-2 py-0.5 font-bold">{c.case_code}</span>
                         <span className="text-[11px] rounded-full gradient-gold text-gold-foreground px-2 py-0.5 font-bold">{getStage(deriveStageKey(c)).label}</span>
+                        {c.pinned && view === "archive" && (
+                          <span className="text-[10px] rounded-full bg-gold/20 text-gold px-2 py-0.5 font-bold inline-flex items-center gap-1">
+                            <Pin className="size-3" /> مثبتة
+                          </span>
+                        )}
                         <span className="text-[11px] text-muted-foreground flex items-center gap-1">
                           <Calendar className="size-3" /> {new Date(c.created_at).toLocaleDateString("ar-EG")}
                         </span>
@@ -703,15 +708,17 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                     </div>
 
                     <div className="flex flex-col gap-2 shrink-0">
-                      <CaseChatButton
-                        doctorSlot={c.doctor_slot}
-                        doctorName={doctor?.name ?? `Slot ${c.doctor_slot}`}
-                        me={actor as RoleKey}
-                        myName={actorName ?? ROLE_LABEL[actor]}
-                        caseCode={c.case_code}
-                        caseLabel={c.patient_name}
-                      />
-                      {actor === "technician" ? (
+                      {actor !== "admin" && (
+                        <CaseChatButton
+                          doctorSlot={c.doctor_slot}
+                          doctorName={doctor?.name ?? `Slot ${c.doctor_slot}`}
+                          me={actor as RoleKey}
+                          myName={actorName ?? ROLE_LABEL[actor]}
+                          caseCode={c.case_code}
+                          caseLabel={c.patient_name}
+                        />
+                      )}
+                      {view === "active" && actor === "technician" ? (
                         <button
                           onClick={() => downloadDesignRar(c)}
                           disabled={busy}
@@ -720,7 +727,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                         >
                           <FileArchive className="size-3.5 text-gold" /> تنزيل RAR
                         </button>
-                      ) : c.scan_path && (
+                      ) : view === "active" && c.scan_path && (
                         <button
                           onClick={() => downloadScanZip(c)}
                           disabled={busy}
@@ -749,19 +756,38 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                               <Download className="size-4 ml-2" /> تنزيل المسح
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuItem onClick={() => shareExternal(c)}>
-                            <Share2 className="size-4 ml-2" /> مشاركة
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => archiveCase(c)}>
-                            <Archive className="size-4 ml-2" /> أرشفة
-                          </DropdownMenuItem>
+                          {/* Share: technician + admin can share archived; everyone can share active */}
+                          {(view === "active" || actor === "technician" || actor === "admin") && (
+                            <DropdownMenuItem onClick={() => shareExternal(c)}>
+                              <Share2 className="size-4 ml-2" /> مشاركة
+                            </DropdownMenuItem>
+                          )}
+                          {/* Admin-only: pin/unpin + delete on archived cases */}
+                          {view === "archive" && actor === "admin" && (
+                            <>
+                              <DropdownMenuItem onClick={() => togglePin(c)}>
+                                {c.pinned
+                                  ? <><PinOff className="size-4 ml-2" /> إلغاء التثبيت</>
+                                  : <><Pin className="size-4 ml-2" /> تثبيت</>}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => deleteCase(c)} className="text-destructive focus:text-destructive">
+                                <Trash2 className="size-4 ml-2" /> حذف نهائي
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {/* Manual archive only in active view, for non-admin operators */}
+                          {view === "active" && actor !== "admin" && (
+                            <DropdownMenuItem onClick={() => archiveCase(c)}>
+                              <Archive className="size-4 ml-2" /> أرشفة
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
                   </div>
 
-                  {/* Workflow controls vary per actor */}
-                  {(() => {
+                  {/* Workflow controls: only in active view and for the operator actors */}
+                  {view === "active" && actor !== "admin" && (() => {
                     let target: RoleKey | undefined = undefined;
                     if (actor === "designer") target = "technician";
                     else if (actor === "technician")
@@ -777,6 +803,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                       />
                     );
                   })()}
+
                 </li>
               );
             })}
