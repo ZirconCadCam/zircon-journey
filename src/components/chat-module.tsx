@@ -904,25 +904,39 @@ function FileBubble({ msg, mine }: { msg: LocalMsg; mine: boolean }) {
     if (ok) toast.success("تم تحميل الملف");
     else window.open(url, "_blank", "noopener");
   }
+  async function openInApp() {
+    if (!msg.attachment_path) return;
+    setBusy(true);
+    const url = await resolveUrl();
+    setBusy(false);
+    if (!url) { toast.error("تعذر فتح الملف"); return; }
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
   const sizeLabel = msg.attachment_size
     ? msg.attachment_size > 1024*1024
       ? `${(msg.attachment_size/1024/1024).toFixed(1)} MB`
       : `${(msg.attachment_size/1024).toFixed(1)} KB`
     : "";
   return (
-    <button onClick={download} disabled={busy || !!msg._local}
-      className={`mt-1 flex items-center gap-2 rounded-lg border px-3 py-2 text-start w-full ${mine ? "border-white/30 bg-white/10" : "border-border bg-muted/40"} disabled:opacity-50`}>
+    <div className={`mt-1 flex items-center gap-2 rounded-lg border px-3 py-2 ${mine ? "border-white/30 bg-white/10" : "border-border bg-muted/40"}`}>
       <FileText className="size-5 shrink-0" />
       <div className="min-w-0 flex-1">
         <div className="font-bold truncate">{msg.attachment_name}</div>
         <div className="text-[10px] opacity-70">
-          {sizeLabel}{sizeLabel ? " — " : ""}{msg._local ? "جارِ الرفع..." : "اضغط للتحميل"}
+          {sizeLabel}{sizeLabel ? " — " : ""}{msg._local ? "جارِ الرفع..." : "تحميل أو فتح الملف"}
         </div>
       </div>
-      <span className={`ms-auto inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold shrink-0 ${mine ? "bg-white/20" : "gradient-gold text-gold-foreground"}`}>
+      <button onClick={openInApp} disabled={busy || !!msg._local}
+        className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold shrink-0 disabled:opacity-50 ${mine ? "bg-white/20 hover:bg-white/30" : "bg-background border border-border hover:border-gold"}`}
+        title="فتح الملف">
+        <ExternalLink className="size-3.5" /> فتح
+      </button>
+      <button onClick={download} disabled={busy || !!msg._local}
+        className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold shrink-0 disabled:opacity-50 ${mine ? "bg-white/20 hover:bg-white/30" : "gradient-gold text-gold-foreground"}`}
+        title="تحميل الملف">
         <Download className="size-3.5" /> تحميل
-      </span>
-    </button>
+      </button>
+    </div>
   );
 }
 
