@@ -451,7 +451,7 @@ function FilesPanel({ doctor, actor }: { doctor: Doctor; actor: string }) {
           </div>
         ) : (
           <ul className="divide-y divide-border">
-            {visible.map(f => <FileRow key={f.id} f={f} doctorBranch={doctor.branch}
+            {visible.map(f => <FileRow key={f.id} f={f} doctorBranch={doctor.branch} doctorName={doctor.name}
               onArchive={archive} onRemove={remove} onCopy={copyLink} onShare={shareExternal} onSendTo={sendToRole} />)}
           </ul>
         )}
