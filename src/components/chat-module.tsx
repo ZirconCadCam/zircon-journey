@@ -10,7 +10,7 @@ import { saveToCenter, downloadUrlToCenter, fileManagerSupported, pickCenterFold
 import {
   Send, Paperclip, Mic, Square, X, MessageSquare, Plus, Archive, ArchiveRestore,
   Search, FileText, Download, ChevronRight, Trash2, Check, CheckCheck, Clock, AlertCircle,
-  Copy, Reply, Share2, Save, FolderOpen, Pause, Play, RotateCw, Pencil,
+  Copy, Reply, Share2, Save, FolderOpen, Pause, Play, RotateCw, Pencil, ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
