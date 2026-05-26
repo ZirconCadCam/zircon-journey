@@ -223,11 +223,18 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
                       {sourceLabel(f.source)}
                     </span>
                   </button>
-                  <button onClick={() => downloadOne(f)} disabled={busy === f.url}
-                    className="rounded-lg border border-border p-1.5 hover:border-gold transition disabled:opacity-60"
-                    aria-label="تنزيل">
-                    {busy === f.url ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
-                  </button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button onClick={() => window.open(f.url, "_blank", "noopener,noreferrer")}
+                      className="rounded-lg border border-border p-1.5 hover:border-gold transition"
+                      aria-label="فتح" title="فتح الملف">
+                      <ExternalLink className="size-3.5" />
+                    </button>
+                    <button onClick={() => downloadOne(f)} disabled={busy === f.url}
+                      className="rounded-lg border border-border p-1.5 hover:border-gold transition disabled:opacity-60"
+                      aria-label="تنزيل" title="تنزيل الملف">
+                      {busy === f.url ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
+                    </button>
+                  </div>
                 </li>
               );
             })}
