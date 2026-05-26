@@ -460,7 +460,7 @@ function FilesPanel({ doctor, actor }: { doctor: Doctor; actor: string }) {
   );
 }
 
-function FileRow({ f, doctorBranch, onArchive, onRemove, onCopy, onShare, onSendTo }: any) {
+function FileRow({ f, doctorBranch, doctorName, onArchive, onRemove, onCopy, onShare, onSendTo }: any) {
   const [copied, setCopied] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
   const sendRef = useRef<HTMLDivElement>(null);
@@ -482,64 +482,99 @@ function FileRow({ f, doctorBranch, onArchive, onRemove, onCopy, onShare, onSend
     { role: secretaryRole, label: doctorBranch === "ibb" ? "سكرتارية إب" : "سكرتارية صنعاء", Icon: Building2, color: "bg-emerald-600 text-white" },
   ];
 
+  const branchLabel = doctorBranch === "ibb" ? "فرع إب" : doctorBranch === "sanaa" ? "فرع صنعاء" : null;
+  const sizeLabel = f.size_bytes
+    ? f.size_bytes > 1024 * 1024
+      ? `${(f.size_bytes / 1024 / 1024).toFixed(1)} MB`
+      : `${(f.size_bytes / 1024).toFixed(1)} KB`
+    : null;
+
+  const ActionBtn = ({ onClick, title, children, className = "" }: any) => (
+    <button onClick={onClick}
+      className={`flex flex-col items-center gap-0.5 rounded-lg border border-border p-2 hover:border-gold transition min-w-[58px] ${className}`}
+      title={title}>
+      {children}
+    </button>
+  );
+
   return (
-    <li className="flex items-center justify-between gap-3 p-4 hover:bg-muted/40 transition flex-wrap">
-      <div className="flex items-center gap-3 min-w-0 flex-1">
-        <div className="size-11 rounded-xl gradient-gold grid place-items-center shadow-gold shrink-0">
-          <FileText className="size-5 text-gold-foreground" />
-        </div>
-        <div className="min-w-0">
-          <div className="font-bold text-sm truncate">{f.file_name}</div>
-          <div className="text-[11px] text-muted-foreground mt-0.5">
-            {f.size_bytes ? `${(f.size_bytes/1024).toFixed(1)} KB • ` : ""}
-            رفع بواسطة {f.uploaded_by} • {new Date(f.created_at).toLocaleString("ar")}
+    <li className="p-4 hover:bg-muted/40 transition">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="size-11 rounded-xl gradient-gold grid place-items-center shadow-gold shrink-0">
+            <FileText className="size-5 text-gold-foreground" />
+          </div>
+          <div className="min-w-0">
+            <div className="font-bold text-sm truncate">{f.file_name}</div>
+            <div className="text-[11px] text-muted-foreground mt-0.5">
+              د/ {doctorName}{branchLabel ? ` • ${branchLabel}` : ""}
+            </div>
           </div>
         </div>
-      </div>
-      <div className="flex items-center gap-1.5 shrink-0">
-        <a href={f.public_url ?? "#"} download={f.file_name} target="_blank" rel="noreferrer"
-          className="rounded-lg border border-border p-2 hover:border-gold" title="تحميل">
-          <Download className="size-4" />
-        </a>
-        <button onClick={() => { onCopy(f); setCopied(true); setTimeout(()=>setCopied(false), 1500); }}
-          className="rounded-lg border border-border p-2 hover:border-gold" title="نسخ رابط المشاركة">
-          {copied ? <Check className="size-4 text-gold" /> : <Copy className="size-4" />}
-        </button>
+        <div className="flex items-stretch gap-1.5 shrink-0">
+          <a href={f.public_url ?? "#"} download={f.file_name} target="_blank" rel="noreferrer"
+            className="flex flex-col items-center gap-0.5 rounded-lg border border-border p-2 hover:border-gold transition min-w-[58px]" title="تحميل">
+            <Download className="size-4" />
+            <span className="text-[10px] font-bold">تحميل</span>
+            <span className="text-[9px] text-muted-foreground truncate max-w-[52px]">{sizeLabel ?? "ملف"}</span>
+          </a>
+          <ActionBtn onClick={() => { onCopy(f); setCopied(true); setTimeout(() => setCopied(false), 1500); }} title="نسخ الرابط">
+            {copied ? <Check className="size-4 text-gold" /> : <Copy className="size-4" />}
+            <span className="text-[10px] font-bold">{copied ? "تم النسخ" : "نسخ"}</span>
+            <span className="text-[9px] text-muted-foreground truncate max-w-[52px]">رابط</span>
+          </ActionBtn>
 
-        {/* أرسال إلى — منسدلة احترافية */}
-        <div ref={sendRef} className="relative">
-          <button onClick={() => setSendOpen(o => !o)}
-            className={`rounded-lg border p-2 transition ${sendOpen ? "border-gold gradient-gold text-gold-foreground" : "border-border hover:border-gold"}`}
-            title="أرسال إلى"
-            aria-haspopup="menu" aria-expanded={sendOpen}>
-            <Send className="size-4" />
-          </button>
-          {sendOpen && (
-            <div role="menu" className={`absolute ${Z.dropdown} mt-2 end-0 w-52 rounded-xl border border-border bg-popover shadow-luxury overflow-hidden animate-in fade-in zoom-in-95`}>
-              <div className="px-3 py-2 text-[11px] font-bold text-muted-foreground border-b border-border">أرسال إلى</div>
-              {targets.map(t => (
-                <button key={t.role} onClick={() => { setSendOpen(false); onSendTo(f, t.role); }}
-                  className="w-full flex items-center gap-2 px-3 py-2.5 text-sm font-bold text-start hover:bg-muted">
-                  <span className={`size-7 rounded-lg grid place-items-center ${t.color} shrink-0`}>
-                    <t.Icon className="size-3.5" />
-                  </span>
-                  {t.label}
-                </button>
-              ))}
-            </div>
-          )}
+          {/* أرسال إلى — منسدلة احترافية */}
+          <div ref={sendRef} className="relative">
+            <button onClick={() => setSendOpen(o => !o)}
+              className={`flex flex-col items-center gap-0.5 rounded-lg border p-2 transition min-w-[58px] ${sendOpen ? "border-gold gradient-gold text-gold-foreground" : "border-border hover:border-gold"}`}
+              title="أرسال إلى" aria-haspopup="menu" aria-expanded={sendOpen}>
+              <Send className="size-4" />
+              <span className="text-[10px] font-bold">إرسال</span>
+              <span className="text-[9px] opacity-80 truncate max-w-[52px]">للفريق</span>
+            </button>
+            {sendOpen && (
+              <div role="menu" className={`absolute ${Z.dropdown} mt-2 end-0 w-52 rounded-xl border border-border bg-popover shadow-luxury overflow-hidden animate-in fade-in zoom-in-95`}>
+                <div className="px-3 py-2 text-[11px] font-bold text-muted-foreground border-b border-border">أرسال إلى</div>
+                {targets.map(t => (
+                  <button key={t.role} onClick={() => { setSendOpen(false); onSendTo(f, t.role); }}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm font-bold text-start hover:bg-muted">
+                    <span className={`size-7 rounded-lg grid place-items-center ${t.color} shrink-0`}>
+                      <t.Icon className="size-3.5" />
+                    </span>
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <ActionBtn onClick={() => onShare(f)} title="مشاركة خارجية">
+            <Share2 className="size-4" />
+            <span className="text-[10px] font-bold">مشاركة</span>
+            <span className="text-[9px] text-muted-foreground truncate max-w-[52px]">خارجية</span>
+          </ActionBtn>
+          <ActionBtn onClick={() => onArchive(f, !f.archived)} title={f.archived ? "إسترجاع" : "أرشفة"}>
+            {f.archived ? <ArchiveRestore className="size-4" /> : <Archive className="size-4" />}
+            <span className="text-[10px] font-bold">{f.archived ? "استرجاع" : "أرشفة"}</span>
+            <span className="text-[9px] text-muted-foreground truncate max-w-[52px]">{new Date(f.created_at).toLocaleDateString("ar")}</span>
+          </ActionBtn>
+          <ActionBtn onClick={() => onRemove(f)} title="حذف" className="hover:bg-destructive hover:text-destructive-foreground hover:border-destructive">
+            <Trash2 className="size-4" />
+            <span className="text-[10px] font-bold">حذف</span>
+            <span className="text-[9px] opacity-70 truncate max-w-[52px]">نهائي</span>
+          </ActionBtn>
         </div>
-
-        <button onClick={() => onShare(f)} className="rounded-lg border border-border p-2 hover:border-gold" title="مشاركة خارجية">
-          <Share2 className="size-4" />
-        </button>
-        <button onClick={() => onArchive(f, !f.archived)} className="rounded-lg border border-border p-2 hover:border-gold"
-          title={f.archived ? "إسترجاع" : "أرشفة"}>
-          {f.archived ? <ArchiveRestore className="size-4" /> : <Archive className="size-4" />}
-        </button>
-        <button onClick={() => onRemove(f)} className="rounded-lg border border-border p-2 hover:bg-destructive hover:text-destructive-foreground" title="حذف">
-          <Trash2 className="size-4" />
-        </button>
+      </div>
+      {/* تفاصيل الملف الكاملة */}
+      <div className="mt-3 rounded-lg border border-border bg-muted/30 px-3 py-2 grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+        <div><span className="text-muted-foreground">الاسم: </span><span className="font-bold truncate inline-block max-w-full align-bottom">{f.file_name}</span></div>
+        <div><span className="text-muted-foreground">الطبيب: </span><span className="font-bold">د/ {doctorName}</span></div>
+        <div><span className="text-muted-foreground">التاريخ: </span><span className="font-bold">{new Date(f.created_at).toLocaleString("ar")}</span></div>
+        <div><span className="text-muted-foreground">رفع بواسطة: </span><span className="font-bold">{f.uploaded_by}</span></div>
+        {sizeLabel && <div><span className="text-muted-foreground">الحجم: </span><span className="font-bold">{sizeLabel}</span></div>}
+        {branchLabel && <div><span className="text-muted-foreground">الفرع: </span><span className="font-bold">{branchLabel}</span></div>}
+        <div><span className="text-muted-foreground">الحالة: </span><span className="font-bold">{f.archived ? "مؤرشف" : "نشط"}</span></div>
       </div>
     </li>
   );
