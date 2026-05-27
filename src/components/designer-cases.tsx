@@ -99,6 +99,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [view, setView] = useState<"active" | "archive">("active");
+  const [zipPreview, setZipPreview] = useState<{ url: string; name: string | null } | null>(null);
 
   useEffect(() => {
     (async () => {
