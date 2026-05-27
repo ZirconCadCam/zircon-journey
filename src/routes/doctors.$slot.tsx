@@ -586,7 +586,7 @@ interface SlotCase {
   tooth_number: string | null; teeth_count: string | null; shade: string | null;
   case_type: string | null; status: CaseStage; notes: string | null;
   scan_path: string | null; scan_name: string | null;
-  pinned: boolean; archived: boolean;
+  pinned: boolean; archived: boolean; final_archived?: boolean | null;
   design_done: boolean | null; design_file_sent: boolean | null;
   fabrication_done: boolean | null; fabrication_file_sent: boolean | null;
   created_at: string; updated_at: string;
