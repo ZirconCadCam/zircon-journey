@@ -4,12 +4,13 @@ import { toast } from "sonner";
 import {
   Stethoscope, FileText, Download, Share2, Loader2,
   ScanLine, User, Phone, Hash, Palette, ClipboardList, Calendar,
-  Archive, MoreVertical, FileArchive, Pin, PinOff, Trash2, ClipboardCheck,
+  Archive, MoreVertical, FileArchive, Pin, PinOff, Trash2, ClipboardCheck, Eye,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { CaseChatButton } from "@/components/case-chat-dialog";
+import { ZipViewerDialog } from "@/components/zip-viewer-dialog";
 
 /** Inject hex overrides for our oklch CSS variables into html2canvas's cloned doc. */
 const H2C_ONCLONE = (doc: Document) => {
