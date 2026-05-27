@@ -823,6 +823,13 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
           </ul>
         )}
       </section>
+
+      <ZipViewerDialog
+        open={!!zipPreview}
+        url={zipPreview?.url ?? null}
+        fileName={zipPreview?.name ?? null}
+        onOpenChange={(v) => { if (!v) setZipPreview(null); }}
+      />
     </div>
   );
 }
