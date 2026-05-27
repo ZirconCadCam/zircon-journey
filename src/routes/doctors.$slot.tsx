@@ -759,18 +759,15 @@ function CaseCard({ c, doctorName, doctorSlot, me, myName, onEdit, onPin, onDele
                   localStorage.getItem("zircon_admin_all") === "1" ||
                   localStorage.getItem("zircon_staff_admin") === "1"
                 );
-                const canPinDelete = !c.archived || isAdmin;
+                const canPinDelete = isAdmin;
                 return <>
-                  {canPinDelete && (
-                    <MenuItem icon={c.pinned ? PinOff : Pin} label={c.pinned ? "إلغاء التثبيت" : "تثبيت"} onClick={() => { setMenuOpen(false); onPin(); }} />
-                  )}
-                  <MenuItem icon={c.archived ? ArchiveRestore : Archive} label={c.archived ? "استرجاع" : "أرشفة"} onClick={() => { setMenuOpen(false); onArchive(); }} />
+                  <MenuItem icon={c.pinned ? PinOff : Pin} label={c.pinned ? "إلغاء التثبيت" : "تثبيت"} onClick={() => { setMenuOpen(false); onPin(); }} />
                   {canPinDelete && (
                     <MenuItem icon={Trash2} label="حذف" danger onClick={() => { setMenuOpen(false); onDelete(); }} />
                   )}
-                  {c.archived && !isAdmin && (
+                  {!isAdmin && (
                     <div className="px-3 py-2 text-[10px] text-muted-foreground border-t border-border">
-                      التثبيت والحذف للحالات المؤرشفة متاح للإدارة فقط
+                      الأرشفة والحذف يتمّان من صفحة الفني/الإدارة
                     </div>
                   )}
                 </>;
