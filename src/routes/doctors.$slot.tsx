@@ -586,7 +586,7 @@ interface SlotCase {
   tooth_number: string | null; teeth_count: string | null; shade: string | null;
   case_type: string | null; status: CaseStage; notes: string | null;
   scan_path: string | null; scan_name: string | null;
-  pinned: boolean; archived: boolean;
+  pinned: boolean; archived: boolean; final_archived?: boolean | null;
   design_done: boolean | null; design_file_sent: boolean | null;
   fabrication_done: boolean | null; fabrication_file_sent: boolean | null;
   created_at: string; updated_at: string;
@@ -595,7 +595,6 @@ interface SlotCase {
 function CasesPanel({ doctor, me, myName }: { doctor: Doctor; me: RoleKey; myName: string }) {
   const [cases, setCases] = useState<SlotCase[]>([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<"active" | "archived">("active");
   const [editing, setEditing] = useState<SlotCase | null>(null);
 
   const load = useCallback(async () => {
@@ -632,13 +631,6 @@ function CasesPanel({ doctor, me, myName }: { doctor: Doctor; me: RoleKey; myNam
     if (error) toast.error(error.message);
     else toast.success(!c.pinned ? "تم تثبيت الحالة" : "تم إلغاء التثبيت");
   }
-  async function toggleArchive(c: SlotCase) {
-    const next = !c.archived;
-    const { error } = await supabase.from("slot_cases")
-      .update({ archived: next, updated_at: new Date().toISOString() }).eq("id", c.id);
-    if (error) toast.error(error.message);
-    else toast.success(next ? "تمت الأرشفة" : "تم الاسترجاع");
-  }
   async function remove(c: SlotCase) {
     if (!confirm(`حذف الحالة "${c.case_code} — ${c.patient_name}" نهائياً؟`)) return;
     const { error } = await supabase.from("slot_cases").delete().eq("id", c.id);
@@ -647,18 +639,14 @@ function CasesPanel({ doctor, me, myName }: { doctor: Doctor; me: RoleKey; myNam
 
   if (loading) return <div className="p-12 text-center text-muted-foreground text-sm">جارِ تحميل الحالات...</div>;
 
-  const visible = cases.filter(c => view === "active" ? !c.archived : c.archived);
+  // Doctor page shows only active cases. Archiving lives in the technician + admin pages.
+  const visible = cases.filter(c => !c.archived && !c.final_archived);
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <button onClick={()=>setView("active")} className={`rounded-full px-4 py-1.5 text-xs font-bold border ${view==="active"?"gradient-gold border-gold":"bg-card border-border"}`}>
-            النشطة ({cases.filter(c=>!c.archived).length})
-          </button>
-          <button onClick={()=>setView("archived")} className={`rounded-full px-4 py-1.5 text-xs font-bold border ${view==="archived"?"gradient-gold border-gold":"bg-card border-border"}`}>
-            <Archive className="inline size-3 me-1" /> المؤرشفة ({cases.filter(c=>c.archived).length})
-          </button>
+        <div className="text-xs text-muted-foreground">
+          عدد الحالات النشطة: <span className="font-bold text-foreground">{visible.length}</span>
         </div>
         <Link to="/doctors/$slot/new-case" params={{ slot: String(doctor.slot) }}
           className="inline-flex items-center gap-2 rounded-xl gradient-brown px-4 py-2 text-sm font-bold shadow-luxury">
@@ -669,7 +657,7 @@ function CasesPanel({ doctor, me, myName }: { doctor: Doctor; me: RoleKey; myNam
       {visible.length === 0 ? (
         <div className="rounded-2xl bg-card border border-border p-12 text-center text-muted-foreground text-sm shadow-luxury">
           <ClipboardList className="size-10 mx-auto mb-3 opacity-40" />
-          {view === "archived" ? "لا توجد حالات مؤرشفة." : "لا توجد حالات بعد. ابدأ بإضافة أول حالة."}
+          لا توجد حالات نشطة حالياً.
         </div>
       ) : (
         <div className="grid md:grid-cols-2 gap-4">
@@ -678,7 +666,6 @@ function CasesPanel({ doctor, me, myName }: { doctor: Doctor; me: RoleKey; myNam
               doctorSlot={doctor.slot} me={me} myName={myName}
               onEdit={() => setEditing(c)}
               onPin={() => togglePin(c)}
-              onArchive={() => toggleArchive(c)}
               onDelete={() => remove(c)} />
           ))}
         </div>
@@ -689,9 +676,9 @@ function CasesPanel({ doctor, me, myName }: { doctor: Doctor; me: RoleKey; myNam
   );
 }
 
-function CaseCard({ c, doctorName, doctorSlot, me, myName, onEdit, onPin, onArchive, onDelete }: {
+function CaseCard({ c, doctorName, doctorSlot, me, myName, onEdit, onPin, onDelete }: {
   c: SlotCase; doctorName: string; doctorSlot: number; me: RoleKey; myName: string;
-  onEdit: () => void; onPin: () => void; onArchive: () => void; onDelete: () => void;
+  onEdit: () => void; onPin: () => void; onDelete: () => void;
 }) {
   const stage = getStage(deriveStageKey(c));
   const stageIdx = STAGES.findIndex(s => s.key === stage.key);
@@ -772,18 +759,15 @@ function CaseCard({ c, doctorName, doctorSlot, me, myName, onEdit, onPin, onArch
                   localStorage.getItem("zircon_admin_all") === "1" ||
                   localStorage.getItem("zircon_staff_admin") === "1"
                 );
-                const canPinDelete = !c.archived || isAdmin;
+                const canPinDelete = isAdmin;
                 return <>
-                  {canPinDelete && (
-                    <MenuItem icon={c.pinned ? PinOff : Pin} label={c.pinned ? "إلغاء التثبيت" : "تثبيت"} onClick={() => { setMenuOpen(false); onPin(); }} />
-                  )}
-                  <MenuItem icon={c.archived ? ArchiveRestore : Archive} label={c.archived ? "استرجاع" : "أرشفة"} onClick={() => { setMenuOpen(false); onArchive(); }} />
+                  <MenuItem icon={c.pinned ? PinOff : Pin} label={c.pinned ? "إلغاء التثبيت" : "تثبيت"} onClick={() => { setMenuOpen(false); onPin(); }} />
                   {canPinDelete && (
                     <MenuItem icon={Trash2} label="حذف" danger onClick={() => { setMenuOpen(false); onDelete(); }} />
                   )}
-                  {c.archived && !isAdmin && (
+                  {!isAdmin && (
                     <div className="px-3 py-2 text-[10px] text-muted-foreground border-t border-border">
-                      التثبيت والحذف للحالات المؤرشفة متاح للإدارة فقط
+                      الأرشفة والحذف يتمّان من صفحة الفني/الإدارة
                     </div>
                   )}
                 </>;

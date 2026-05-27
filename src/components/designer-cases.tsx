@@ -4,12 +4,13 @@ import { toast } from "sonner";
 import {
   Stethoscope, FileText, Download, Share2, Loader2,
   ScanLine, User, Phone, Hash, Palette, ClipboardList, Calendar,
-  Archive, MoreVertical, FileArchive, Pin, PinOff, Trash2, ClipboardCheck,
+  Archive, MoreVertical, FileArchive, Pin, PinOff, Trash2, ClipboardCheck, Eye,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { CaseChatButton } from "@/components/case-chat-dialog";
+import { ZipViewerDialog } from "@/components/zip-viewer-dialog";
 
 /** Inject hex overrides for our oklch CSS variables into html2canvas's cloned doc. */
 const H2C_ONCLONE = (doc: Document) => {
@@ -98,6 +99,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [view, setView] = useState<"active" | "archive">("active");
+  const [zipPreview, setZipPreview] = useState<{ url: string; name: string | null } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -737,6 +739,17 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                           <FileArchive className="size-3.5 text-gold" /> تنزيل ZIP
                         </button>
                       )}
+                      {/* In-app ZIP preview — available to designer + admin before final archive */}
+                      {(actor === "designer" || actor === "admin") && view === "active" && c.scan_path && !c.final_archived && (
+                        <button
+                          onClick={() => setZipPreview({ url: c.scan_path!, name: c.scan_name })}
+                          disabled={busy}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-gold/60 bg-gold/10 px-3 py-1.5 text-xs font-bold hover:gradient-gold hover:text-gold-foreground transition disabled:opacity-60"
+                          title="عرض محتوى ملف ZIP داخل التطبيق"
+                        >
+                          <Eye className="size-3.5" /> عرض ZIP
+                        </button>
+                      )}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button
@@ -810,6 +823,13 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
           </ul>
         )}
       </section>
+
+      <ZipViewerDialog
+        open={!!zipPreview}
+        url={zipPreview?.url ?? null}
+        fileName={zipPreview?.name ?? null}
+        onOpenChange={(v) => { if (!v) setZipPreview(null); }}
+      />
     </div>
   );
 }
