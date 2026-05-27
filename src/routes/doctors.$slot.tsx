@@ -676,9 +676,9 @@ function CasesPanel({ doctor, me, myName }: { doctor: Doctor; me: RoleKey; myNam
   );
 }
 
-function CaseCard({ c, doctorName, doctorSlot, me, myName, onEdit, onPin, onArchive, onDelete }: {
+function CaseCard({ c, doctorName, doctorSlot, me, myName, onEdit, onPin, onDelete }: {
   c: SlotCase; doctorName: string; doctorSlot: number; me: RoleKey; myName: string;
-  onEdit: () => void; onPin: () => void; onArchive: () => void; onDelete: () => void;
+  onEdit: () => void; onPin: () => void; onDelete: () => void;
 }) {
   const stage = getStage(deriveStageKey(c));
   const stageIdx = STAGES.findIndex(s => s.key === stage.key);
