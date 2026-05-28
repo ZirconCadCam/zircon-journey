@@ -7,6 +7,7 @@ import {
 } from "@/lib/chat";
 import { startResumableUpload, type ResumableHandle } from "@/lib/resumable-upload";
 import { saveToCenter, downloadUrlToCenter, fileManagerSupported, pickCenterFolder, getCenterFolder, CENTER_FOLDER_NAME } from "@/lib/file-manager";
+import { InAppFileViewer } from "@/components/in-app-file-viewer";
 import {
   Send, Paperclip, Mic, Square, X, MessageSquare, Plus, Archive, ArchiveRestore,
   Search, FileText, Download, ChevronRight, Trash2, Check, CheckCheck, Clock, AlertCircle,
