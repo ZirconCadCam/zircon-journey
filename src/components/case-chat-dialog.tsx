@@ -5,6 +5,7 @@ import type { RoleKey } from "@/lib/chat";
 import { Z } from "@/lib/z-index";
 import { supabase } from "@/integrations/supabase/client";
 import { downloadUrlToCenter } from "@/lib/file-manager";
+import { InAppFileViewer } from "@/components/in-app-file-viewer";
 import { toast } from "sonner";
 
 /**
@@ -113,6 +114,7 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
   const [c, setC] = useState<any>(null);
   const [files, setFiles] = useState<CaseAttachment[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
+  const [viewer, setViewer] = useState<CaseAttachment | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -224,9 +226,9 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
                     </span>
                   </button>
                   <div className="flex items-center gap-1 shrink-0">
-                    <button onClick={() => window.open(f.url, "_blank", "noopener,noreferrer")}
+                    <button onClick={() => setViewer(f)}
                       className="rounded-lg border border-border p-1.5 hover:border-gold transition"
-                      aria-label="فتح" title="فتح الملف">
+                      aria-label="فتح داخل التطبيق" title="فتح داخل التطبيق (من ذاكرة الجهاز إن وُجدت)">
                       <ExternalLink className="size-3.5" />
                     </button>
                     <button onClick={() => downloadOne(f)} disabled={busy === f.url}
@@ -241,10 +243,16 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
           </ul>
         )}
         <div className="text-[10px] text-muted-foreground mt-1">
-          الملفات تُحفظ تلقائياً داخل مجلد <span className="font-bold">مركز زركون CAD/CAM</span> على جهازك،
-          ثم يمكنك فتحها مباشرةً من مدير الملفات.
+          الملفات تُعرض داخل التطبيق مباشرةً، ويتم تخزينها مؤقتاً في مجلد <span className="font-bold">مركز زركون CAD/CAM</span> على جهازك ليتم فتحها لاحقاً بسرعة من ذاكرة الجهاز.
         </div>
       </div>
+      <InAppFileViewer
+        open={!!viewer}
+        onOpenChange={(v) => { if (!v) setViewer(null); }}
+        url={viewer?.url ?? null}
+        name={viewer?.name ?? ""}
+        subfolder={caseCode}
+      />
     </div>
   );
 }

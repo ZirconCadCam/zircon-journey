@@ -7,6 +7,7 @@ import {
 } from "@/lib/chat";
 import { startResumableUpload, type ResumableHandle } from "@/lib/resumable-upload";
 import { saveToCenter, downloadUrlToCenter, fileManagerSupported, pickCenterFolder, getCenterFolder, CENTER_FOLDER_NAME } from "@/lib/file-manager";
+import { InAppFileViewer } from "@/components/in-app-file-viewer";
 import {
   Send, Paperclip, Mic, Square, X, MessageSquare, Plus, Archive, ArchiveRestore,
   Search, FileText, Download, ChevronRight, Trash2, Check, CheckCheck, Clock, AlertCircle,
@@ -867,6 +868,8 @@ function MessageStatus({ msg, otherParticipants }: { msg: LocalMsg; otherPartici
 
 function FileBubble({ msg, mine }: { msg: LocalMsg; mine: boolean }) {
   const [busy, setBusy] = useState(false);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerUrl, setViewerUrl] = useState<string | null>(null);
   async function resolveUrl(): Promise<string | null> {
     if (!msg.attachment_path) return null;
     if (/^https?:\/\//i.test(msg.attachment_path)) return msg.attachment_path;
@@ -910,14 +913,17 @@ function FileBubble({ msg, mine }: { msg: LocalMsg; mine: boolean }) {
     const url = await resolveUrl();
     setBusy(false);
     if (!url) { toast.error("تعذر فتح الملف"); return; }
-    window.open(url, "_blank", "noopener,noreferrer");
+    setViewerUrl(url);
+    setViewerOpen(true);
   }
+
   const sizeLabel = msg.attachment_size
     ? msg.attachment_size > 1024*1024
       ? `${(msg.attachment_size/1024/1024).toFixed(1)} MB`
       : `${(msg.attachment_size/1024).toFixed(1)} KB`
     : "";
   return (
+    <>
     <div className={`mt-1 flex items-center gap-2 rounded-lg border px-3 py-2 ${mine ? "border-white/30 bg-white/10" : "border-border bg-muted/40"}`}>
       <FileText className="size-5 shrink-0" />
       <div className="min-w-0 flex-1">
@@ -928,7 +934,7 @@ function FileBubble({ msg, mine }: { msg: LocalMsg; mine: boolean }) {
       </div>
       <button onClick={openInApp} disabled={busy || !!msg._local}
         className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold shrink-0 disabled:opacity-50 ${mine ? "bg-white/20 hover:bg-white/30" : "bg-background border border-border hover:border-gold"}`}
-        title="فتح الملف">
+        title="فتح داخل التطبيق">
         <ExternalLink className="size-3.5" /> فتح
       </button>
       <button onClick={download} disabled={busy || !!msg._local}
@@ -937,8 +943,17 @@ function FileBubble({ msg, mine }: { msg: LocalMsg; mine: boolean }) {
         <Download className="size-3.5" /> تحميل
       </button>
     </div>
+    <InAppFileViewer
+      open={viewerOpen}
+      onOpenChange={setViewerOpen}
+      url={viewerUrl}
+      name={msg.attachment_name || `file-${msg.id.slice(0,8)}`}
+      mime={msg.attachment_mime}
+    />
+    </>
   );
 }
+
 
 function AudioBubble({ path, name, mime }: { path: string; name?: string | null; mime?: string | null }) {
   const [url, setUrl] = useState<string | null>(null);

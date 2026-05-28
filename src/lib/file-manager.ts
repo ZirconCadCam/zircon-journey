@@ -145,3 +145,51 @@ export async function downloadUrlToCenter(url: string, filename: string, subfold
   const blob = await res.blob();
   return saveToCenter(blob, filename, subfolder);
 }
+
+/**
+ * Try to read a previously-saved file from the chosen center folder
+ * (acting as a local cache). Returns the Blob if present, else null.
+ */
+export async function readFromCenter(filename: string, subfolder?: string): Promise<Blob | null> {
+  if (!isSupported()) return null;
+  const dir = await getCenterFolder();
+  if (!dir) return null;
+  try {
+    let target: any = dir;
+    if (subfolder) target = await (target as any).getDirectoryHandle(subfolder, { create: false });
+    const fh = await (target as any).getFileHandle(filename, { create: false });
+    const file = await fh.getFile();
+    return file as Blob;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Get a blob URL for a file: read from the device file-manager cache if it
+ * exists there, otherwise fetch from the remote URL and (optionally) save
+ * a copy into the cache for next time. Falls back to returning the remote
+ * URL when the File System Access API is unavailable.
+ */
+export async function getCachedOrFetchBlobUrl(
+  remoteUrl: string,
+  filename: string,
+  subfolder: string = "ملفات",
+  cacheRemote: boolean = true,
+): Promise<{ url: string; cached: boolean; revoke?: () => void }> {
+  const cached = await readFromCenter(filename, subfolder);
+  if (cached) {
+    const u = URL.createObjectURL(cached);
+    return { url: u, cached: true, revoke: () => URL.revokeObjectURL(u) };
+  }
+  try {
+    const res = await fetch(remoteUrl);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const blob = await res.blob();
+    if (cacheRemote) { try { await saveToCenter(blob, filename, subfolder); } catch {} }
+    const u = URL.createObjectURL(blob);
+    return { url: u, cached: false, revoke: () => URL.revokeObjectURL(u) };
+  } catch {
+    return { url: remoteUrl, cached: false };
+  }
+}
