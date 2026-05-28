@@ -653,6 +653,8 @@ function DoctorControls({ c, actorName, doctorName }: {
   const [busy, setBusy] = useState(false);
   const [revOpen, setRevOpen] = useState(false);
   const [notes, setNotes] = useState("");
+  const [revFiles, setRevFiles] = useState<File[]>([]);
+  const revFileRef = useRef<HTMLInputElement>(null);
   const [logOpen, setLogOpen] = useState(false);
   const [confirmApprove, setConfirmApprove] = useState(false);
 
