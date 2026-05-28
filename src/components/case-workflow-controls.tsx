@@ -653,6 +653,8 @@ function DoctorControls({ c, actorName, doctorName }: {
   const [busy, setBusy] = useState(false);
   const [revOpen, setRevOpen] = useState(false);
   const [notes, setNotes] = useState("");
+  const [revFiles, setRevFiles] = useState<File[]>([]);
+  const revFileRef = useRef<HTMLInputElement>(null);
   const [logOpen, setLogOpen] = useState(false);
   const [confirmApprove, setConfirmApprove] = useState(false);
 
@@ -740,15 +742,30 @@ function DoctorControls({ c, actorName, doctorName }: {
       const techBody = `🔁 طلب تعديل من الطبيب — الحالة ${c.case_code} (${c.patient_name}). بانتظار وصول ملف rar المعدل من المصمم.\nملاحظات الطبيب:\n${trimmed}`;
       for (const role of ["designer", "technician"] as RoleKey[]) {
         const conv = await ensureConv(c, "doctor", role, doctorName);
-        if (conv) await supabase.from("chat_messages").insert({
+        if (!conv) continue;
+        await supabase.from("chat_messages").insert({
           conversation_id: conv, sender: "doctor", sender_name: actorName,
           content: role === "designer" ? designerBody : techBody,
           message_type: "text",
         });
+        for (const f of revFiles) {
+          const up = await uploadAttachment(f, c, "revision-notes");
+          if (!up) continue;
+          await supabase.from("chat_messages").insert({
+            conversation_id: conv, sender: "doctor", sender_name: actorName,
+            content: `📎 مرفق طلب التعديل: ${f.name}`,
+            message_type: "file",
+            attachment_path: up.path,
+            attachment_name: f.name,
+            attachment_mime: f.type || null,
+            attachment_size: f.size,
+          });
+        }
       }
       toast.success("✅ تم إرسال طلب التعديل للمصمم والفني");
       setRevOpen(false);
       setNotes("");
+      setRevFiles([]);
     } else toast.error(error.message);
     setBusy(false);
   }
@@ -914,6 +931,49 @@ function DoctorControls({ c, actorName, doctorName }: {
             <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={5}
               placeholder="اكتب الملاحظات التفصيلية للتعديل…"
               className="w-full rounded-xl border border-input bg-background p-3 text-sm outline-none focus:border-gold" />
+
+            <div className="mt-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-bold text-foreground">المرفقات (صور / ملفات توضيحية)</div>
+                <button
+                  type="button"
+                  onClick={() => revFileRef.current?.click()}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-gold/60 bg-gold/5 px-2.5 py-1.5 text-[11px] font-bold hover:bg-gold/10"
+                >
+                  <FileArchive className="size-3.5" /> إضافة ملف
+                </button>
+                <input
+                  ref={revFileRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    const list = Array.from(e.target.files ?? []);
+                    if (e.target) e.target.value = "";
+                    if (list.length) setRevFiles(prev => [...prev, ...list]);
+                  }}
+                />
+              </div>
+              {revFiles.length > 0 && (
+                <ul className="space-y-1 max-h-32 overflow-auto">
+                  {revFiles.map((f, i) => (
+                    <li key={i} className="flex items-center justify-between gap-2 rounded-md border border-border bg-muted/40 px-2 py-1 text-[11px]">
+                      <span className="truncate flex-1">{f.name}</span>
+                      <span className="text-muted-foreground font-mono text-[10px]">{(f.size / 1024).toFixed(1)} KB</span>
+                      <button
+                        type="button"
+                        onClick={() => setRevFiles(prev => prev.filter((_, j) => j !== i))}
+                        className="rounded p-0.5 hover:bg-destructive/10 text-destructive"
+                        aria-label="حذف"
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
             <div className="flex justify-end gap-2 mt-3">
               <button onClick={() => setRevOpen(false)} className="rounded-lg border border-border px-3 py-2 text-xs font-bold">
                 إلغاء
