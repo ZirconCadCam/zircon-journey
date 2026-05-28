@@ -243,10 +243,16 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
           </ul>
         )}
         <div className="text-[10px] text-muted-foreground mt-1">
-          الملفات تُحفظ تلقائياً داخل مجلد <span className="font-bold">مركز زركون CAD/CAM</span> على جهازك،
-          ثم يمكنك فتحها مباشرةً من مدير الملفات.
+          الملفات تُعرض داخل التطبيق مباشرةً، ويتم تخزينها مؤقتاً في مجلد <span className="font-bold">مركز زركون CAD/CAM</span> على جهازك ليتم فتحها لاحقاً بسرعة من ذاكرة الجهاز.
         </div>
       </div>
+      <InAppFileViewer
+        open={!!viewer}
+        onOpenChange={(v) => { if (!v) setViewer(null); }}
+        url={viewer?.url ?? null}
+        name={viewer?.name ?? ""}
+        subfolder={caseCode}
+      />
     </div>
   );
 }
