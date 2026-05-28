@@ -742,15 +742,30 @@ function DoctorControls({ c, actorName, doctorName }: {
       const techBody = `🔁 طلب تعديل من الطبيب — الحالة ${c.case_code} (${c.patient_name}). بانتظار وصول ملف rar المعدل من المصمم.\nملاحظات الطبيب:\n${trimmed}`;
       for (const role of ["designer", "technician"] as RoleKey[]) {
         const conv = await ensureConv(c, "doctor", role, doctorName);
-        if (conv) await supabase.from("chat_messages").insert({
+        if (!conv) continue;
+        await supabase.from("chat_messages").insert({
           conversation_id: conv, sender: "doctor", sender_name: actorName,
           content: role === "designer" ? designerBody : techBody,
           message_type: "text",
         });
+        for (const f of revFiles) {
+          const up = await uploadAttachment(f, c, "revision-notes");
+          if (!up) continue;
+          await supabase.from("chat_messages").insert({
+            conversation_id: conv, sender: "doctor", sender_name: actorName,
+            content: `📎 مرفق طلب التعديل: ${f.name}`,
+            message_type: "file",
+            attachment_path: up.path,
+            attachment_name: f.name,
+            attachment_mime: f.type || null,
+            attachment_size: f.size,
+          });
+        }
       }
       toast.success("✅ تم إرسال طلب التعديل للمصمم والفني");
       setRevOpen(false);
       setNotes("");
+      setRevFiles([]);
     } else toast.error(error.message);
     setBusy(false);
   }
