@@ -5,6 +5,7 @@ import type { RoleKey } from "@/lib/chat";
 import { Z } from "@/lib/z-index";
 import { supabase } from "@/integrations/supabase/client";
 import { downloadUrlToCenter } from "@/lib/file-manager";
+import { InAppFileViewer } from "@/components/in-app-file-viewer";
 import { toast } from "sonner";
 
 /**
