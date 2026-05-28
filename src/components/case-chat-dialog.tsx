@@ -226,9 +226,9 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
                     </span>
                   </button>
                   <div className="flex items-center gap-1 shrink-0">
-                    <button onClick={() => window.open(f.url, "_blank", "noopener,noreferrer")}
+                    <button onClick={() => setViewer(f)}
                       className="rounded-lg border border-border p-1.5 hover:border-gold transition"
-                      aria-label="فتح" title="فتح الملف">
+                      aria-label="فتح داخل التطبيق" title="فتح داخل التطبيق (من ذاكرة الجهاز إن وُجدت)">
                       <ExternalLink className="size-3.5" />
                     </button>
                     <button onClick={() => downloadOne(f)} disabled={busy === f.url}
