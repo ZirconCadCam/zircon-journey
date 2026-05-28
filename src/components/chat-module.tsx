@@ -867,6 +867,8 @@ function MessageStatus({ msg, otherParticipants }: { msg: LocalMsg; otherPartici
 
 function FileBubble({ msg, mine }: { msg: LocalMsg; mine: boolean }) {
   const [busy, setBusy] = useState(false);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerUrl, setViewerUrl] = useState<string | null>(null);
   async function resolveUrl(): Promise<string | null> {
     if (!msg.attachment_path) return null;
     if (/^https?:\/\//i.test(msg.attachment_path)) return msg.attachment_path;
@@ -910,8 +912,10 @@ function FileBubble({ msg, mine }: { msg: LocalMsg; mine: boolean }) {
     const url = await resolveUrl();
     setBusy(false);
     if (!url) { toast.error("تعذر فتح الملف"); return; }
-    window.open(url, "_blank", "noopener,noreferrer");
+    setViewerUrl(url);
+    setViewerOpen(true);
   }
+
   const sizeLabel = msg.attachment_size
     ? msg.attachment_size > 1024*1024
       ? `${(msg.attachment_size/1024/1024).toFixed(1)} MB`
