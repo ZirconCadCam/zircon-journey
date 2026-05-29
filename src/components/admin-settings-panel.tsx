@@ -1,7 +1,17 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Settings, UserPlus, Archive, Stethoscope, RefreshCw, Save } from "lucide-react";
+import { Settings, UserPlus, Archive, Stethoscope, RefreshCw, Save, HardDrive, Trash2, Loader2, FolderOpen } from "lucide-react";
+import {
+  getCacheStats,
+  clearCenterCache,
+  getCenterFolderStatus,
+  requestCenterPermission,
+  formatBytes,
+  CENTER_FOLDER_NAME,
+  type CacheStats,
+  type CenterStatus,
+} from "@/lib/file-manager";
 
 interface Doctor {
   slot: number;
