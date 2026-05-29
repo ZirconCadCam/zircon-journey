@@ -392,6 +392,20 @@ function NewSlotCase() {
               className="w-full inline-flex items-center justify-center gap-2 rounded-xl gradient-brown py-3 font-bold shadow-luxury disabled:opacity-60">
               {submitting ? <><Loader2 className="size-4 animate-spin" /> جارِ الحفظ...</> : "حفظ الحالة"}
             </button>
+
+            <button
+              type="button"
+              onClick={resetForNewCase}
+              disabled={!savedOnce || submitting}
+              title={savedOnce ? "إنشاء حالة جديدة دون مغادرة الصفحة" : "ستصبح متاحة بعد حفظ الحالة"}
+              className={`w-full inline-flex items-center justify-center gap-2 rounded-xl border-2 border-dashed py-2.5 font-bold transition ${
+                savedOnce
+                  ? "border-gold text-gold hover:bg-gold/10 cursor-pointer"
+                  : "border-border text-muted-foreground opacity-40 cursor-not-allowed"
+              }`}
+            >
+              <Plus className="size-4" /> حالة جديدة
+            </button>
             <Link to="/doctors/$slot" params={{ slot }}
               className="block text-center text-xs text-muted-foreground hover:text-foreground">
               إلغاء والعودة
