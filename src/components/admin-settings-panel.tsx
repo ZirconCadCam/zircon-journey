@@ -1,7 +1,17 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Settings, UserPlus, Archive, Stethoscope, RefreshCw, Save } from "lucide-react";
+import { Settings, UserPlus, Archive, Stethoscope, RefreshCw, Save, HardDrive, Trash2, Loader2, FolderOpen } from "lucide-react";
+import {
+  getCacheStats,
+  clearCenterCache,
+  getCenterFolderStatus,
+  requestCenterPermission,
+  formatBytes,
+  CENTER_FOLDER_NAME,
+  type CacheStats,
+  type CenterStatus,
+} from "@/lib/file-manager";
 
 interface Doctor {
   slot: number;
@@ -61,6 +71,149 @@ export function AdminSettingsPanel() {
       </div>
 
       <GeneralAppSettingsCard />
+
+      <FileCacheCard />
+    </div>
+  );
+}
+
+/* -------------------- ذاكرة كاش ملفات مركز زركون -------------------- */
+
+function FileCacheCard() {
+  const [stats, setStats] = useState<CacheStats | null>(null);
+  const [status, setStatus] = useState<CenterStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [clearing, setClearing] = useState(false);
+
+  async function refresh() {
+    setLoading(true);
+    const [st, s] = await Promise.all([getCenterFolderStatus(), getCacheStats()]);
+    setStatus(st);
+    setStats(s);
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    refresh();
+  }, []);
+
+  async function clearCache() {
+    if (!confirm(`هل تريد مسح جميع ملفات الكاش المخزنة في مجلد «${CENTER_FOLDER_NAME}» على هذا الجهاز؟ لا يمكن التراجع، وستتم إعادة جلب الملفات من السحابة عند الحاجة.`)) return;
+    setClearing(true);
+    try {
+      const r = await clearCenterCache();
+      toast.success(`تم مسح ${r.removed} عنصراً من الكاش`);
+      await refresh();
+    } catch {
+      toast.error("تعذر مسح الكاش");
+    } finally {
+      setClearing(false);
+    }
+  }
+
+  async function grant() {
+    const ok = await requestCenterPermission();
+    if (ok) { toast.success("تم منح الصلاحية"); await refresh(); }
+    else toast.error("لم يتم منح الصلاحية");
+  }
+
+  return (
+    <div className="rounded-2xl bg-card border border-border p-6 shadow-luxury">
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-3">
+          <div className="size-10 rounded-xl bg-gold/10 text-gold grid place-items-center">
+            <HardDrive className="size-5" />
+          </div>
+          <div>
+            <div className="font-bold">ذاكرة كاش ملفات الجهاز</div>
+            <div className="text-[11px] text-muted-foreground">
+              ملفات مركز زركون المخزنة محلياً لفتحها بسرعة دون استهلاك بيانات
+            </div>
+          </div>
+        </div>
+        <button
+          onClick={refresh}
+          disabled={loading}
+          className="rounded-lg border border-border bg-background p-2 hover:border-gold disabled:opacity-50"
+          aria-label="تحديث"
+          title="تحديث"
+        >
+          {loading ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+        </button>
+      </div>
+
+      {status === "unsupported" ? (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-700">
+          متصفحك الحالي لا يدعم تخزين الملفات في مجلد الجهاز. تُفتح الملفات مباشرةً من السحابة.
+        </div>
+      ) : status === "none" ? (
+        <div className="rounded-xl border border-border bg-muted/30 p-4 text-center space-y-3">
+          <div className="text-xs text-muted-foreground">
+            لم يتم ربط مجلد «{CENTER_FOLDER_NAME}» على هذا الجهاز بعد.
+          </div>
+          <button
+            onClick={grant}
+            className="inline-flex items-center gap-1.5 rounded-lg gradient-gold text-gold-foreground px-3 py-1.5 text-xs font-bold"
+          >
+            <FolderOpen className="size-3.5" /> ربط المجلد الآن
+          </button>
+        </div>
+      ) : status === "denied" ? (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-center space-y-3">
+          <div className="text-xs text-amber-700">
+            صلاحية الوصول إلى مجلد الجهاز غير ممنوحة حالياً.
+          </div>
+          <button
+            onClick={grant}
+            className="inline-flex items-center gap-1.5 rounded-lg gradient-gold text-gold-foreground px-3 py-1.5 text-xs font-bold"
+          >
+            <FolderOpen className="size-3.5" /> منح الصلاحية
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="rounded-xl border border-border bg-muted/20 p-3">
+              <div className="text-[11px] text-muted-foreground">الحجم الحالي للكاش</div>
+              <div className="text-lg font-extrabold">{formatBytes(stats?.totalBytes ?? 0)}</div>
+            </div>
+            <div className="rounded-xl border border-border bg-muted/20 p-3">
+              <div className="text-[11px] text-muted-foreground">عدد الملفات</div>
+              <div className="text-lg font-extrabold">{stats?.fileCount ?? 0}</div>
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <div className="text-[11px] font-bold text-muted-foreground mb-1.5">الأنواع المخزنة</div>
+            {stats && stats.types.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {stats.types.map((t) => (
+                  <span
+                    key={t.ext}
+                    className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2 py-0.5 text-[11px] font-bold"
+                    title={`${t.count} ملف — ${formatBytes(t.bytes)}`}
+                  >
+                    <span className="uppercase text-gold">.{t.ext}</span>
+                    <span className="text-muted-foreground">×{t.count}</span>
+                    <span className="text-muted-foreground">({formatBytes(t.bytes)})</span>
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <div className="text-[11px] text-muted-foreground">لا توجد ملفات مخزنة بعد.</div>
+            )}
+          </div>
+
+          <button
+            onClick={clearCache}
+            disabled={clearing || (stats?.fileCount ?? 0) === 0}
+            className="w-full rounded-xl bg-destructive text-destructive-foreground py-2.5 font-bold shadow-luxury disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {clearing ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
+            {clearing ? "جاري المسح..." : "مسح كاش الملفات"}
+          </button>
+        </>
+      )}
     </div>
   );
 }

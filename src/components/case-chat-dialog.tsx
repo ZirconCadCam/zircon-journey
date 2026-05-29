@@ -4,7 +4,7 @@ import { ChatModule } from "@/components/chat-module";
 import type { RoleKey } from "@/lib/chat";
 import { Z } from "@/lib/z-index";
 import { supabase } from "@/integrations/supabase/client";
-import { downloadUrlToCenter } from "@/lib/file-manager";
+import { downloadUrlToCenter, autoCacheFile } from "@/lib/file-manager";
 import { InAppFileViewer } from "@/components/in-app-file-viewer";
 import { toast } from "sonner";
 
@@ -120,7 +120,7 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
     let cancelled = false;
     (async () => {
       const { data: row } = await supabase.from("slot_cases").select(
-        "id, case_code, patient_name, patient_phone, patient_age, patient_gender, tooth_number, shade, case_type, notes, scan_path, scan_name, revision_design_file_path, revision_design_file_name, created_at"
+        "id, case_code, patient_name, patient_phone, patient_age, patient_gender, tooth_number, shade, case_type, notes, scan_path, scan_name, revision_design_file_path, revision_design_file_name, doctor_decision, final_archived, created_at"
       ).eq("doctor_slot", doctorSlot).eq("case_code", caseCode).maybeSingle();
       if (cancelled) return;
       setC(row);
@@ -158,6 +158,17 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
         }
       }
       if (!cancelled) setFiles(list);
+
+      // Task 3: auto-store received files into the device center folder, but
+      // only for active cases and revision-notes cases (not finally archived).
+      // Silent: runs only when the device folder is linked + permitted.
+      const isActiveOrRevision = !row?.final_archived;
+      if (isActiveOrRevision && list.length) {
+        for (const f of list) {
+          try { await autoCacheFile(f.url, f.name, caseCode); } catch { /* silent */ }
+          if (cancelled) break;
+        }
+      }
     })();
     return () => { cancelled = true; };
   }, [doctorSlot, caseCode]);
