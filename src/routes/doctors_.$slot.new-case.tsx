@@ -217,8 +217,8 @@ function NewSlotCase() {
         localNotify("Zircon Journey — تم إنشاء حالة", `${form.patient_name.trim()} • ${inserted!.case_code}`);
       } catch { /* notification failures shouldn't block save */ }
 
-      toast.success("تم إنشاء الحالة وإرسال تفاصيلها للمصمم");
-      nav({ to: "/doctors/$slot", params: { slot } });
+      toast.success("تم إنشاء الحالة وإرسال تفاصيلها للمصمم — يمكنك إنشاء حالة أخرى الآن");
+      setSavedOnce(true);
     } catch (err: any) {
       toast.error(err.message || "فشل إنشاء الحالة");
     } finally { setSubmitting(false); }
