@@ -158,6 +158,17 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
         }
       }
       if (!cancelled) setFiles(list);
+
+      // Task 3: auto-store received files into the device center folder, but
+      // only for active cases and revision-notes cases (not finally archived).
+      // Silent: runs only when the device folder is linked + permitted.
+      const isActiveOrRevision = !row?.final_archived;
+      if (isActiveOrRevision && list.length) {
+        for (const f of list) {
+          try { await autoCacheFile(f.url, f.name, caseCode); } catch { /* silent */ }
+          if (cancelled) break;
+        }
+      }
     })();
     return () => { cancelled = true; };
   }, [doctorSlot, caseCode]);
