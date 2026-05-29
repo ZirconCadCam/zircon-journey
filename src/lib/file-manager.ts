@@ -89,6 +89,156 @@ export function fileManagerSupported(): boolean {
   return isSupported();
 }
 
+/* ---------------------------------------------------------------------------
+ * Device-folder access status + permission helpers (Task 1)
+ * ------------------------------------------------------------------------- */
+
+export type CenterStatus = "unsupported" | "none" | "denied" | "ready";
+
+/**
+ * Report whether we can actually read/write the device center folder:
+ *  - "unsupported": browser lacks the File System Access API
+ *  - "none": API supported but no folder linked yet
+ *  - "denied": a folder is linked but permission isn't granted
+ *  - "ready": linked and permission granted
+ */
+export async function getCenterFolderStatus(): Promise<CenterStatus> {
+  if (!isSupported()) return "unsupported";
+  const handle: any = await idbGet(KEY);
+  if (!handle) return "none";
+  try {
+    const perm = await handle.queryPermission?.({ mode: "readwrite" });
+    return perm === "granted" ? "ready" : "denied";
+  } catch {
+    return "denied";
+  }
+}
+
+/** Re-request permission (or prompt to pick a folder if none linked yet). */
+export async function requestCenterPermission(): Promise<boolean> {
+  const handle: any = await idbGet(KEY);
+  if (!handle) return pickCenterFolder();
+  return ensurePermission(handle, "readwrite");
+}
+
+/* ---------------------------------------------------------------------------
+ * Cache stats + clearing (Task 2)
+ * ------------------------------------------------------------------------- */
+
+export interface CacheStats {
+  supported: boolean;
+  linked: boolean;
+  totalBytes: number;
+  fileCount: number;
+  types: { ext: string; count: number; bytes: number }[];
+}
+
+/** Walk the center folder and summarise total size + stored file types. */
+export async function getCacheStats(): Promise<CacheStats> {
+  const base: CacheStats = { supported: isSupported(), linked: false, totalBytes: 0, fileCount: 0, types: [] };
+  if (!isSupported()) return base;
+  const dir: any = await getCenterFolder();
+  if (!dir) return base;
+
+  const byExt = new Map<string, { count: number; bytes: number }>();
+  let total = 0, count = 0;
+
+  async function walk(handle: any) {
+    for await (const [name, entry] of handle.entries()) {
+      if (entry.kind === "file") {
+        try {
+          const f = await entry.getFile();
+          total += f.size; count++;
+          const ext = (name.match(/\.([a-zA-Z0-9]+)$/)?.[1] || "أخرى").toLowerCase();
+          const cur = byExt.get(ext) || { count: 0, bytes: 0 };
+          cur.count++; cur.bytes += f.size;
+          byExt.set(ext, cur);
+        } catch { /* skip unreadable */ }
+      } else if (entry.kind === "directory") {
+        await walk(entry);
+      }
+    }
+  }
+  try { await walk(dir); } catch { /* ignore */ }
+
+  const types = [...byExt.entries()]
+    .map(([ext, v]) => ({ ext, ...v }))
+    .sort((a, b) => b.bytes - a.bytes);
+  return { supported: true, linked: true, totalBytes: total, fileCount: count, types };
+}
+
+/** Delete every file/subfolder inside the center folder (keeps the link). */
+export async function clearCenterCache(): Promise<{ removed: number }> {
+  if (!isSupported()) return { removed: 0 };
+  const dir: any = await getCenterFolder();
+  if (!dir) return { removed: 0 };
+  const entries: { name: string; kind: string }[] = [];
+  try {
+    for await (const [name, entry] of dir.entries()) entries.push({ name, kind: entry.kind });
+  } catch { return { removed: 0 }; }
+  let removed = 0;
+  for (const e of entries) {
+    try {
+      await dir.removeEntry(e.name, { recursive: e.kind === "directory" });
+      removed++;
+    } catch { /* keep going */ }
+  }
+  return { removed };
+}
+
+/** Human-readable byte size. */
+export function formatBytes(n: number): string {
+  if (!n) return "0 ب";
+  if (n < 1024) return `${n} ب`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} ك.ب`;
+  if (n < 1024 * 1024 * 1024) return `${(n / 1024 / 1024).toFixed(1)} م.ب`;
+  return `${(n / 1024 / 1024 / 1024).toFixed(2)} ج.ب`;
+}
+
+/* ---------------------------------------------------------------------------
+ * Automatic caching of received case files (Task 3)
+ * ------------------------------------------------------------------------- */
+
+/**
+ * Silently store a received file into the device center folder when (and only
+ * when) the folder is linked and permission is granted. Skips work if the file
+ * is already cached. Never prompts the user and never throws.
+ */
+export async function autoCacheFile(
+  remoteUrl: string,
+  filename: string,
+  subfolder: string,
+): Promise<boolean> {
+  if (!isSupported()) return false;
+  if ((await getCenterFolderStatus()) !== "ready") return false;
+  try {
+    const existing = await readFromCenter(filename, subfolder);
+    if (existing) return true;
+    const res = await fetch(remoteUrl);
+    if (!res.ok) return false;
+    const blob = await res.blob();
+    const r = await saveToCenter(blob, filename, subfolder);
+    return r.saved && !r.fallback;
+  } catch {
+    return false;
+  }
+}
+
+/** Fetch a remote URL straight to a blob URL (no device caching). */
+export async function fetchRemoteBlobUrl(
+  remoteUrl: string,
+): Promise<{ url: string; revoke?: () => void }> {
+  try {
+    const res = await fetch(remoteUrl);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const blob = await res.blob();
+    const u = URL.createObjectURL(blob);
+    return { url: u, revoke: () => URL.revokeObjectURL(u) };
+  } catch {
+    return { url: remoteUrl };
+  }
+}
+
 /**
  * Save a Blob to the chosen center folder (creates a subfolder if provided).
  * Returns true on success. If no folder is set or browser unsupported,
