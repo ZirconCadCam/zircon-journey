@@ -48,6 +48,20 @@ function NewSlotCase() {
     tooth_number: "", teeth_count: "", shade: "A2", case_type: "تاج زيركون", notes: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [savedOnce, setSavedOnce] = useState(false);
+
+  function resetForNewCase() {
+    setForm({
+      patient_name: "", patient_phone: "", patient_age: "", patient_gender: "",
+      tooth_number: "", teeth_count: "", shade: "A2", case_type: "تاج زيركون", notes: "",
+    });
+    setScan(null);
+    setScanProgress(0);
+    setErrors({});
+    setSavedOnce(false);
+    if (fileInput.current) fileInput.current.value = "";
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   useEffect(() => {
     const sessionOk =
