@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowRight, Sparkles, Upload, FileText, X, Loader2, ScanLine } from "lucide-react";
+import { ArrowRight, Sparkles, Upload, FileText, X, Loader2, ScanLine, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { ToothQuadrantPicker } from "@/components/tooth-quadrant-picker";
@@ -48,6 +48,20 @@ function NewSlotCase() {
     tooth_number: "", teeth_count: "", shade: "A2", case_type: "تاج زيركون", notes: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [savedOnce, setSavedOnce] = useState(false);
+
+  function resetForNewCase() {
+    setForm({
+      patient_name: "", patient_phone: "", patient_age: "", patient_gender: "",
+      tooth_number: "", teeth_count: "", shade: "A2", case_type: "تاج زيركون", notes: "",
+    });
+    setScan(null);
+    setScanProgress(0);
+    setErrors({});
+    setSavedOnce(false);
+    if (fileInput.current) fileInput.current.value = "";
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   useEffect(() => {
     const sessionOk =
@@ -203,8 +217,8 @@ function NewSlotCase() {
         localNotify("Zircon Journey — تم إنشاء حالة", `${form.patient_name.trim()} • ${inserted!.case_code}`);
       } catch { /* notification failures shouldn't block save */ }
 
-      toast.success("تم إنشاء الحالة وإرسال تفاصيلها للمصمم");
-      nav({ to: "/doctors/$slot", params: { slot } });
+      toast.success("تم إنشاء الحالة وإرسال تفاصيلها للمصمم — يمكنك إنشاء حالة أخرى الآن");
+      setSavedOnce(true);
     } catch (err: any) {
       toast.error(err.message || "فشل إنشاء الحالة");
     } finally { setSubmitting(false); }
@@ -377,6 +391,20 @@ function NewSlotCase() {
             <button type="submit" disabled={submitting}
               className="w-full inline-flex items-center justify-center gap-2 rounded-xl gradient-brown py-3 font-bold shadow-luxury disabled:opacity-60">
               {submitting ? <><Loader2 className="size-4 animate-spin" /> جارِ الحفظ...</> : "حفظ الحالة"}
+            </button>
+
+            <button
+              type="button"
+              onClick={resetForNewCase}
+              disabled={!savedOnce || submitting}
+              title={savedOnce ? "إنشاء حالة جديدة دون مغادرة الصفحة" : "ستصبح متاحة بعد حفظ الحالة"}
+              className={`w-full inline-flex items-center justify-center gap-2 rounded-xl border-2 border-dashed py-2.5 font-bold transition ${
+                savedOnce
+                  ? "border-gold text-gold hover:bg-gold/10 cursor-pointer"
+                  : "border-border text-muted-foreground opacity-40 cursor-not-allowed"
+              }`}
+            >
+              <Plus className="size-4" /> حالة جديدة
             </button>
             <Link to="/doctors/$slot" params={{ slot }}
               className="block text-center text-xs text-muted-foreground hover:text-foreground">
