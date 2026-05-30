@@ -244,6 +244,12 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
         <div className="mt-6">
           {tab === "settings" && role === "admin" ? (
             <AdminSettingsPanel />
+          ) : role === "designer" && tab === "archive" ? (
+            <DesignerArchive />
+          ) : role === "designer" && tab === "designfiles" ? (
+            <DesignerDesignFiles />
+          ) : role === "designer" && tab === "reports" ? (
+            <DesignerReports />
           ) : (role === "designer" || role === "technician" || role === "secretary_sanaa" || role === "secretary_ibb" || role === "admin") && tab === "cases" ? (
             <DesignerCases actor={role as any} actorName={ROLE_LABEL[role]} />
 
