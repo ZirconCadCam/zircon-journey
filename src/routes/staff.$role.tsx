@@ -210,6 +210,22 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
                 <ClipboardList className="size-4" /> الحالات
               </button>
             )}
+            {role === "designer" && (
+              <>
+                <button onClick={() => setTab("archive")}
+                  className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "archive" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
+                  <Archive className="size-4" /> الأرشيف
+                </button>
+                <button onClick={() => setTab("designfiles")}
+                  className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "designfiles" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
+                  <FileArchive className="size-4" /> ملفات التصاميم
+                </button>
+                <button onClick={() => setTab("reports")}
+                  className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "reports" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
+                  <FileText className="size-4" /> الكشوفات
+                </button>
+              </>
+            )}
             {role === "admin" && (
               <button onClick={() => setTab("cases")}
                 className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "cases" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
