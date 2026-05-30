@@ -9,7 +9,7 @@ import {
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableFooter,
 } from "@/components/ui/table";
 import { getSignedUrl } from "@/lib/chat";
-import { downloadUrlToCenter, fileManagerSupported, CENTER_FOLDER_NAME } from "@/lib/file-manager";
+import { downloadUrlToCenter, fileManagerSupported } from "@/lib/file-manager";
 
 interface Doctor { slot: number; name: string; branch: string | null }
 interface Case {
