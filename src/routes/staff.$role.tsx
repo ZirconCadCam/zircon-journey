@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ChatModule } from "@/components/chat-module";
 import { DesignerCases } from "@/components/designer-cases";
 import { DesignerArchive, DesignerDesignFiles, DesignerReports } from "@/components/designer-panels";
+import { TechnicianReports, TechnicianDesignFiles } from "@/components/technician-panels";
 import { AdminSettingsPanel } from "@/components/admin-settings-panel";
 import { AdminVoiceListener } from "@/components/admin-voice-listener";
 
@@ -226,6 +227,18 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
                 </button>
               </>
             )}
+            {role === "technician" && (
+              <>
+                <button onClick={() => setTab("reports")}
+                  className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "reports" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
+                  <FileText className="size-4" /> الكشوفات
+                </button>
+                <button onClick={() => setTab("designfiles")}
+                  className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "designfiles" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
+                  <FileArchive className="size-4" /> ملفات التصاميم
+                </button>
+              </>
+            )}
             {role === "admin" && (
               <button onClick={() => setTab("cases")}
                 className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "cases" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
@@ -250,6 +263,10 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
             <DesignerDesignFiles />
           ) : role === "designer" && tab === "reports" ? (
             <DesignerReports />
+          ) : role === "technician" && tab === "reports" ? (
+            <TechnicianReports />
+          ) : role === "technician" && tab === "designfiles" ? (
+            <TechnicianDesignFiles />
           ) : (role === "designer" || role === "technician" || role === "secretary_sanaa" || role === "secretary_ibb" || role === "admin") && tab === "cases" ? (
             <DesignerCases actor={role as any} actorName={ROLE_LABEL[role]} />
 
