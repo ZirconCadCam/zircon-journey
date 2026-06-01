@@ -282,10 +282,10 @@ export function TransferOverlay() {
 
 function DownloadDonePopup({ p }: { p: CompletedPopup }) {
   // auto-dismiss after 5 seconds of no action
-  if (typeof window !== "undefined") {
-    // schedule once
-    queueAutoDismiss(p.id);
-  }
+  useEffect(() => {
+    const t = setTimeout(() => dismissPopup(p.id), 5000);
+    return () => clearTimeout(t);
+  }, [p.id]);
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-emerald-500/40 bg-card/95 backdrop-blur p-3 shadow-luxury animate-in slide-in-from-bottom-2">
       <div className="size-9 shrink-0 grid place-items-center rounded-xl bg-emerald-500/15 text-emerald-600">
@@ -309,11 +309,4 @@ function DownloadDonePopup({ p }: { p: CompletedPopup }) {
       </div>
     </div>
   );
-}
-
-const scheduled = new Set<string>();
-function queueAutoDismiss(id: string) {
-  if (scheduled.has(id)) return;
-  scheduled.add(id);
-  setTimeout(() => { dismissPopup(id); scheduled.delete(id); }, 5000);
 }
