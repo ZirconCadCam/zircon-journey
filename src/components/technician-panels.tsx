@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import { getSignedUrl } from "@/lib/chat";
 import { deriveStageKey } from "@/lib/case-stages";
-import { downloadUrlToCenter, fileManagerSupported } from "@/lib/file-manager";
+import { fileManagerSupported } from "@/lib/file-manager";
 
 interface Doctor { slot: number; name: string; branch: string | null }
 interface Case {
