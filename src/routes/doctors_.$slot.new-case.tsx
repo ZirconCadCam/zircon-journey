@@ -252,6 +252,7 @@ function NewSlotCase() {
 
       toast.success("تم إنشاء الحالة وإرسال تفاصيلها للمصمم — يمكنك إنشاء حالة أخرى الآن");
       setSavedOnce(true);
+      setSavedSig(currentSig);
     } catch (err: any) {
       toast.error(err.message || "فشل إنشاء الحالة");
     } finally { setSubmitting(false); }
