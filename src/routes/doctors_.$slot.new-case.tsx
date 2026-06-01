@@ -91,6 +91,11 @@ function NewSlotCase() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    // Prevent re-saving the exact same case data that was already saved/sent.
+    if (alreadySaved) {
+      toast.info("تم حفظ هذه الحالة وإرسالها مسبقاً. عدّل البيانات أو ابدأ حالة جديدة.");
+      return;
+    }
     // Require all fields + a .zip scan file
     const required = [
       ["patient_name", form.patient_name, "اسم المريض"],
