@@ -409,10 +409,31 @@ function NewSlotCase() {
                   <div className="text-[11px] text-muted-foreground flex items-center gap-2">
                     <span>{(scan.size/1024/1024).toFixed(2)} MB</span>
                     {submitting && (
-                      <span className="text-gold font-bold">• {scanProgress}% جارِ الرفع…</span>
+                      <span className="text-gold font-bold">
+                        • {scanProgress}% {uploadPaused ? "متوقف مؤقتاً" : "جارِ الرفع…"}
+                      </span>
                     )}
                   </div>
                 </div>
+                {submitting && uploadHandle.current && (
+                  <div className="flex items-center gap-1 self-center shrink-0">
+                    {uploadPaused ? (
+                      <button type="button" onClick={() => { uploadHandle.current?.resume(); setUploadPaused(false); }}
+                        className="rounded-lg border border-border p-1.5 hover:border-gold" aria-label="استئناف الرفع">
+                        <Play className="size-4" />
+                      </button>
+                    ) : (
+                      <button type="button" onClick={() => { uploadHandle.current?.pause(); setUploadPaused(true); }}
+                        className="rounded-lg border border-border p-1.5 hover:border-gold" aria-label="إيقاف مؤقت">
+                        <Pause className="size-4" />
+                      </button>
+                    )}
+                    <button type="button" onClick={() => { uploadCanceled.current = true; uploadHandle.current?.abort(); }}
+                      className="rounded-lg border border-border p-1.5 hover:bg-destructive hover:text-destructive-foreground" aria-label="إلغاء الرفع">
+                      <X className="size-4" />
+                    </button>
+                  </div>
+                )}
                 {!submitting && (
                   <button type="button" onClick={() => { setScan(null); setScanProgress(0); if (fileInput.current) fileInput.current.value=""; }}
                     className="rounded-lg border border-border p-1.5 hover:bg-destructive hover:text-destructive-foreground self-center" aria-label="إزالة">
