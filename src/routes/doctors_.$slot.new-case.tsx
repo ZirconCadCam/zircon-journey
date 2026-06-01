@@ -443,9 +443,18 @@ function NewSlotCase() {
               </div>
             )}
 
-            <button type="submit" disabled={submitting}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-xl gradient-brown py-3 font-bold shadow-luxury disabled:opacity-60">
-              {submitting ? <><Loader2 className="size-4 animate-spin" /> جارِ الحفظ...</> : "حفظ الحالة"}
+            <button type="submit" disabled={submitting || alreadySaved}
+              title={alreadySaved ? "تم حفظ هذه الحالة وإرسالها — عدّل البيانات أو ابدأ حالة جديدة" : "حفظ وإرسال الحالة"}
+              className={`w-full inline-flex items-center justify-center gap-2 rounded-xl py-3 font-bold shadow-luxury transition ${
+                alreadySaved
+                  ? "bg-muted text-muted-foreground opacity-50 cursor-not-allowed"
+                  : "gradient-brown hover:brightness-105"
+              } disabled:opacity-60`}>
+              {submitting
+                ? <><Loader2 className="size-4 animate-spin" /> جارِ الحفظ...</>
+                : alreadySaved
+                  ? "تم الحفظ والإرسال ✓"
+                  : "حفظ الحالة"}
             </button>
 
             <button
