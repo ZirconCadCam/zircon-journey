@@ -12,7 +12,7 @@
  *   const t = registerUpload(filename, { pause, resume, cancel });
  *   t.update(pct, loaded, total);  t.done();  // or t.fail() / t.cancelDone();
  */
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { Pause, Play, X, Download, ExternalLink, FileDown, CheckCircle2, Upload as UploadIcon } from "lucide-react";
 import { saveToCenter, fileManagerSupported } from "@/lib/file-manager";
 
