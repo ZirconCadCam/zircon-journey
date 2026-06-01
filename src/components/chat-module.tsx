@@ -972,19 +972,8 @@ function AudioBubble({ path, name, mime }: { path: string; name?: string | null;
     if (!u) { setDownloading(false); toast.error("تعذر إنشاء الرابط"); return; }
     const filename = name || `voice-${Date.now()}.${(mime || "audio/webm").includes("mp4") ? "m4a" : "webm"}`;
     try {
-      if (fileManagerSupported() && (await getCenterFolder())) {
-        const r = await downloadUrlToCenter(u, filename, "تسجيلات");
-        toast.success(r.fallback ? "تم التحميل" : `حُفظ في ${CENTER_FOLDER_NAME}/تسجيلات`);
-      } else {
-        const res = await fetch(u);
-        const blob = await res.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = blobUrl; a.download = filename;
-        document.body.appendChild(a); a.click(); a.remove();
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
-        toast.success("تم تحميل الملف");
-      }
+      const { transferDownload } = await import("@/lib/transfer-manager");
+      await transferDownload({ url: u, filename, mime, saveToCenter: fileManagerSupported(), subfolder: "تسجيلات" });
     } catch (e: any) {
       toast.error(e?.message ?? "تعذر التحميل");
     } finally { setDownloading(false); }
