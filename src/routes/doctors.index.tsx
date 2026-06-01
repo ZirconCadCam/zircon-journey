@@ -24,6 +24,7 @@ function DoctorsGrid() {
   const [filter, setFilter] = useState<"all" | "sanaa" | "ibb">("all");
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState<Doctor | null>(null);
+  const [adding, setAdding] = useState(false);
 
   useEffect(() => {
     load();
