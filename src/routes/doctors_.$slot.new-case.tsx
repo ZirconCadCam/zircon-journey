@@ -50,6 +50,15 @@ function NewSlotCase() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [savedOnce, setSavedOnce] = useState(false);
+  const [savedSig, setSavedSig] = useState<string | null>(null);
+  const uploadHandle = useRef<ResumableHandle | null>(null);
+  const uploadCanceled = useRef(false);
+  const [uploadPaused, setUploadPaused] = useState(false);
+
+  // Signature of the case data currently in the form (incl. chosen scan).
+  // Used to fade the save button once an identical case is already saved.
+  const currentSig = JSON.stringify(form) + "|" + (scan ? `${scan.name}:${scan.size}` : "");
+  const alreadySaved = savedOnce && savedSig === currentSig;
 
   function resetForNewCase() {
     setForm({
