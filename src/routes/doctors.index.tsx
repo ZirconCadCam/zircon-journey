@@ -199,3 +199,60 @@ function EditDialog({ d, onClose, onSaved }: { d: Doctor; onClose: () => void; o
     </div>
   );
 }
+
+function AddDialog({ nextSlot, onClose, onSaved }: { nextSlot: number; onClose: () => void; onSaved: () => void }) {
+  const [name, setName] = useState("");
+  const [branch, setBranch] = useState<string>("");
+  const [password, setPassword] = useState(Math.random().toString(36).slice(2, 8));
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    const trimmed = name.trim();
+    if (trimmed.length < 2) { toast.error("الرجاء إدخال اسم الطبيب"); return; }
+    if (!password.trim()) { toast.error("الرجاء إدخال كلمة مرور"); return; }
+    setSaving(true);
+    const { error } = await supabase.from("doctor_profiles").insert({
+      slot: nextSlot,
+      name: trimmed,
+      branch: branch || null,
+      password: password.trim(),
+      active: true,
+    });
+    setSaving(false);
+    if (error) toast.error(error.message);
+    else { toast.success(`تمت إضافة الطبيب في الخانة #${nextSlot}`); onSaved(); }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" onClick={onClose}>
+      <div className="bg-card rounded-2xl border border-border shadow-luxury max-w-md w-full p-6" onClick={e=>e.stopPropagation()}>
+        <div className="font-bold text-lg mb-1">إضافة طبيب جديد</div>
+        <div className="text-xs text-muted-foreground mb-4">سيُضاف في الخانة #{nextSlot}</div>
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs font-bold mb-1 block">الاسم</label>
+            <input value={name} onChange={e=>setName(e.target.value)} placeholder="د. ..." className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="text-xs font-bold mb-1 block">الفرع</label>
+            <select value={branch} onChange={e=>setBranch(e.target.value)} className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
+              <option value="">— لا يوجد —</option>
+              <option value="sanaa">فرع صنعاء</option>
+              <option value="ibb">فرع إب</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-bold mb-1 block">كلمة المرور</label>
+            <input value={password} onChange={e=>setPassword(e.target.value)} className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm font-mono" />
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 mt-5">
+          <button onClick={onClose} className="rounded-lg border border-border px-4 py-2 text-sm">إلغاء</button>
+          <button onClick={save} disabled={saving} className="rounded-lg gradient-brown px-4 py-2 text-sm font-bold">
+            {saving ? "..." : "إضافة"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
