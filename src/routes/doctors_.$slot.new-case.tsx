@@ -147,19 +147,36 @@ function NewSlotCase() {
         const rand = Math.random().toString(36).slice(2, 8);
         const path = `${slot}/scans/${Date.now()}-${rand}-${safeBase}.${ext}`;
 
-        // Resumable TUS upload with live progress
+        // Resumable TUS upload with live progress + global transfer tracking
         setScanProgress(1);
+        setUploadPaused(false);
+        uploadCanceled.current = false;
         const { startResumableUpload } = await import("@/lib/resumable-upload");
-        await new Promise<void>((resolve, reject) => {
-          startResumableUpload({
-            bucket: "doctor-files",
-            path,
-            file: scan,
-            onProgress: (pct) => setScanProgress(Math.max(1, pct)),
-            onSuccess: () => resolve(),
-            onError: (err) => reject(err),
-          }).catch(reject);
+        const { registerUpload } = await import("@/lib/transfer-manager");
+        const tracker = registerUpload(scan.name, {
+          pause: () => { uploadHandle.current?.pause(); setUploadPaused(true); tracker.paused(); },
+          resume: () => { uploadHandle.current?.resume(); setUploadPaused(false); tracker.resumed(); },
+          cancel: () => { uploadCanceled.current = true; uploadHandle.current?.abort(); },
         });
+        try {
+          await new Promise<void>((resolve, reject) => {
+            startResumableUpload({
+              bucket: "doctor-files",
+              path,
+              file: scan,
+              onProgress: (pct, loaded, total) => { setScanProgress(Math.max(1, pct)); tracker.update(pct, loaded, total); },
+              onSuccess: () => resolve(),
+              onError: (err) => reject(err),
+            }).then((h) => { uploadHandle.current = h; }).catch(reject);
+          });
+          tracker.done();
+        } catch (e) {
+          uploadHandle.current = null;
+          if (uploadCanceled.current) { tracker.remove(); throw new Error("تم إلغاء رفع المسح"); }
+          tracker.fail();
+          throw e;
+        }
+        uploadHandle.current = null;
         setScanProgress(100);
 
         const { data: pub } = supabase.storage.from("doctor-files").getPublicUrl(path);
