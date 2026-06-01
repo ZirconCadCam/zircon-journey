@@ -83,9 +83,17 @@ function DoctorsGrid() {
           </div>
         </div>
 
-        <h1 className="text-2xl md:text-3xl font-bold mb-6 flex items-center gap-3">
-          <Stethoscope className="size-7 text-gold" /> أطباء المركز
-        </h1>
+        <div className="flex items-center justify-between gap-3 mb-6">
+          <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
+            <Stethoscope className="size-7 text-gold" /> أطباء المركز
+          </h1>
+          {role === "admin" && (
+            <button onClick={() => setAdding(true)}
+              className="inline-flex items-center gap-2 rounded-xl gradient-brown px-4 py-2 text-sm font-bold shadow-luxury hover:brightness-105 transition">
+              <Plus className="size-4" /> إضافة طبيب
+            </button>
+          )}
+        </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
           {visible.map(d => <DoctorTile key={d.slot} d={d} isAdmin={role === "admin"} onEdit={() => setEditing(d)} />)}
@@ -94,6 +102,13 @@ function DoctorsGrid() {
 
       {editing && role === "admin" && (
         <EditDialog d={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />
+      )}
+      {adding && role === "admin" && (
+        <AddDialog
+          nextSlot={doctors.reduce((m, d) => Math.max(m, d.slot), 0) + 1}
+          onClose={() => setAdding(false)}
+          onSaved={() => { setAdding(false); load(); }}
+        />
       )}
     </div>
   );
