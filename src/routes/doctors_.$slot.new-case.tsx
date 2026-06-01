@@ -1,10 +1,11 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowRight, Sparkles, Upload, FileText, X, Loader2, ScanLine, Plus } from "lucide-react";
+import { ArrowRight, Sparkles, Upload, FileText, X, Loader2, ScanLine, Plus, Pause, Play } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { ToothQuadrantPicker } from "@/components/tooth-quadrant-picker";
+import type { ResumableHandle } from "@/lib/resumable-upload";
 
 const patientSchema = z.object({
   patient_name: z.string().trim()
