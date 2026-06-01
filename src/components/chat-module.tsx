@@ -893,19 +893,15 @@ function FileBubble({ msg, mine }: { msg: LocalMsg; mine: boolean }) {
     const url = await resolveUrl();
     if (!url) { setBusy(false); toast.error("تعذر إنشاء رابط التحميل"); return; }
     const name = msg.attachment_name || `file-${msg.id.slice(0,8)}`;
-    // If file manager is linked, save into center
-    if (fileManagerSupported() && (await getCenterFolder())) {
-      try {
-        const r = await downloadUrlToCenter(url, name, "ملفات");
-        setBusy(false);
-        toast.success(r.fallback ? "تم التحميل" : `حُفظ في ${CENTER_FOLDER_NAME}/ملفات`);
-        return;
-      } catch {}
+    try {
+      const { transferDownload } = await import("@/lib/transfer-manager");
+      await transferDownload({ url, filename: name, mime: msg.attachment_mime, saveToCenter: fileManagerSupported() });
+    } catch {
+      const ok = await forceDownload(url, name);
+      if (!ok) window.open(url, "_blank", "noopener");
+    } finally {
+      setBusy(false);
     }
-    const ok = await forceDownload(url, name);
-    setBusy(false);
-    if (ok) toast.success("تم تحميل الملف");
-    else window.open(url, "_blank", "noopener");
   }
   async function openInApp() {
     if (!msg.attachment_path) return;
@@ -976,19 +972,8 @@ function AudioBubble({ path, name, mime }: { path: string; name?: string | null;
     if (!u) { setDownloading(false); toast.error("تعذر إنشاء الرابط"); return; }
     const filename = name || `voice-${Date.now()}.${(mime || "audio/webm").includes("mp4") ? "m4a" : "webm"}`;
     try {
-      if (fileManagerSupported() && (await getCenterFolder())) {
-        const r = await downloadUrlToCenter(u, filename, "تسجيلات");
-        toast.success(r.fallback ? "تم التحميل" : `حُفظ في ${CENTER_FOLDER_NAME}/تسجيلات`);
-      } else {
-        const res = await fetch(u);
-        const blob = await res.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = blobUrl; a.download = filename;
-        document.body.appendChild(a); a.click(); a.remove();
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
-        toast.success("تم تحميل الملف");
-      }
+      const { transferDownload } = await import("@/lib/transfer-manager");
+      await transferDownload({ url: u, filename, mime, saveToCenter: fileManagerSupported(), subfolder: "تسجيلات" });
     } catch (e: any) {
       toast.error(e?.message ?? "تعذر التحميل");
     } finally { setDownloading(false); }

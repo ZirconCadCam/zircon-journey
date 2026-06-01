@@ -9,7 +9,7 @@ import {
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableFooter,
 } from "@/components/ui/table";
 import { getSignedUrl } from "@/lib/chat";
-import { downloadUrlToCenter, fileManagerSupported } from "@/lib/file-manager";
+import { fileManagerSupported } from "@/lib/file-manager";
 
 interface Doctor { slot: number; name: string; branch: string | null }
 interface Case {
@@ -52,19 +52,8 @@ async function downloadFile(path: string, fileName: string) {
   const url = await resolveUrl(path);
   if (!url) { toast.error("تعذر الوصول للملف"); return; }
   try {
-    if (fileManagerSupported()) {
-      const r = await downloadUrlToCenter(url, fileName);
-      toast.success(r.fallback ? "تم تنزيل الملف" : `تم الحفظ في ${r.path}`);
-    } else {
-      const res = await fetch(url);
-      const blob = await res.blob();
-      const objUrl = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = objUrl; a.download = fileName;
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(() => URL.revokeObjectURL(objUrl), 4000);
-      toast.success("تم تنزيل الملف");
-    }
+    const { transferDownload } = await import("@/lib/transfer-manager");
+    await transferDownload({ url, filename: fileName, saveToCenter: fileManagerSupported() });
   } catch (e: any) {
     toast.error(e.message || "تعذر تنزيل الملف");
   }

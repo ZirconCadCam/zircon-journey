@@ -1,10 +1,11 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowRight, Sparkles, Upload, FileText, X, Loader2, ScanLine, Plus } from "lucide-react";
+import { ArrowRight, Sparkles, Upload, FileText, X, Loader2, ScanLine, Plus, Pause, Play } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { ToothQuadrantPicker } from "@/components/tooth-quadrant-picker";
+import type { ResumableHandle } from "@/lib/resumable-upload";
 
 const patientSchema = z.object({
   patient_name: z.string().trim()
@@ -49,6 +50,15 @@ function NewSlotCase() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [savedOnce, setSavedOnce] = useState(false);
+  const [savedSig, setSavedSig] = useState<string | null>(null);
+  const uploadHandle = useRef<ResumableHandle | null>(null);
+  const uploadCanceled = useRef(false);
+  const [uploadPaused, setUploadPaused] = useState(false);
+
+  // Signature of the case data currently in the form (incl. chosen scan).
+  // Used to fade the save button once an identical case is already saved.
+  const currentSig = JSON.stringify(form) + "|" + (scan ? `${scan.name}:${scan.size}` : "");
+  const alreadySaved = savedOnce && savedSig === currentSig;
 
   function resetForNewCase() {
     setForm({
@@ -59,6 +69,7 @@ function NewSlotCase() {
     setScanProgress(0);
     setErrors({});
     setSavedOnce(false);
+    setSavedSig(null);
     if (fileInput.current) fileInput.current.value = "";
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -80,6 +91,11 @@ function NewSlotCase() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    // Prevent re-saving the exact same case data that was already saved/sent.
+    if (alreadySaved) {
+      toast.info("تم حفظ هذه الحالة وإرسالها مسبقاً. عدّل البيانات أو ابدأ حالة جديدة.");
+      return;
+    }
     // Require all fields + a .zip scan file
     const required = [
       ["patient_name", form.patient_name, "اسم المريض"],
@@ -131,19 +147,36 @@ function NewSlotCase() {
         const rand = Math.random().toString(36).slice(2, 8);
         const path = `${slot}/scans/${Date.now()}-${rand}-${safeBase}.${ext}`;
 
-        // Resumable TUS upload with live progress
+        // Resumable TUS upload with live progress + global transfer tracking
         setScanProgress(1);
+        setUploadPaused(false);
+        uploadCanceled.current = false;
         const { startResumableUpload } = await import("@/lib/resumable-upload");
-        await new Promise<void>((resolve, reject) => {
-          startResumableUpload({
-            bucket: "doctor-files",
-            path,
-            file: scan,
-            onProgress: (pct) => setScanProgress(Math.max(1, pct)),
-            onSuccess: () => resolve(),
-            onError: (err) => reject(err),
-          }).catch(reject);
+        const { registerUpload } = await import("@/lib/transfer-manager");
+        const tracker = registerUpload(scan.name, {
+          pause: () => { uploadHandle.current?.pause(); setUploadPaused(true); tracker.paused(); },
+          resume: () => { uploadHandle.current?.resume(); setUploadPaused(false); tracker.resumed(); },
+          cancel: () => { uploadCanceled.current = true; uploadHandle.current?.abort(); },
         });
+        try {
+          await new Promise<void>((resolve, reject) => {
+            startResumableUpload({
+              bucket: "doctor-files",
+              path,
+              file: scan,
+              onProgress: (pct, loaded, total) => { setScanProgress(Math.max(1, pct)); tracker.update(pct, loaded, total); },
+              onSuccess: () => resolve(),
+              onError: (err) => reject(err),
+            }).then((h) => { uploadHandle.current = h; }).catch(reject);
+          });
+          tracker.done();
+        } catch (e) {
+          uploadHandle.current = null;
+          if (uploadCanceled.current) { tracker.remove(); throw new Error("تم إلغاء رفع المسح"); }
+          tracker.fail();
+          throw e;
+        }
+        uploadHandle.current = null;
         setScanProgress(100);
 
         const { data: pub } = supabase.storage.from("doctor-files").getPublicUrl(path);
@@ -219,6 +252,7 @@ function NewSlotCase() {
 
       toast.success("تم إنشاء الحالة وإرسال تفاصيلها للمصمم — يمكنك إنشاء حالة أخرى الآن");
       setSavedOnce(true);
+      setSavedSig(currentSig);
     } catch (err: any) {
       toast.error(err.message || "فشل إنشاء الحالة");
     } finally { setSubmitting(false); }
@@ -375,10 +409,31 @@ function NewSlotCase() {
                   <div className="text-[11px] text-muted-foreground flex items-center gap-2">
                     <span>{(scan.size/1024/1024).toFixed(2)} MB</span>
                     {submitting && (
-                      <span className="text-gold font-bold">• {scanProgress}% جارِ الرفع…</span>
+                      <span className="text-gold font-bold">
+                        • {scanProgress}% {uploadPaused ? "متوقف مؤقتاً" : "جارِ الرفع…"}
+                      </span>
                     )}
                   </div>
                 </div>
+                {submitting && uploadHandle.current && (
+                  <div className="flex items-center gap-1 self-center shrink-0">
+                    {uploadPaused ? (
+                      <button type="button" onClick={() => { uploadHandle.current?.resume(); setUploadPaused(false); }}
+                        className="rounded-lg border border-border p-1.5 hover:border-gold" aria-label="استئناف الرفع">
+                        <Play className="size-4" />
+                      </button>
+                    ) : (
+                      <button type="button" onClick={() => { uploadHandle.current?.pause(); setUploadPaused(true); }}
+                        className="rounded-lg border border-border p-1.5 hover:border-gold" aria-label="إيقاف مؤقت">
+                        <Pause className="size-4" />
+                      </button>
+                    )}
+                    <button type="button" onClick={() => { uploadCanceled.current = true; uploadHandle.current?.abort(); }}
+                      className="rounded-lg border border-border p-1.5 hover:bg-destructive hover:text-destructive-foreground" aria-label="إلغاء الرفع">
+                      <X className="size-4" />
+                    </button>
+                  </div>
+                )}
                 {!submitting && (
                   <button type="button" onClick={() => { setScan(null); setScanProgress(0); if (fileInput.current) fileInput.current.value=""; }}
                     className="rounded-lg border border-border p-1.5 hover:bg-destructive hover:text-destructive-foreground self-center" aria-label="إزالة">
@@ -388,9 +443,18 @@ function NewSlotCase() {
               </div>
             )}
 
-            <button type="submit" disabled={submitting}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-xl gradient-brown py-3 font-bold shadow-luxury disabled:opacity-60">
-              {submitting ? <><Loader2 className="size-4 animate-spin" /> جارِ الحفظ...</> : "حفظ الحالة"}
+            <button type="submit" disabled={submitting || alreadySaved}
+              title={alreadySaved ? "تم حفظ هذه الحالة وإرسالها — عدّل البيانات أو ابدأ حالة جديدة" : "حفظ وإرسال الحالة"}
+              className={`w-full inline-flex items-center justify-center gap-2 rounded-xl py-3 font-bold shadow-luxury transition ${
+                alreadySaved
+                  ? "bg-muted text-muted-foreground opacity-50 cursor-not-allowed"
+                  : "gradient-brown hover:brightness-105"
+              } disabled:opacity-60`}>
+              {submitting
+                ? <><Loader2 className="size-4 animate-spin" /> جارِ الحفظ...</>
+                : alreadySaved
+                  ? "تم الحفظ والإرسال ✓"
+                  : "حفظ الحالة"}
             </button>
 
             <button
