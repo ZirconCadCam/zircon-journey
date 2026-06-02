@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import type { RoleKey } from "@/lib/chat";
 import { ROLE_LABEL } from "@/lib/chat";
+import { CaseFileActivityLog } from "@/components/case-file-activity-log";
 
 export interface WorkflowCase {
   id: string;
