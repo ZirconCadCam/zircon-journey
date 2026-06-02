@@ -255,7 +255,7 @@ export function TransferOverlay() {
   return (
     <div className="fixed bottom-4 left-4 z-[60] flex w-[min(92vw,22rem)] flex-col gap-2" dir="rtl">
       {/* completion popups (auto-dismiss handled per item) */}
-      {completed.map((p) => <DownloadDonePopup key={p.id} p={p} />)}
+      {completed.map((p) => <TransferDonePopup key={p.id} p={p} />)}
 
       {/* active transfers */}
       {items.map((t) => (
