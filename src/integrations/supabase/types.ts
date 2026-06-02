@@ -392,6 +392,42 @@ export type Database = {
         }
         Relationships: []
       }
+      file_activity: {
+        Row: {
+          action: string
+          actor: string | null
+          actor_role: string | null
+          case_id: string
+          created_at: string
+          file_name: string
+          id: string
+          size_bytes: number | null
+          status: string
+        }
+        Insert: {
+          action: string
+          actor?: string | null
+          actor_role?: string | null
+          case_id: string
+          created_at?: string
+          file_name: string
+          id?: string
+          size_bytes?: number | null
+          status?: string
+        }
+        Update: {
+          action?: string
+          actor?: string | null
+          actor_role?: string | null
+          case_id?: string
+          created_at?: string
+          file_name?: string
+          id?: string
+          size_bytes?: number | null
+          status?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           body: string | null
@@ -480,6 +516,7 @@ export type Database = {
           fabrication_file_sent: boolean
           final_archived: boolean
           id: string
+          idempotency_key: string | null
           new_delivered_at: string | null
           new_read_at: string | null
           notes: string | null
@@ -545,6 +582,7 @@ export type Database = {
           fabrication_file_sent?: boolean
           final_archived?: boolean
           id?: string
+          idempotency_key?: string | null
           new_delivered_at?: string | null
           new_read_at?: string | null
           notes?: string | null
@@ -610,6 +648,7 @@ export type Database = {
           fabrication_file_sent?: boolean
           final_archived?: boolean
           id?: string
+          idempotency_key?: string | null
           new_delivered_at?: string | null
           new_read_at?: string | null
           notes?: string | null
