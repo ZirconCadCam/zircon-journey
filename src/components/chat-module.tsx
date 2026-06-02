@@ -395,13 +395,24 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
   }
 
   async function startUpload(id: string, path: string, file: File) {
+    const { registerUpload } = await import("@/lib/transfer-manager");
+    const tracker = registerUpload(file.name || "ملف", {
+      pause: () => { try { uploadHandles.current.get(id)?.pause(); } catch {} tracker.paused();
+        setMsgs(prev => prev.map(m => m.id === id ? { ...m, _local: "paused" as any } : m)); },
+      resume: () => { try { uploadHandles.current.get(id)?.resume(); } catch {} tracker.resumed();
+        setMsgs(prev => prev.map(m => m.id === id ? { ...m, _local: "uploading" } : m)); },
+      cancel: () => { try { uploadHandles.current.get(id)?.abort(); } catch {} uploadHandles.current.delete(id);
+        tracker.remove(); setMsgs(prev => prev.map(m => m.id === id ? { ...m, _local: "failed" } : m)); },
+    });
     try {
       const handle = await startResumableUpload({
         path, file,
-        onProgress: (pct) => {
+        onProgress: (pct, loaded, total) => {
+          tracker.update(pct, loaded, total);
           setMsgs(prev => prev.map(m => m.id === id ? { ...m, _progress: pct, _local: "uploading" } : m));
         },
         onError: (err) => {
+          tracker.fail();
           setMsgs(prev => prev.map(m => m.id === id ? { ...m, _local: "failed" } : m));
           toast.error("توقف الرفع — سيتم الاستئناف تلقائياً عند عودة الاتصال");
           console.error("[upload]", err);
@@ -419,15 +430,18 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
             read_by: [me],
           });
           if (error) {
+            tracker.fail();
             setMsgs(prev => prev.map(m => m.id === id ? { ...m, _local: "failed" } : m));
             toast.error(error.message);
           } else {
+            tracker.done();
             setMsgs(prev => prev.map(m => m.id === id ? { ...m, _local: undefined, _progress: 100, _file: undefined } : m));
           }
         },
       });
       uploadHandles.current.set(id, handle);
     } catch (e: any) {
+      tracker.fail();
       setMsgs(prev => prev.map(m => m.id === id ? { ...m, _local: "failed" } : m));
       toast.error(e?.message ?? "فشل بدء الرفع");
     }
