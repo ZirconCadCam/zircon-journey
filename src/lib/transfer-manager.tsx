@@ -112,7 +112,11 @@ export function registerUpload(
     },
     paused() { patch(id, { status: "paused" }); },
     resumed() { patch(id, { status: "active" }); },
-    done() { patch(id, { progress: 100, status: "done" }); setTimeout(() => removeTransfer(id), 1500); },
+    done() {
+      patch(id, { progress: 100, status: "done" });
+      pushPopup({ id: uid(), filename, kind: "upload" });
+      setTimeout(() => removeTransfer(id), 1500);
+    },
     fail() { patch(id, { status: "error" }); setTimeout(() => removeTransfer(id), 3500); },
     remove() { removeTransfer(id); },
   };
