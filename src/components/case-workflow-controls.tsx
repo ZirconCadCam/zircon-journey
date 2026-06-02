@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import type { RoleKey } from "@/lib/chat";
 import { ROLE_LABEL } from "@/lib/chat";
+import { CaseFileActivityLog } from "@/components/case-file-activity-log";
 
 export interface WorkflowCase {
   id: string;
@@ -811,6 +812,7 @@ function DoctorControls({ c, actorName, doctorName }: {
 
   return (
     <div className="rounded-xl border border-border bg-muted/30 p-3 mt-3 space-y-2">
+      {c.id && <CaseFileActivityLog caseId={c.id} />}
       {!hasAction && (
         <div className="text-[11px] font-bold text-muted-foreground flex items-center gap-1.5">
           <AlertCircle className="size-3.5 text-gold" /> {stageHint}

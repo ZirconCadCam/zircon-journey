@@ -194,6 +194,13 @@ function NewSlotCase() {
         });
       }
 
+      // Stable idempotency key for this exact payload — the DB unique index
+      // rejects a second insert of the same data even if the UI re-submits.
+      let idemHash = 0;
+      const idemSrc = `${slot}|${currentSig}`;
+      for (let i = 0; i < idemSrc.length; i++) idemHash = (idemHash * 31 + idemSrc.charCodeAt(i)) | 0;
+      const idempotency_key = `case:${slot}:${(idemHash >>> 0).toString(36)}`;
+
       const { data: inserted, error } = await supabase.from("slot_cases").insert({
         doctor_slot: Number(slot),
         patient_name: form.patient_name.trim(),
@@ -206,11 +213,35 @@ function NewSlotCase() {
         case_type: form.case_type || null,
         notes: form.notes.trim() || null,
         scan_path, scan_name, scan_size, scan_mime,
+        idempotency_key,
         // After saving and notifying the designer, the case is automatically
         // shown as "قيد التصميم" (designer stage) on the doctor's portal.
         status: "designer",
       }).select("id, case_code").single();
-      if (error) throw error;
+      if (error) {
+        // 23505 = unique violation → this exact case was already saved/sent.
+        if ((error as any).code === "23505") {
+          setSavedOnce(true);
+          setSavedSig(currentSig);
+          toast.info("تم حفظ هذه الحالة مسبقاً — لن تُرسل نسخة مكررة");
+          setSubmitting(false);
+          return;
+        }
+        throw error;
+      }
+
+      // Record the scan upload in the per-case file activity log.
+      if (inserted?.id && scan_name) {
+        try {
+          const { logFileActivity } = await import("@/lib/file-activity");
+          await logFileActivity({
+            caseId: inserted.id, action: "upload", fileName: scan_name,
+            status: "done", actor: "الطبيب", actorRole: "doctor", sizeBytes: scan_size ?? null,
+          });
+        } catch { /* best-effort */ }
+      }
+
+
 
       // Auto-handoff: send the full case payload to the designer via chat.
       try {
