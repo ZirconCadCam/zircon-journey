@@ -196,7 +196,7 @@ export async function transferDownload(opts: {
     }
 
     const blobUrl = URL.createObjectURL(blob);
-    pushPopup({ id: uid(), filename: opts.filename, blobUrl, savedPath, fallback });
+    pushPopup({ id: uid(), filename: opts.filename, kind: "download", blobUrl, savedPath, fallback });
 
     setTimeout(() => removeTransfer(id), 1200);
     return { ok: true, canceled: false, savedPath, fallback };
