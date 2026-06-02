@@ -35,6 +35,7 @@ export interface Transfer {
 export interface CompletedPopup {
   id: string;
   filename: string;
+  kind?: TransferKind;
   blobUrl?: string;
   savedPath?: string;
   fallback?: boolean;
