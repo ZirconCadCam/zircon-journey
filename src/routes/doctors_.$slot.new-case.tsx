@@ -212,6 +212,19 @@ function NewSlotCase() {
       }).select("id, case_code").single();
       if (error) throw error;
 
+      // Record the scan upload in the per-case file activity log.
+      if (inserted?.id && scan_name) {
+        try {
+          const { logFileActivity } = await import("@/lib/file-activity");
+          await logFileActivity({
+            caseId: inserted.id, action: "upload", fileName: scan_name,
+            status: "done", actor: "الطبيب", actorRole: "doctor", sizeBytes: scan_size ?? null,
+          });
+        } catch { /* best-effort */ }
+      }
+
+
+
       // Auto-handoff: send the full case payload to the designer via chat.
       try {
         const { notifyRoleAboutCase, getStage, nextStage, localNotify } = await import("@/lib/case-stages");
