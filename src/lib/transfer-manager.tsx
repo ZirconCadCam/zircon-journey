@@ -285,7 +285,8 @@ export function TransferOverlay() {
   );
 }
 
-function DownloadDonePopup({ p }: { p: CompletedPopup }) {
+function TransferDonePopup({ p }: { p: CompletedPopup }) {
+  const isUpload = p.kind === "upload";
   // auto-dismiss after 5 seconds of no action
   useEffect(() => {
     const t = setTimeout(() => dismissPopup(p.id), 5000);
@@ -294,19 +295,19 @@ function DownloadDonePopup({ p }: { p: CompletedPopup }) {
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-emerald-500/40 bg-card/95 backdrop-blur p-3 shadow-luxury animate-in slide-in-from-bottom-2">
       <div className="size-9 shrink-0 grid place-items-center rounded-xl bg-emerald-500/15 text-emerald-600">
-        <CheckCircle2 className="size-5" />
+        {isUpload ? <UploadIcon className="size-5" /> : <CheckCircle2 className="size-5" />}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="text-[11px] font-bold text-emerald-600">اكتمل التنزيل</div>
+        <div className="text-[11px] font-bold text-emerald-600">{isUpload ? "اكتمل الرفع" : "اكتمل التنزيل"}</div>
         <div className="truncate text-xs font-bold">{p.filename}</div>
         {p.savedPath && !p.fallback && <div className="truncate text-[10px] text-muted-foreground">{p.savedPath}</div>}
       </div>
       <div className="flex items-center gap-1 shrink-0">
-        {p.blobUrl && (
+        {!isUpload && p.blobUrl && (
           <a href={p.blobUrl} target="_blank" rel="noreferrer" onClick={() => dismissPopup(p.id)}
             className="rounded-lg border border-gold p-1.5 hover:bg-gold/10" aria-label="فتح"><ExternalLink className="size-3.5" /></a>
         )}
-        {p.blobUrl && (
+        {!isUpload && p.blobUrl && (
           <a href={p.blobUrl} download={p.filename} onClick={() => dismissPopup(p.id)}
             className="rounded-lg gradient-gold text-gold-foreground p-1.5" aria-label="حفظ"><Download className="size-3.5" /></a>
         )}
