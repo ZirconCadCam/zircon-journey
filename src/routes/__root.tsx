@@ -8,7 +8,7 @@ import {
 } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
 import { InstallPrompt } from "@/components/install-prompt";
-import { TransferOverlay } from "@/lib/transfer-manager";
+import { TransferOverlay, BackgroundKeepAlive } from "@/lib/transfer-manager";
 import appCss from "../styles.css?url";
 
 function NotFoundComponent() {
@@ -91,6 +91,7 @@ function RootComponent() {
       <Toaster position="top-center" richColors />
       <InstallPrompt />
       <TransferOverlay />
+      <BackgroundKeepAlive />
     </QueryClientProvider>
   );
 }
