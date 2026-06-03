@@ -336,44 +336,159 @@ export function DesignerDesignFiles() {
 /* ================================================================== */
 /* 3) Reports                                                          */
 /* ================================================================== */
-export function DesignerReports() {
-  const { cases, doctorMap, loading } = useDesignerData();
+function esc(s: string) {
+  return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] || c));
+}
 
-  const completed = useMemo(
+function exportTablePDF(title: string, rows: Case[], doctorMap: Map<number, Doctor>, rangeLabel: string) {
+  const totalTeeth = rows.reduce((s, c) => s + teethCount(c), 0);
+  const body = rows.map(c => `
+    <tr>
+      <td>${esc(c.patient_name)}</td>
+      <td>${esc(doctorMap.get(c.doctor_slot)?.name ?? `Slot ${c.doctor_slot}`)}</td>
+      <td>${esc(c.case_type || "—")}</td>
+      <td>${teethCount(c) || "—"}</td>
+      <td>${new Date(c.created_at).toLocaleDateString("ar-EG")}</td>
+    </tr>`).join("");
+
+  const html = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
+  <title>${esc(title)}</title>
+  <style>
+    body{font-family:'Segoe UI',Tahoma,sans-serif;padding:24px;color:#1a1a1a}
+    h1{font-size:18px;margin:0 0 4px}
+    .sub{color:#666;font-size:12px;margin-bottom:16px}
+    table{width:100%;border-collapse:collapse;font-size:12px}
+    th,td{border:1px solid #ccc;padding:6px 8px;text-align:right}
+    thead th{background:#c9a84c;color:#1a1a1a}
+    tfoot td{font-weight:bold;background:#f3f0e8}
+  </style></head><body>
+  <h1>${esc(title)}</h1>
+  <div class="sub">${esc(rangeLabel)} — تاريخ الطباعة: ${new Date().toLocaleDateString("ar-EG")}</div>
+  <table>
+    <thead><tr>
+      <th>اسم المريض</th><th>الدكتور</th><th>نوع المعالجة</th><th>عدد الأسنان</th><th>التاريخ</th>
+    </tr></thead>
+    <tbody>${body || `<tr><td colspan="5" style="text-align:center">لا توجد حالات</td></tr>`}</tbody>
+    <tfoot><tr>
+      <td colspan="3">الإجماليات</td>
+      <td>إجمالي الأسنان: ${totalTeeth}</td>
+      <td>إجمالي المرضى: ${rows.length}</td>
+    </tr></tfoot>
+  </table>
+  <script>window.onload=function(){window.print();}</script>
+  </body></html>`;
+
+  const w = window.open("", "_blank");
+  if (!w) { toast.error("اسمح بالنوافذ المنبثقة لتصدير PDF"); return; }
+  w.document.write(html);
+  w.document.close();
+}
+
+export function DesignerReports() {
+  const { doctors, cases, doctorMap, loading } = useDesignerData();
+  const [selectedSlot, setSelectedSlot] = useState<number | "">("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+
+  const base = useMemo(
     () => cases.filter(isCompleted).sort(
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
     ),
     [cases],
   );
 
-  const byBranch = useMemo(() => {
-    const m: Record<"sanaa" | "ibb", Case[]> = { sanaa: [], ibb: [] };
-    for (const c of completed) {
-      const b = doctorMap.get(c.doctor_slot)?.branch;
-      if (b === "sanaa") m.sanaa.push(c);
-      else if (b === "ibb") m.ibb.push(c);
-    }
-    return m;
-  }, [completed, doctorMap]);
+  const dateFiltered = useMemo(() => {
+    const fromT = from ? new Date(from + "T00:00:00").getTime() : -Infinity;
+    const toT = to ? new Date(to + "T23:59:59").getTime() : Infinity;
+    return base.filter(c => {
+      const t = new Date(c.created_at).getTime();
+      return t >= fromT && t <= toT;
+    });
+  }, [base, from, to]);
+
+  const doctorRows = useMemo(
+    () => selectedSlot === "" ? [] : dateFiltered.filter(c => c.doctor_slot === selectedSlot),
+    [dateFiltered, selectedSlot],
+  );
+
+  const rangeLabel = (from || to)
+    ? `النطاق: ${from ? new Date(from).toLocaleDateString("ar-EG") : "البداية"} ← ${to ? new Date(to).toLocaleDateString("ar-EG") : "الآن"}`
+    : "النطاق: كل التواريخ";
 
   if (loading) return <LoadingBox />;
 
   return (
-    <section className="space-y-6">
-      <ReportTable title="كشف فرع صنعاء" rows={byBranch.sanaa} doctorMap={doctorMap} />
-      <ReportTable title="كشف فرع إب" rows={byBranch.ibb} doctorMap={doctorMap} />
+    <section className="space-y-5">
+      {/* Filters */}
+      <div className="rounded-2xl bg-card border border-border p-4 shadow-luxury flex flex-wrap items-end gap-4">
+        <div className="flex items-center gap-2 text-sm font-bold text-muted-foreground">
+          <Filter className="size-4 text-gold" /> التصفية
+        </div>
+        <label className="text-xs font-bold flex flex-col gap-1">
+          من تاريخ
+          <input type="date" value={from} onChange={e => setFrom(e.target.value)}
+            className="rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-gold" />
+        </label>
+        <label className="text-xs font-bold flex flex-col gap-1">
+          إلى تاريخ
+          <input type="date" value={to} onChange={e => setTo(e.target.value)}
+            className="rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-gold" />
+        </label>
+        <label className="text-xs font-bold flex flex-col gap-1">
+          الدكتور (للكشف الأول)
+          <select value={selectedSlot} onChange={e => setSelectedSlot(e.target.value === "" ? "" : Number(e.target.value))}
+            className="rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-gold min-w-[180px]">
+            <option value="">— اختر دكتور —</option>
+            {doctors.map(d => <option key={d.slot} value={d.slot}>{d.name} ({branchLabel(d.branch)})</option>)}
+          </select>
+        </label>
+        {(from || to) && (
+          <button onClick={() => { setFrom(""); setTo(""); }}
+            className="rounded-lg border border-border px-3 py-2 text-xs font-bold hover:bg-muted/40 transition">
+            مسح التواريخ
+          </button>
+        )}
+      </div>
+
+      {/* Report 1: by selected doctor */}
+      <ReportTable
+        title={`الكشف الأول — حالات مكتملة (${selectedSlot === "" ? "اختر دكتوراً" : doctorMap.get(selectedSlot as number)?.name ?? ""})`}
+        rows={doctorRows}
+        doctorMap={doctorMap}
+        rangeLabel={rangeLabel}
+        emptyHint={selectedSlot === "" ? "اختر دكتوراً من قائمة التصفية لعرض حالاته" : "لا توجد حالات لهذا الدكتور ضمن النطاق"}
+      />
+
+      {/* Report 2: general */}
+      <ReportTable
+        title="الكشف العام — حالات مكتملة (جميع الدكاترة)"
+        rows={dateFiltered}
+        doctorMap={doctorMap}
+        rangeLabel={rangeLabel}
+      />
     </section>
   );
 }
 
-function ReportTable({ title, rows, doctorMap }: { title: string; rows: Case[]; doctorMap: Map<number, Doctor> }) {
+function ReportTable({
+  title, rows, doctorMap, rangeLabel, emptyHint,
+}: {
+  title: string; rows: Case[]; doctorMap: Map<number, Doctor>; rangeLabel: string; emptyHint?: string;
+}) {
   const totalTeeth = rows.reduce((s, c) => s + teethCount(c), 0);
   const totalPatients = rows.length;
   return (
     <div className="rounded-2xl bg-card border border-border overflow-hidden shadow-luxury">
-      <div className="p-4 border-b border-border font-bold text-sm flex items-center gap-2">
+      <div className="p-4 border-b border-border font-bold text-sm flex items-center gap-2 flex-wrap">
         <FileText className="size-4 text-gold" /> {title}
-        <span className="text-[11px] rounded-full bg-muted px-2 py-0.5 font-bold mr-auto">{totalPatients} حالة</span>
+        <span className="text-[11px] rounded-full bg-muted px-2 py-0.5 font-bold">{totalPatients} حالة</span>
+        <button
+          onClick={() => exportTablePDF(title, rows, doctorMap, rangeLabel)}
+          disabled={rows.length === 0}
+          className="mr-auto inline-flex items-center gap-1.5 rounded-lg border border-gold/60 bg-gold/10 px-3 py-1.5 text-xs font-bold hover:gradient-gold hover:text-gold-foreground transition disabled:opacity-50"
+        >
+          <FileDown className="size-3.5" /> تصدير PDF
+        </button>
       </div>
       <Table>
         <TableHeader>
@@ -388,7 +503,7 @@ function ReportTable({ title, rows, doctorMap }: { title: string; rows: Case[]; 
         <TableBody>
           {rows.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={5} className="text-center text-muted-foreground py-8">لا توجد حالات</TableCell>
+              <TableCell colSpan={5} className="text-center text-muted-foreground py-8">{emptyHint ?? "لا توجد حالات"}</TableCell>
             </TableRow>
           ) : rows.map(c => (
             <TableRow key={c.id}>
