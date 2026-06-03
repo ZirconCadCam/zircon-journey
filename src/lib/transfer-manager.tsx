@@ -316,3 +316,56 @@ function TransferDonePopup({ p }: { p: CompletedPopup }) {
     </div>
   );
 }
+
+/* ------------------- background keep-alive for transfers ------------------ */
+/** True while any upload/download is still active or paused. */
+export function hasActiveTransfers(): boolean {
+  return transfers.some((t) => t.status === "active" || t.status === "paused");
+}
+
+/**
+ * Keeps the page working in the background while files are still transferring:
+ *  - Warns the user before closing/leaving if a transfer is in progress.
+ *  - Acquires a Screen Wake Lock (best-effort) to reduce throttling/sleep so
+ *    in-flight uploads/downloads keep running, and re-acquires it when the
+ *    tab returns to the foreground.
+ * Interrupted resumable (TUS) uploads still auto-resume on next app load.
+ */
+export function BackgroundKeepAlive() {
+  const items = useTransfers();
+  const active = items.some((t) => t.status === "active" || t.status === "paused");
+
+  useEffect(() => {
+    if (!active) return;
+
+    const beforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+      return "";
+    };
+    window.addEventListener("beforeunload", beforeUnload);
+
+    let lock: any = null;
+    let released = false;
+    const acquire = async () => {
+      try {
+        const nav = navigator as any;
+        if (nav.wakeLock?.request && document.visibilityState === "visible") {
+          lock = await nav.wakeLock.request("screen");
+        }
+      } catch { /* wake lock unsupported or denied */ }
+    };
+    const onVisible = () => { if (document.visibilityState === "visible" && !released) acquire(); };
+    acquire();
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      released = true;
+      window.removeEventListener("beforeunload", beforeUnload);
+      document.removeEventListener("visibilitychange", onVisible);
+      try { lock?.release?.(); } catch { /* ignore */ }
+    };
+  }, [active]);
+
+  return null;
+}
