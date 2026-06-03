@@ -91,6 +91,7 @@ function RootComponent() {
       <Toaster position="top-center" richColors />
       <InstallPrompt />
       <TransferOverlay />
+      <BackgroundKeepAlive />
     </QueryClientProvider>
   );
 }
