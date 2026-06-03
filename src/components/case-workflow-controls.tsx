@@ -785,6 +785,9 @@ function DoctorControls({ c, actorName, doctorName }: {
     const { error } = await supabase.from("slot_cases").update(patch).eq("id", c.id);
     if (error) { setBusy(false); toast.error(error.message); return; }
     if (next) {
+      // Auto-archive this case's own conversations (title prefixed with [case_code]).
+      await supabase.from("chat_conversations").update({ archived: true })
+        .eq("doctor_slot", c.doctor_slot).like("title", `[${c.case_code}]%`);
       await appendAudit(c, { actor: actorName || "الطبيب", action: "تأكيد تركيب الأسنان الدائمة وأرشفة الحالة" });
       const msg = `🦷✅ تم تركيب الأسنان الدائمة للمريض — الحالة ${c.case_code} (${c.patient_name}). الحالة مؤرشفة نهائياً.`;
       for (const role of ["designer", "technician", "secretary_sanaa", "secretary_ibb"] as RoleKey[]) {
