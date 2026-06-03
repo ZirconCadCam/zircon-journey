@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   Loader2, User, Stethoscope, Calendar, Hash, ClipboardList, Archive,
-  RotateCcw, Download, Search, FileArchive, FileText,
+  RotateCcw, Download, Search, FileArchive, FileText, Filter, FileDown,
 } from "lucide-react";
 import {
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableFooter,
