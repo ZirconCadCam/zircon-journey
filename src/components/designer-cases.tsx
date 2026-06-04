@@ -485,42 +485,47 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
   }
 
 
-  /** Download the doctor-uploaded scan as a ZIP into the device file manager.
+  /** Download the doctor-uploaded scan as a ZIP into the device file manager,
+   * showing the floating progress "tube" while streaming + packaging.
    * Filename: "<patient> - د/<doctor> - YYYY-MM-DD.zip" */
   async function downloadScanZip(c: Case) {
     if (!c.scan_path) { toast.error("لا يوجد ملف مرفق"); return; }
     setBusyId(c.id);
+    const doctor = doctorMap.get(c.doctor_slot);
+    const date = new Date(c.created_at).toISOString().slice(0, 10);
+    const safe = (s: string) => s.replace(/[\\/:*?"<>|]+/g, "_").trim();
+    const docName = safe((doctor?.name ?? `Slot ${c.doctor_slot}`).replace(/^د\.?\s*/, ""));
+    const baseName = `${safe(c.patient_name)} - د.${docName} - ${date}`;
+    const fileName = `${baseName}.zip`;
+    const { registerDownloadTask, fetchBlobWithProgress } = await import("@/lib/transfer-manager");
+    const task = registerDownloadTask(fileName);
     try {
-      const doctor = doctorMap.get(c.doctor_slot);
-      const date = new Date(c.created_at).toISOString().slice(0, 10);
-      const safe = (s: string) => s.replace(/[\\/:*?"<>|]+/g, "_").trim();
-      const docName = safe((doctor?.name ?? `Slot ${c.doctor_slot}`).replace(/^د\.?\s*/, ""));
-      const baseName = `${safe(c.patient_name)} - د.${docName} - ${date}`;
-      const res = await fetch(c.scan_path);
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      const blob = await res.blob();
-      // If the source is already a zip, save as-is; otherwise wrap into a zip-named container.
+      // Streaming counts for 90% of the bar; packaging/saving the rest.
+      const blob = await fetchBlobWithProgress(c.scan_path, (loaded, total) => {
+        if (total > 0) task.update((loaded / total) * 90, loaded, total);
+      });
       const isZip = (c.scan_mime || "").includes("zip") || /\.zip$/i.test(c.scan_name || "");
-      if (isZip) {
-        const r = await saveToCenter(blob, `${baseName}.zip`, c.case_code);
-        toast.success(r.fallback ? "تم تنزيل الملف" : `تم الحفظ في ${r.path}`);
-      } else {
-        // Use JSZip to bundle the single scan file into a real .zip
+      let outBlob = blob;
+      if (!isZip) {
         const { default: JSZip } = await import("jszip");
         const zip = new JSZip();
         zip.file(c.scan_name || "scan.bin", blob);
-        const zipBlob = await zip.generateAsync({ type: "blob" });
-        const r = await saveToCenter(zipBlob, `${baseName}.zip`, c.case_code);
-        toast.success(r.fallback ? "تم تنزيل الملف" : `تم الحفظ في ${r.path}`);
+        outBlob = await zip.generateAsync({ type: "blob" });
       }
+      task.update(96);
+      const r = await saveToCenter(outBlob, fileName, c.case_code);
+      const blobUrl = URL.createObjectURL(outBlob);
+      task.done({ blobUrl, savedPath: r.path, fallback: r.fallback });
+      toast.success(r.fallback ? "تم تنزيل الملف" : `تم الحفظ في ${r.path}`);
     } catch (e: any) {
       console.error(e);
+      task.fail();
       toast.error(e.message || "تعذر تنزيل الملف");
     } finally { setBusyId(null); }
   }
 
   /** Technician: download the latest .rar from the designer for this case
-   * into the device file manager. Falls back to a normal download. */
+   * into the device file manager, with the floating progress "tube". */
   async function downloadDesignRar(c: Case) {
     setBusyId(c.id);
     try {
@@ -533,10 +538,8 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
       // Prefer the revision rar if present, otherwise locate the latest .rar
       // attachment sent by the designer in this case's chat thread.
       let url: string | null = null;
-      let name: string | null = null;
       if ((c as any).revision_design_file_path) {
         url = (c as any).revision_design_file_path as string;
-        name = (c as any).revision_design_file_name as string | null;
       } else {
         const { data: convs } = await supabase.from("chat_conversations")
           .select("id, participants").eq("doctor_slot", c.doctor_slot);
@@ -555,18 +558,23 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
           const hit = ((msgs ?? []) as any[]).find(m =>
             /\.rar$/i.test(m.attachment_name || "") &&
             (m.content || "").includes(c.case_code));
-          if (hit) { url = hit.attachment_path; name = hit.attachment_name; }
+          if (hit) { url = hit.attachment_path; }
         }
       }
 
       if (!url) { toast.error("لم يصل ملف التصميم (.rar) بعد"); return; }
-      const r = await downloadUrlToCenter(url, `${baseName}.rar`, c.case_code);
-      toast.success(r.fallback ? "تم تنزيل الملف" : `تم الحفظ في ${r.path}`);
+      const resolved = /^https?:\/\//i.test(url) ? url : (await getSignedUrl(url, 3600)) ?? url;
+      const { transferDownload } = await import("@/lib/transfer-manager");
+      await transferDownload({
+        url: resolved, filename: `${baseName}.rar`,
+        saveToCenter: fileManagerSupported(), subfolder: c.case_code,
+      });
     } catch (e: any) {
       console.error(e);
       toast.error(e.message || "تعذر تنزيل ملف التصميم");
     } finally { setBusyId(null); }
   }
+
 
   // delete removed from designer page per requirements
 
