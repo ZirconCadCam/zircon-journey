@@ -220,6 +220,43 @@ function triggerBrowserDownload(blob: Blob, filename: string) {
   setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
 
+/* ----------------- manual transfer tasks (custom flows) ---------------- */
+/** Stream a remote URL into a Blob while reporting progress. */
+export async function fetchBlobWithProgress(
+  url: string,
+  onProgress?: (loaded: number, total: number) => void,
+): Promise<Blob> {
+  return streamToBlob(url, { paused: false, canceled: false }, (l, t) => onProgress?.(l, t));
+}
+
+/**
+ * Register a manually-driven download task so custom flows (e.g. fetch → zip →
+ * save) still show the floating progress "tube". Drive it with update()/done().
+ */
+export function registerDownloadTask(
+  filename: string,
+  controls?: { pause?: () => void; resume?: () => void; cancel?: () => void },
+) {
+  const id = uid();
+  upsert({
+    id, kind: "download", filename, progress: 0, loaded: 0, total: 0, status: "active",
+    pause: controls?.pause, resume: controls?.resume, cancel: controls?.cancel,
+  });
+  return {
+    id,
+    update(pct: number, loaded = 0, total = 0) {
+      patch(id, { progress: Math.max(0, Math.min(100, Math.round(pct))), loaded, total, status: "active" });
+    },
+    done(info?: { blobUrl?: string; savedPath?: string; fallback?: boolean }) {
+      patch(id, { progress: 100, status: "done" });
+      pushPopup({ id: uid(), filename, kind: "download", blobUrl: info?.blobUrl, savedPath: info?.savedPath, fallback: info?.fallback });
+      setTimeout(() => removeTransfer(id), 1200);
+    },
+    fail() { patch(id, { status: "error" }); setTimeout(() => removeTransfer(id), 3500); },
+    remove() { removeTransfer(id); },
+  };
+}
+
 /* ------------------------------ overlay UI ---------------------------- */
 function StatusLabel(s: TransferStatus): string {
   switch (s) {
