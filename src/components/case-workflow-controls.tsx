@@ -109,12 +109,42 @@ async function ensureConv(c: WorkflowCase, sender: RoleKey, target: RoleKey, doc
 
 async function uploadAttachment(file: File, c: WorkflowCase, phase: string): Promise<{ url: string; path: string } | null> {
   const path = `${c.doctor_slot}/${phase}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-  const { error } = await supabase.storage.from("chat-attachments").upload(path, file, { upsert: false });
-  if (error) { toast.error(error.message); return null; }
-  const { data: signed } = await supabase.storage.from("chat-attachments")
-    .createSignedUrl(path, 60 * 60 * 24 * 365);
-  return { url: signed?.signedUrl ?? path, path };
+  const { registerUpload } = await import("@/lib/transfer-manager");
+  const { startResumableUpload } = await import("@/lib/resumable-upload");
+
+  return new Promise(async (resolve) => {
+    let handle: { abort: () => void; pause: () => void; resume: () => void } | null = null;
+    let settled = false;
+    const task = registerUpload(file.name, {
+      pause: () => { handle?.pause(); task.paused(); },
+      resume: () => { handle?.resume(); task.resumed(); },
+      cancel: () => { handle?.abort(); task.remove(); if (!settled) { settled = true; resolve(null); } },
+    });
+    try {
+      handle = await startResumableUpload({
+        bucket: "chat-attachments",
+        path,
+        file,
+        fileName: file.name,
+        onProgress: (pct, loaded, total) => task.update(pct, loaded, total),
+        onError: (err) => {
+          task.fail();
+          if (!settled) { settled = true; toast.error(err.message || "فشل رفع الملف"); resolve(null); }
+        },
+        onSuccess: async () => {
+          task.done();
+          const { data: signed } = await supabase.storage.from("chat-attachments")
+            .createSignedUrl(path, 60 * 60 * 24 * 365);
+          if (!settled) { settled = true; resolve({ url: signed?.signedUrl ?? path, path }); }
+        },
+      });
+    } catch (e: any) {
+      task.fail();
+      if (!settled) { settled = true; toast.error(e.message || "فشل رفع الملف"); resolve(null); }
+    }
+  });
 }
+
 
 // ============== DESIGNER ==============
 function DesignerControls({ c, actorName, doctorName, target, blockedByPending }: {
