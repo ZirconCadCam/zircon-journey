@@ -771,6 +771,13 @@ function DoctorControls({ c, actorName, doctorName }: {
       await appendAudit(c, { actor: actorName || "الطبيب", action: "طلب تعديل التصميم", notes: trimmed });
       const designerBody = `🔁 طلب تعديل تصميم — الحالة ${c.case_code} (${c.patient_name})\nملاحظات:\n${trimmed}`;
       const techBody = `🔁 طلب تعديل من الطبيب — الحالة ${c.case_code} (${c.patient_name}). بانتظار وصول ملف rar المعدل من المصمم.\nملاحظات الطبيب:\n${trimmed}`;
+      // Upload each attachment ONCE (with progress tube), then reference the
+      // same stored path in both the designer and technician conversations.
+      const uploaded: { name: string; path: string; mime: string | null; size: number }[] = [];
+      for (const f of revFiles) {
+        const up = await uploadAttachment(f, c, "revision-notes");
+        if (up) uploaded.push({ name: f.name, path: up.path, mime: f.type || null, size: f.size });
+      }
       for (const role of ["designer", "technician"] as RoleKey[]) {
         const conv = await ensureConv(c, "doctor", role, doctorName);
         if (!conv) continue;
@@ -779,17 +786,15 @@ function DoctorControls({ c, actorName, doctorName }: {
           content: role === "designer" ? designerBody : techBody,
           message_type: "text",
         });
-        for (const f of revFiles) {
-          const up = await uploadAttachment(f, c, "revision-notes");
-          if (!up) continue;
+        for (const u of uploaded) {
           await supabase.from("chat_messages").insert({
             conversation_id: conv, sender: "doctor", sender_name: actorName,
-            content: `📎 مرفق طلب التعديل: ${f.name}`,
+            content: `📎 مرفق طلب التعديل: ${u.name}`,
             message_type: "file",
-            attachment_path: up.path,
-            attachment_name: f.name,
-            attachment_mime: f.type || null,
-            attachment_size: f.size,
+            attachment_path: u.path,
+            attachment_name: u.name,
+            attachment_mime: u.mime,
+            attachment_size: u.size,
           });
         }
       }
@@ -800,6 +805,7 @@ function DoctorControls({ c, actorName, doctorName }: {
     } else toast.error(error.message);
     setBusy(false);
   }
+
 
   async function toggleInstalled() {
     if (busy) return;
