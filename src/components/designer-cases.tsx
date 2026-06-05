@@ -414,42 +414,19 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
   }
 
   async function shareExternal(c: Case) {
-    setBusyId(c.id);
-    try {
-      const doctor = doctorMap.get(c.doctor_slot);
-      const summary = [
-        `📋 حالة ${c.case_code}`,
-        `الطبيب: ${doctor?.name ?? ""}`,
-        `المريض: ${c.patient_name}`,
-        c.tooth_number ? `السن: ${c.tooth_number}` : null,
-        c.shade ? `اللون: ${c.shade}` : null,
-        c.case_type ? `النوع: ${c.case_type}` : null,
-        c.notes ? `ملاحظات: ${c.notes}` : null,
-        c.scan_path ? `📎 المسح: ${c.scan_path}` : null,
-      ].filter(Boolean).join("\n");
-
-      // Try sharing the actual scan file when possible
-      if (c.scan_path) {
-        try {
-          const res = await fetch(c.scan_path);
-          const blob = await res.blob();
-          const file = new File([blob], c.scan_name || `${c.case_code}.bin`, { type: c.scan_mime || blob.type || "application/octet-stream" });
-          if ((navigator as any).canShare?.({ files: [file] })) {
-            await navigator.share({ title: `حالة ${c.case_code}`, text: summary, files: [file] } as any);
-            return;
-          }
-        } catch { /* fall through */ }
-      }
-
-      if (navigator.share) {
-        await navigator.share({ title: `حالة ${c.case_code}`, text: summary });
-      } else {
-        await navigator.clipboard.writeText(summary);
-        toast.success("تم نسخ تفاصيل الحالة (مشاركة المتصفح غير مدعومة)");
-      }
-    } catch (e: any) {
-      if (e?.name !== "AbortError") toast.error(e.message || "تعذر المشاركة");
-    } finally { setBusyId(null); }
+    const doctor = doctorMap.get(c.doctor_slot);
+    const summary = [
+      `📋 حالة ${c.case_code}`,
+      `الطبيب: ${doctor?.name ?? ""}`,
+      `المريض: ${c.patient_name}`,
+      c.tooth_number ? `السن: ${c.tooth_number}` : null,
+      c.shade ? `اللون: ${c.shade}` : null,
+      c.case_type ? `النوع: ${c.case_type}` : null,
+      c.notes ? `ملاحظات: ${c.notes}` : null,
+    ].filter(Boolean).join("\n");
+    // Share the case summary text; falls back to clipboard automatically.
+    const { shareOrCopy } = await import("@/lib/share");
+    await shareOrCopy({ title: `حالة ${c.case_code}`, text: summary, url: c.scan_path || undefined });
   }
 
   async function archiveCase(c: Case) {
@@ -515,7 +492,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
       task.update(96);
       const r = await saveToCenter(outBlob, fileName, c.case_code);
       const blobUrl = URL.createObjectURL(outBlob);
-      task.done({ blobUrl, savedPath: r.path, fallback: r.fallback });
+      task.done({ blobUrl, savedPath: r.path, fallback: r.fallback, mime: "application/zip" });
       toast.success(r.fallback ? "تم تنزيل الملف" : `تم الحفظ في ${r.path}`);
     } catch (e: any) {
       console.error(e);

@@ -382,9 +382,8 @@ function FilesPanel({ doctor, actor }: { doctor: Doctor; actor: string }) {
   }
   async function shareExternal(f: DocFile) {
     if (!f.public_url) return;
-    if (navigator.share) {
-      try { await navigator.share({ title: f.file_name, url: f.public_url }); } catch {}
-    } else copyLink(f);
+    const { shareOrCopy } = await import("@/lib/share");
+    await shareOrCopy({ title: f.file_name, url: f.public_url });
   }
 
   /**

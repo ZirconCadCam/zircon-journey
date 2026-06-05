@@ -12,9 +12,10 @@
  *   const t = registerUpload(filename, { pause, resume, cancel });
  *   t.update(pct, loaded, total);  t.done();  // or t.fail() / t.cancelDone();
  */
-import { useEffect, useSyncExternalStore } from "react";
-import { Pause, Play, X, Download, ExternalLink, FileDown, CheckCircle2, Upload as UploadIcon } from "lucide-react";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { Pause, Play, X, Download, ExternalLink, FileDown, CheckCircle2, Upload as UploadIcon, Eye } from "lucide-react";
 import { saveToCenter, fileManagerSupported } from "@/lib/file-manager";
+import { InAppFileViewer } from "@/components/in-app-file-viewer";
 
 export type TransferKind = "upload" | "download";
 export type TransferStatus = "active" | "paused" | "done" | "error" | "canceled";
@@ -39,6 +40,9 @@ export interface CompletedPopup {
   blobUrl?: string;
   savedPath?: string;
   fallback?: boolean;
+  mime?: string | null;
+  /** Original remote URL — used by the in-app viewer when no blobUrl exists. */
+  sourceUrl?: string;
 }
 
 /* ----------------------------- tiny store ----------------------------- */
@@ -196,7 +200,7 @@ export async function transferDownload(opts: {
     }
 
     const blobUrl = URL.createObjectURL(blob);
-    pushPopup({ id: uid(), filename: opts.filename, kind: "download", blobUrl, savedPath, fallback });
+    pushPopup({ id: uid(), filename: opts.filename, kind: "download", blobUrl, savedPath, fallback, mime: opts.mime, sourceUrl: opts.url });
 
     setTimeout(() => removeTransfer(id), 1200);
     return { ok: true, canceled: false, savedPath, fallback };
@@ -247,9 +251,9 @@ export function registerDownloadTask(
     update(pct: number, loaded = 0, total = 0) {
       patch(id, { progress: Math.max(0, Math.min(100, Math.round(pct))), loaded, total, status: "active" });
     },
-    done(info?: { blobUrl?: string; savedPath?: string; fallback?: boolean }) {
+    done(info?: { blobUrl?: string; savedPath?: string; fallback?: boolean; mime?: string | null; sourceUrl?: string }) {
       patch(id, { progress: 100, status: "done" });
-      pushPopup({ id: uid(), filename, kind: "download", blobUrl: info?.blobUrl, savedPath: info?.savedPath, fallback: info?.fallback });
+      pushPopup({ id: uid(), filename, kind: "download", blobUrl: info?.blobUrl, savedPath: info?.savedPath, fallback: info?.fallback, mime: info?.mime, sourceUrl: info?.sourceUrl });
       setTimeout(() => removeTransfer(id), 1200);
     },
     fail() { patch(id, { status: "error" }); setTimeout(() => removeTransfer(id), 3500); },
@@ -324,32 +328,49 @@ export function TransferOverlay() {
 
 function TransferDonePopup({ p }: { p: CompletedPopup }) {
   const isUpload = p.kind === "upload";
-  // auto-dismiss after 5 seconds of no action
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const viewUrl = p.sourceUrl ?? p.blobUrl ?? null;
+  const canView = !isUpload && !!viewUrl;
+  // auto-dismiss after 5 seconds of no action — paused while the viewer is open
   useEffect(() => {
+    if (viewerOpen) return;
     const t = setTimeout(() => dismissPopup(p.id), 5000);
     return () => clearTimeout(t);
-  }, [p.id]);
+  }, [p.id, viewerOpen]);
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-emerald-500/40 bg-card/95 backdrop-blur p-3 shadow-luxury animate-in slide-in-from-bottom-2">
       <div className="size-9 shrink-0 grid place-items-center rounded-xl bg-emerald-500/15 text-emerald-600">
         {isUpload ? <UploadIcon className="size-5" /> : <CheckCircle2 className="size-5" />}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="text-[11px] font-bold text-emerald-600">{isUpload ? "اكتمل الرفع" : "اكتمل التنزيل"}</div>
+        <div className="text-[11px] font-bold text-emerald-600">{isUpload ? "اكتمل الرفع" : "اكتمل التنزيل — يمكنك عرض الملف"}</div>
         <div className="truncate text-xs font-bold">{p.filename}</div>
         {p.savedPath && !p.fallback && <div className="truncate text-[10px] text-muted-foreground">{p.savedPath}</div>}
       </div>
       <div className="flex items-center gap-1 shrink-0">
+        {canView && (
+          <button onClick={() => setViewerOpen(true)}
+            className="rounded-lg gradient-gold text-gold-foreground p-1.5" aria-label="عرض الملف" title="عرض الملف"><Eye className="size-3.5" /></button>
+        )}
         {!isUpload && p.blobUrl && (
           <a href={p.blobUrl} target="_blank" rel="noreferrer" onClick={() => dismissPopup(p.id)}
-            className="rounded-lg border border-gold p-1.5 hover:bg-gold/10" aria-label="فتح"><ExternalLink className="size-3.5" /></a>
+            className="rounded-lg border border-gold p-1.5 hover:bg-gold/10" aria-label="فتح في نافذة"><ExternalLink className="size-3.5" /></a>
         )}
         {!isUpload && p.blobUrl && (
           <a href={p.blobUrl} download={p.filename} onClick={() => dismissPopup(p.id)}
-            className="rounded-lg gradient-gold text-gold-foreground p-1.5" aria-label="حفظ"><Download className="size-3.5" /></a>
+            className="rounded-lg border border-border p-1.5 hover:bg-muted" aria-label="حفظ"><Download className="size-3.5" /></a>
         )}
         <button onClick={() => dismissPopup(p.id)} className="rounded-lg border border-border p-1.5 hover:bg-muted" aria-label="إغلاق"><X className="size-3.5" /></button>
       </div>
+      {canView && (
+        <InAppFileViewer
+          open={viewerOpen}
+          onOpenChange={(v) => { setViewerOpen(v); if (!v) dismissPopup(p.id); }}
+          url={viewUrl}
+          name={p.filename}
+          mime={p.mime}
+        />
+      )}
     </div>
   );
 }
