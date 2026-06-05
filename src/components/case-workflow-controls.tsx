@@ -233,14 +233,53 @@ function DesignerControls({ c, actorName, doctorName, target, blockedByPending }
 }
 
 // ---------- Designer: revision request from the doctor ----------
+interface DoctorRevisionFile { name: string; path: string; mime: string | null }
+
 function DesignerRevisionSection({ c, actorName, doctorName }: {
   c: WorkflowCase; actorName: string; doctorName: string;
 }) {
   const [busy, setBusy] = useState(false);
+  const [textMode, setTextMode] = useState(false);
+  const [text, setText] = useState("");
+  const [docFiles, setDocFiles] = useState<DoctorRevisionFile[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
-  if (c.doctor_decision !== "revision") return null;
   const done = !!c.revision_design_done;
   const approved = !!c.revision_approved_by_tech;
+
+  // Load the modification files the doctor attached to the revision request
+  // (sent into the doctor → designer conversation as file messages).
+  useEffect(() => {
+    if (c.doctor_decision !== "revision") return;
+    let cancelled = false;
+    (async () => {
+      const { data: convs } = await supabase.from("chat_conversations")
+        .select("id,participants").eq("doctor_slot", c.doctor_slot);
+      const conv = (convs ?? []).find((x: any) =>
+        Array.isArray(x.participants) && x.participants.length === 2
+        && x.participants.includes("doctor") && x.participants.includes("designer"));
+      if (!conv) return;
+      const { data: msgs } = await supabase.from("chat_messages")
+        .select("attachment_path,attachment_name,attachment_mime,content,message_type,sender,created_at")
+        .eq("conversation_id", (conv as { id: string }).id)
+        .eq("sender", "doctor")
+        .eq("message_type", "file")
+        .order("created_at", { ascending: false });
+      if (cancelled) return;
+      const files = (msgs ?? [])
+        .filter((m: any) => m.attachment_path && (m.content ?? "").includes("طلب التعديل"))
+        .map((m: any) => ({ name: m.attachment_name as string, path: m.attachment_path as string, mime: m.attachment_mime as string | null }));
+      setDocFiles(files);
+    })();
+    return () => { cancelled = true; };
+  }, [c.id, c.doctor_decision, c.doctor_slot]);
+
+  if (c.doctor_decision !== "revision") return null;
+
+  async function downloadDocFile(f: DoctorRevisionFile) {
+    const url = /^https?:\/\//i.test(f.path) ? f.path : (await getSignedUrl(f.path)) ?? f.path;
+    const { transferDownload } = await import("@/lib/transfer-manager");
+    await transferDownload({ url, filename: f.name || "ملف-التعديل", mime: f.mime, saveToCenter: true });
+  }
 
   async function uploadRevision(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
@@ -277,6 +316,35 @@ function DesignerRevisionSection({ c, actorName, doctorName }: {
     finally { setBusy(false); }
   }
 
+  // Send the revision as plain text — produces the exact same workflow result
+  // as sending the modified .rar (notifies tech + doctor, marks done).
+  async function sendRevisionText() {
+    const body = text.trim();
+    if (body.length < 2) { toast.error("اكتب نص التعديل أولاً"); return; }
+    setBusy(true);
+    try {
+      const conv = await ensureConv(c, "designer", "technician", doctorName);
+      if (conv) await supabase.from("chat_messages").insert({
+        conversation_id: conv, sender: "designer", sender_name: actorName,
+        content: `🔁 تعديل تصميم نهائي (نصي) — الحالة ${c.case_code} (${c.patient_name})\n${body}`,
+        message_type: "text",
+      });
+      const dconv = await ensureConv(c, "designer", "doctor", doctorName);
+      if (dconv) await supabase.from("chat_messages").insert({
+        conversation_id: dconv, sender: "designer", sender_name: actorName,
+        content: `✏️ تم إنجاز التعديل المطلوب وإرساله للفني (نصياً) — الحالة ${c.case_code}`,
+        message_type: "text",
+      });
+      await supabase.from("slot_cases").update({
+        revision_design_file_name: "تعديل نصي",
+        revision_design_done: true,
+      }).eq("id", c.id);
+      toast.success("تم إرسال التعديل النصي للفني");
+      setTextMode(false); setText("");
+    } catch (err: any) { toast.error(err.message || "فشل الإرسال"); }
+    finally { setBusy(false); }
+  }
+
   return (
     <div className="rounded-lg border border-amber-500/50 bg-amber-50/60 p-3 space-y-2">
       <div className="text-xs font-bold text-amber-800 flex items-center gap-1.5">
@@ -287,14 +355,40 @@ function DesignerRevisionSection({ c, actorName, doctorName }: {
           {c.revision_notes}
         </div>
       )}
+
+      {/* Modification files attached by the doctor */}
+      {docFiles.length > 0 && (
+        <div className="space-y-1.5">
+          <div className="text-[11px] font-bold text-amber-800">ملفات التعديل المرسلة من الطبيب:</div>
+          <ul className="space-y-1">
+            {docFiles.map((f, i) => (
+              <li key={i} className="flex items-center justify-between gap-2 rounded-md border border-amber-300 bg-white/70 px-2 py-1 text-[11px]">
+                <span className="truncate flex-1">{f.name}</span>
+                <button type="button" onClick={() => downloadDocFile(f)}
+                  className="inline-flex items-center gap-1 rounded-md border border-gold/60 bg-gold/10 px-2 py-1 font-bold hover:bg-gold/20">
+                  <Download className="size-3" /> تحميل
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="flex items-center gap-2 flex-wrap">
         <label className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold cursor-pointer transition border
           ${done ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-border bg-card hover:border-gold"}`}>
           {busy ? <Loader2 className="size-3.5 animate-spin" /> : <FileArchive className="size-3.5" />}
-          {done ? "تم إرسال ملف التعديل" : "رفع ملف التعديل (.rar)"}
+          {done ? "تم إرسال التعديل" : "رفع ملف التعديل (.rar)"}
           <input ref={fileRef} type="file" accept=".rar" className="hidden"
             onChange={uploadRevision} disabled={busy || done} />
         </label>
+        {!done && (
+          <button type="button" onClick={() => setTextMode(o => !o)} disabled={busy}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold transition border
+              ${textMode ? "border-gold bg-gold/10 text-gold" : "border-border bg-card hover:border-gold"}`}>
+            <Type className="size-3.5" /> تعديل نصي
+          </button>
+        )}
         {done && !approved && (
           <span className="text-[11px] text-amber-700 font-bold">بانتظار اعتماد الفني…</span>
         )}
@@ -304,6 +398,23 @@ function DesignerRevisionSection({ c, actorName, doctorName }: {
           </span>
         )}
       </div>
+
+      {textMode && !done && (
+        <div className="space-y-2 rounded-lg border border-gold/40 bg-card p-2">
+          <textarea value={text} onChange={e => setText(e.target.value)} rows={4}
+            placeholder="اكتب تفاصيل التعديل النصي للفني…"
+            className="w-full rounded-lg border border-input bg-background p-2 text-sm outline-none focus:border-gold" />
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => { setTextMode(false); setText(""); }}
+              className="rounded-lg border border-border px-3 py-1.5 text-xs font-bold">إلغاء</button>
+            <button type="button" onClick={sendRevisionText} disabled={busy}
+              className="inline-flex items-center gap-1.5 rounded-lg gradient-brown px-3 py-1.5 text-xs font-bold shadow-luxury disabled:opacity-50">
+              {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
+              إرسال النص للفني
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
