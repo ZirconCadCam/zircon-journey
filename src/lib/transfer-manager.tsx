@@ -39,6 +39,9 @@ export interface CompletedPopup {
   blobUrl?: string;
   savedPath?: string;
   fallback?: boolean;
+  mime?: string | null;
+  /** Original remote URL — used by the in-app viewer when no blobUrl exists. */
+  sourceUrl?: string;
 }
 
 /* ----------------------------- tiny store ----------------------------- */
