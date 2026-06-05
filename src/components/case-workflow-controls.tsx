@@ -107,6 +107,17 @@ async function ensureConv(c: WorkflowCase, sender: RoleKey, target: RoleKey, doc
   return created.id;
 }
 
+/** Resolve the matching branch secretary role for a case's doctor, so we never
+ *  notify (and thus re-create conversations with) the wrong-branch secretary. */
+async function branchSecretaryRole(slot: number): Promise<RoleKey | null> {
+  const { data } = await supabase.from("doctor_profiles")
+    .select("branch").eq("slot", slot).maybeSingle();
+  const branch = (data as { branch?: string | null } | null)?.branch;
+  if (branch === "sanaa") return "secretary_sanaa";
+  if (branch === "ibb") return "secretary_ibb";
+  return null;
+}
+
 async function uploadAttachment(file: File, c: WorkflowCase, phase: string): Promise<{ url: string; path: string } | null> {
   const path = `${c.doctor_slot}/${phase}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
   const { registerUpload } = await import("@/lib/transfer-manager");
