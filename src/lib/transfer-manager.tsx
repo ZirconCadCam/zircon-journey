@@ -12,9 +12,10 @@
  *   const t = registerUpload(filename, { pause, resume, cancel });
  *   t.update(pct, loaded, total);  t.done();  // or t.fail() / t.cancelDone();
  */
-import { useEffect, useSyncExternalStore } from "react";
-import { Pause, Play, X, Download, ExternalLink, FileDown, CheckCircle2, Upload as UploadIcon } from "lucide-react";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { Pause, Play, X, Download, ExternalLink, FileDown, CheckCircle2, Upload as UploadIcon, Eye } from "lucide-react";
 import { saveToCenter, fileManagerSupported } from "@/lib/file-manager";
+import { InAppFileViewer } from "@/components/in-app-file-viewer";
 
 export type TransferKind = "upload" | "download";
 export type TransferStatus = "active" | "paused" | "done" | "error" | "canceled";
