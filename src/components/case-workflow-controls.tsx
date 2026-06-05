@@ -4,10 +4,10 @@ import { toast } from "sonner";
 import {
   CheckSquare, Square, Loader2, AlertCircle,
   FileArchive, FileCode, ChevronDown, ChevronUp, Check, Send, Truck,
-  ThumbsUp, Pencil, X, Archive,
+  ThumbsUp, Pencil, X, Archive, Download, Type,
 } from "lucide-react";
 import type { RoleKey } from "@/lib/chat";
-import { ROLE_LABEL } from "@/lib/chat";
+import { ROLE_LABEL, getSignedUrl } from "@/lib/chat";
 import { CaseFileActivityLog } from "@/components/case-file-activity-log";
 
 export interface WorkflowCase {
