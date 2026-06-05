@@ -199,7 +199,7 @@ export async function transferDownload(opts: {
     }
 
     const blobUrl = URL.createObjectURL(blob);
-    pushPopup({ id: uid(), filename: opts.filename, kind: "download", blobUrl, savedPath, fallback });
+    pushPopup({ id: uid(), filename: opts.filename, kind: "download", blobUrl, savedPath, fallback, mime: opts.mime, sourceUrl: opts.url });
 
     setTimeout(() => removeTransfer(id), 1200);
     return { ok: true, canceled: false, savedPath, fallback };
