@@ -250,9 +250,9 @@ export function registerDownloadTask(
     update(pct: number, loaded = 0, total = 0) {
       patch(id, { progress: Math.max(0, Math.min(100, Math.round(pct))), loaded, total, status: "active" });
     },
-    done(info?: { blobUrl?: string; savedPath?: string; fallback?: boolean }) {
+    done(info?: { blobUrl?: string; savedPath?: string; fallback?: boolean; mime?: string | null; sourceUrl?: string }) {
       patch(id, { progress: 100, status: "done" });
-      pushPopup({ id: uid(), filename, kind: "download", blobUrl: info?.blobUrl, savedPath: info?.savedPath, fallback: info?.fallback });
+      pushPopup({ id: uid(), filename, kind: "download", blobUrl: info?.blobUrl, savedPath: info?.savedPath, fallback: info?.fallback, mime: info?.mime, sourceUrl: info?.sourceUrl });
       setTimeout(() => removeTransfer(id), 1200);
     },
     fail() { patch(id, { status: "error" }); setTimeout(() => removeTransfer(id), 3500); },
