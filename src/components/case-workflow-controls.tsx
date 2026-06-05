@@ -584,7 +584,12 @@ function TechnicianPermanentSection({ c, actorName, doctorName }: {
     if (error) { setBusy(false); toast.error(error.message); return; }
     if (next) {
       const msg = `🦷 تم نحت الأسنان الدائمة — الحالة ${c.case_code} (${c.patient_name}).\nالطبيب: ${doctorName}.\nالأسنان قيد الترحيل.`;
-      for (const role of ["doctor", "secretary_sanaa", "secretary_ibb"] as RoleKey[]) {
+      // Notify the doctor + ONLY the matching-branch secretary (avoid
+      // re-creating conversations with the wrong-branch secretary).
+      const secRole = await branchSecretaryRole(c.doctor_slot);
+      const roles: RoleKey[] = ["doctor"];
+      if (secRole) roles.push(secRole);
+      for (const role of roles) {
         const conv = await ensureConv(c, "technician", role, doctorName);
         if (conv) await supabase.from("chat_messages").insert({
           conversation_id: conv, sender: "technician", sender_name: actorName,
