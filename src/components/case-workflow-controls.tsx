@@ -953,7 +953,11 @@ function DoctorControls({ c, actorName, doctorName }: {
         .eq("doctor_slot", c.doctor_slot).like("title", `[${c.case_code}]%`);
       await appendAudit(c, { actor: actorName || "الطبيب", action: "تأكيد تركيب الأسنان الدائمة وأرشفة الحالة" });
       const msg = `🦷✅ تم تركيب الأسنان الدائمة للمريض — الحالة ${c.case_code} (${c.patient_name}). الحالة مؤرشفة نهائياً.`;
-      for (const role of ["designer", "technician", "secretary_sanaa", "secretary_ibb"] as RoleKey[]) {
+      // Notify designer + technician + ONLY the matching-branch secretary.
+      const secRole = await branchSecretaryRole(c.doctor_slot);
+      const roles: RoleKey[] = ["designer", "technician"];
+      if (secRole) roles.push(secRole);
+      for (const role of roles) {
         const conv = await ensureConv(c, "doctor", role, doctorName);
         if (conv) await supabase.from("chat_messages").insert({
           conversation_id: conv, sender: "doctor", sender_name: actorName,
