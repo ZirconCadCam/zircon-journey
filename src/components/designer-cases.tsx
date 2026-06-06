@@ -817,12 +817,31 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
 
                       {c.scan_path && (
                         <div className="mt-3 space-y-2">
-                          <div className="inline-flex items-center gap-2 text-xs bg-gold/10 border border-gold/30 rounded-lg px-3 py-1.5">
+                          <button
+                            type="button"
+                            onClick={() => downloadCloudFile(c.scan_path, c.scan_name || `${c.case_code}-scan`, c.scan_mime)}
+                            className="inline-flex items-center gap-2 text-xs bg-gold/10 border border-gold/30 rounded-lg px-3 py-1.5 hover:gradient-gold hover:text-gold-foreground transition cursor-pointer"
+                            title="انقر لتنزيل ملف المسح من السحابة"
+                          >
                             <ScanLine className="size-3.5 text-gold" />
                             <span className="font-bold">المسح ثلاثي الأبعاد:</span>
-                            <span className="truncate max-w-[200px]">{c.scan_name}</span>
+                            <span className="truncate max-w-[200px] underline underline-offset-2">{c.scan_name}</span>
                             {c.scan_size && <span className="text-muted-foreground">({(c.scan_size/1024/1024).toFixed(1)} MB)</span>}
-                          </div>
+                            <Download className="size-3.5" />
+                          </button>
+                          {(c.revision_design_file_path) && (actor === "technician" || actor === "admin") && (
+                            <button
+                              type="button"
+                              onClick={() => downloadCloudFile(c.revision_design_file_path, c.revision_design_file_name || `${c.case_code}-معدّل.rar`, "application/vnd.rar")}
+                              className="flex items-center gap-2 text-xs bg-amber-500/10 border border-amber-500/40 rounded-lg px-3 py-1.5 hover:bg-amber-500 hover:text-white transition cursor-pointer"
+                              title="تنزيل ملف التصميم المعدّل (آخر تحديث) من السحابة"
+                            >
+                              <RefreshCw className="size-3.5 text-amber-600" />
+                              <span className="font-bold">ملف التصميم المعدّل (آخر تحديث):</span>
+                              <span className="truncate max-w-[180px] underline underline-offset-2">{c.revision_design_file_name || "تعديل.rar"}</span>
+                              <Download className="size-3.5" />
+                            </button>
+                          )}
                           {c.scan_mime?.startsWith("image/") && (
                             <div className="rounded-xl overflow-hidden border border-gold/30 bg-muted/30 max-w-md">
                               <img src={c.scan_path} alt={c.scan_name || "3D scan"} loading="lazy"
