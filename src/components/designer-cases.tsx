@@ -863,6 +863,16 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                           caseLabel={c.patient_name}
                         />
                       )}
+                      {actor === "admin" && view === "archive" && (
+                        <button
+                          onClick={() => sendToTelegram(c)}
+                          disabled={busy}
+                          className="inline-flex items-center gap-1.5 rounded-lg gradient-gold text-gold-foreground px-3 py-1.5 text-xs font-bold shadow-gold hover:opacity-90 transition disabled:opacity-60"
+                          title="إرسال بيانات الحالة وملفاتها ومحادثاتها إلى جروب تلجرام"
+                        >
+                          {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />} إرسال إلى تلجرام
+                        </button>
+                      )}
                       {view === "active" && actor === "technician" ? (
                         <button
                           onClick={() => downloadDesignRar(c)}
