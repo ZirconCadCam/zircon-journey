@@ -75,6 +75,9 @@ interface Case {
   final_archived?: boolean | null;
   archived?: boolean | null;
   pinned?: boolean | null;
+  revision_design_file_path?: string | null;
+  revision_design_file_name?: string | null;
+  revision_design_done?: boolean | null;
 }
 
 import { CaseWorkflowControls } from "@/components/case-workflow-controls";
