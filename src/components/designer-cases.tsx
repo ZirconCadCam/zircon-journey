@@ -5,6 +5,7 @@ import {
   Stethoscope, FileText, Download, Share2, Loader2,
   ScanLine, User, Phone, Hash, Palette, ClipboardList, Calendar,
   Archive, MoreVertical, FileArchive, Pin, PinOff, Trash2, ClipboardCheck, Eye,
+  RefreshCw, Send,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
@@ -75,6 +76,9 @@ interface Case {
   final_archived?: boolean | null;
   archived?: boolean | null;
   pinned?: boolean | null;
+  revision_design_file_path?: string | null;
+  revision_design_file_name?: string | null;
+  revision_design_done?: boolean | null;
 }
 
 import { CaseWorkflowControls } from "@/components/case-workflow-controls";
@@ -552,6 +556,136 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     } finally { setBusyId(null); }
   }
 
+  /** Item 2: make any stored file (cloud path or URL) clickable to download. */
+  async function downloadCloudFile(path: string | null | undefined, name: string, mime?: string | null) {
+    if (!path) { toast.error("لا يوجد ملف للتنزيل"); return; }
+    try {
+      const resolved = /^https?:\/\//i.test(path) ? path : (await getSignedUrl(path, 3600)) ?? path;
+      const { transferDownload } = await import("@/lib/transfer-manager");
+      await transferDownload({ url: resolved, filename: name, mime, saveToCenter: fileManagerSupported() });
+    } catch (e: any) {
+      toast.error(e.message || "تعذر تنزيل الملف");
+    }
+  }
+
+  /** Build a PDF of the case conversations, upload it, return a signed URL. */
+  async function buildAndUploadConversationsPdf(c: Case, convIds: string[]): Promise<string | null> {
+    try {
+      if (!convIds.length) return null;
+      const { data: msgs } = await supabase.from("chat_messages")
+        .select("sender, sender_name, content, created_at, message_type, attachment_name")
+        .in("conversation_id", convIds)
+        .order("created_at", { ascending: true }).limit(500);
+      const rows = ((msgs ?? []) as any[]).filter(
+        m => (m.content || "").includes(c.case_code) || m.message_type === "file",
+      );
+      const node = document.createElement("div");
+      node.style.cssText = "position:fixed;left:-99999px;top:0;width:794px;padding:36px;background:#fff;color:#1a1a1a;font-family:'Cairo','Tajawal','Segoe UI',sans-serif;direction:rtl;text-align:right;line-height:1.7;";
+      node.innerHTML = `
+        <div style="border-bottom:3px solid #b8893a;padding-bottom:14px;margin-bottom:18px;">
+          <div style="font-size:22px;font-weight:800;color:#5b3a14;">محادثات الحالة ${escapeHtml(c.case_code)}</div>
+          <div style="font-size:12px;color:#777;margin-top:4px;">${escapeHtml(c.patient_name)} — ${new Date().toLocaleString("ar-EG")}</div>
+        </div>
+        ${rows.length ? rows.map(m => `
+          <div style="margin-bottom:10px;padding:10px;border:1px solid #e2d4b1;border-radius:8px;background:#faf6ee;">
+            <div style="font-size:11px;color:#777;">${escapeHtml(ROLE_LABEL[m.sender as RoleKey] ?? m.sender)} • ${new Date(m.created_at).toLocaleString("ar-EG")}</div>
+            <div style="font-size:13px;margin-top:4px;white-space:pre-wrap;">${escapeHtml(m.content || (m.attachment_name ? `📎 ${m.attachment_name}` : "—"))}</div>
+          </div>`).join("") : `<div style="color:#999;">لا توجد محادثات لهذه الحالة.</div>`}
+      `;
+      document.body.appendChild(node);
+      const canvas = await html2canvas(node, { scale: 2, backgroundColor: "#ffffff", useCORS: true, onclone: H2C_ONCLONE });
+      document.body.removeChild(node);
+      const pdf = new jsPDF({ unit: "pt", format: "a4" });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const imgW = pageW; const imgH = (canvas.height * imgW) / canvas.width;
+      const img = canvas.toDataURL("image/jpeg", 0.92);
+      if (imgH <= pageH) pdf.addImage(img, "JPEG", 0, 0, imgW, imgH);
+      else { let remaining = imgH, y = 0; while (remaining > 0) { pdf.addImage(img, "JPEG", 0, y, imgW, imgH); remaining -= pageH; if (remaining > 0) { pdf.addPage(); y -= pageH; } } }
+      const blob = pdf.output("blob");
+      const path = `${c.case_code}/telegram/conversations-${Date.now()}.pdf`;
+      const { error } = await supabase.storage.from("chat-attachments").upload(path, blob, { contentType: "application/pdf", upsert: true });
+      if (error) { console.error(error); return null; }
+      return await getSignedUrl(path, 3600);
+    } catch (e) { console.error(e); return null; }
+  }
+
+  /** Item 3: send the whole archived case (data + zip + rar before/after + chat PDF) to Telegram. */
+  async function sendToTelegram(c: Case) {
+    setBusyId(c.id);
+    try {
+      const doctor = doctorMap.get(c.doctor_slot);
+      const branchAr = doctor?.branch === "sanaa" ? "صنعاء" : doctor?.branch === "ibb" ? "إب" : "—";
+      const caption = [
+        `🦷 تفاصيل الحالة ${c.case_code}`,
+        `المريض: ${c.patient_name}`,
+        `الطبيب: ${doctor?.name ?? `Slot ${c.doctor_slot}`} • ${branchAr}`,
+        c.patient_phone ? `الهاتف: ${c.patient_phone}` : null,
+        c.patient_age ? `العمر: ${c.patient_age}` : null,
+        c.patient_gender ? `الجنس: ${c.patient_gender === "male" ? "ذكر" : "أنثى"}` : null,
+        c.tooth_number ? `السن: ${c.tooth_number}` : null,
+        c.shade ? `اللون: ${c.shade}` : null,
+        c.case_type ? `النوع: ${c.case_type}` : null,
+        c.notes ? `ملاحظات: ${c.notes}` : null,
+        `التاريخ: ${new Date(c.created_at).toLocaleDateString("ar-EG")}`,
+      ].filter(Boolean).join("\n");
+
+      const safe = (s: string) => s.replace(/[\\/:*?"<>|]+/g, "_").trim();
+      const documents: { url: string; filename: string }[] = [];
+
+      // (a) scan file (zip)
+      if (c.scan_path) {
+        const url = /^https?:\/\//i.test(c.scan_path) ? c.scan_path : await getSignedUrl(c.scan_path, 3600);
+        const ext = /\.zip$/i.test(c.scan_name || "") ? "zip" : (c.scan_name?.split(".").pop() || "zip");
+        if (url) documents.push({ url, filename: `${safe(c.patient_name)} - ملف الحالة.${ext}` });
+      }
+
+      // (b) rar files before & after edit
+      const { data: convs } = await supabase.from("chat_conversations")
+        .select("id, participants").eq("doctor_slot", c.doctor_slot);
+      const convIds = ((convs ?? []) as any[]).map(cv => cv.id);
+      let beforeRar: string | null = null;
+      let afterRar: string | null = c.revision_design_file_path ?? null;
+      if (convIds.length) {
+        const { data: rarMsgs } = await supabase.from("chat_messages")
+          .select("attachment_path, attachment_name, content, message_type, created_at")
+          .in("conversation_id", convIds)
+          .eq("message_type", "file")
+          .order("created_at", { ascending: true }).limit(200);
+        for (const m of (rarMsgs ?? []) as any[]) {
+          if (!m.attachment_path || !/\.rar$/i.test(m.attachment_name || "")) continue;
+          if (!(m.content || "").includes(c.case_code)) continue;
+          const isRev = /تعديل|revision/i.test(m.content || "");
+          if (isRev) { if (!afterRar) afterRar = m.attachment_path; }
+          else { beforeRar = m.attachment_path; }
+        }
+      }
+      if (beforeRar) {
+        const url = /^https?:\/\//i.test(beforeRar) ? beforeRar : await getSignedUrl(beforeRar, 3600);
+        if (url) documents.push({ url, filename: `${safe(c.patient_name)} - التصميم قبل التعديل.rar` });
+      }
+      if (afterRar) {
+        const url = /^https?:\/\//i.test(afterRar) ? afterRar : await getSignedUrl(afterRar, 3600);
+        if (url) documents.push({ url, filename: `${safe(c.patient_name)} - التصميم بعد التعديل.rar` });
+      }
+
+      // (c) conversations PDF
+      const pdfUrl = await buildAndUploadConversationsPdf(c, convIds);
+      if (pdfUrl) documents.push({ url: pdfUrl, filename: `${safe(c.patient_name)} - المحادثات.pdf` });
+
+      const { sendCaseToTelegram } = await import("@/lib/telegram.functions");
+      const res: any = await sendCaseToTelegram({ data: { caption, documents } });
+      const failed = (res?.sent || []).filter((s: any) => !s.ok);
+      if (failed.length) toast.warning(`تم الإرسال — تعذّر ${failed.length} ملف`);
+      else toast.success("تم إرسال تفاصيل الحالة إلى تلجرام");
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e.message || "تعذر الإرسال إلى تلجرام");
+    } finally { setBusyId(null); }
+  }
+
+
+
 
   // delete removed from designer page per requirements
 
@@ -646,6 +780,11 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-mono text-xs rounded-md bg-muted px-2 py-0.5 font-bold">{c.case_code}</span>
                         <span className="text-[11px] rounded-full gradient-gold text-gold-foreground px-2 py-0.5 font-bold">{getStage(deriveStageKey(c)).label}</span>
+                        {(c.revision_design_done || c.revision_design_file_path) && (actor === "technician" || actor === "admin") && (
+                          <span className="text-[10px] rounded-full bg-amber-500 text-white px-2 py-0.5 font-bold inline-flex items-center gap-1" title="ملف التصميم المعدّل من المصمم — أحدث نسخة">
+                            <RefreshCw className="size-3" /> ملف معدّل · آخر تحديث
+                          </span>
+                        )}
                         {c.pinned && view === "archive" && (
                           <span className="text-[10px] rounded-full bg-gold/20 text-gold px-2 py-0.5 font-bold inline-flex items-center gap-1">
                             <Pin className="size-3" /> مثبتة
@@ -678,12 +817,31 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
 
                       {c.scan_path && (
                         <div className="mt-3 space-y-2">
-                          <div className="inline-flex items-center gap-2 text-xs bg-gold/10 border border-gold/30 rounded-lg px-3 py-1.5">
+                          <button
+                            type="button"
+                            onClick={() => downloadCloudFile(c.scan_path, c.scan_name || `${c.case_code}-scan`, c.scan_mime)}
+                            className="inline-flex items-center gap-2 text-xs bg-gold/10 border border-gold/30 rounded-lg px-3 py-1.5 hover:gradient-gold hover:text-gold-foreground transition cursor-pointer"
+                            title="انقر لتنزيل ملف المسح من السحابة"
+                          >
                             <ScanLine className="size-3.5 text-gold" />
                             <span className="font-bold">المسح ثلاثي الأبعاد:</span>
-                            <span className="truncate max-w-[200px]">{c.scan_name}</span>
+                            <span className="truncate max-w-[200px] underline underline-offset-2">{c.scan_name}</span>
                             {c.scan_size && <span className="text-muted-foreground">({(c.scan_size/1024/1024).toFixed(1)} MB)</span>}
-                          </div>
+                            <Download className="size-3.5" />
+                          </button>
+                          {(c.revision_design_file_path) && (actor === "technician" || actor === "admin") && (
+                            <button
+                              type="button"
+                              onClick={() => downloadCloudFile(c.revision_design_file_path, c.revision_design_file_name || `${c.case_code}-معدّل.rar`, "application/vnd.rar")}
+                              className="flex items-center gap-2 text-xs bg-amber-500/10 border border-amber-500/40 rounded-lg px-3 py-1.5 hover:bg-amber-500 hover:text-white transition cursor-pointer"
+                              title="تنزيل ملف التصميم المعدّل (آخر تحديث) من السحابة"
+                            >
+                              <RefreshCw className="size-3.5 text-amber-600" />
+                              <span className="font-bold">ملف التصميم المعدّل (آخر تحديث):</span>
+                              <span className="truncate max-w-[180px] underline underline-offset-2">{c.revision_design_file_name || "تعديل.rar"}</span>
+                              <Download className="size-3.5" />
+                            </button>
+                          )}
                           {c.scan_mime?.startsWith("image/") && (
                             <div className="rounded-xl overflow-hidden border border-gold/30 bg-muted/30 max-w-md">
                               <img src={c.scan_path} alt={c.scan_name || "3D scan"} loading="lazy"
@@ -704,6 +862,16 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                           caseCode={c.case_code}
                           caseLabel={c.patient_name}
                         />
+                      )}
+                      {actor === "admin" && view === "archive" && (
+                        <button
+                          onClick={() => sendToTelegram(c)}
+                          disabled={busy}
+                          className="inline-flex items-center gap-1.5 rounded-lg gradient-gold text-gold-foreground px-3 py-1.5 text-xs font-bold shadow-gold hover:opacity-90 transition disabled:opacity-60"
+                          title="إرسال بيانات الحالة وملفاتها ومحادثاتها إلى جروب تلجرام"
+                        >
+                          {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />} إرسال إلى تلجرام
+                        </button>
                       )}
                       {view === "active" && actor === "technician" ? (
                         <button
