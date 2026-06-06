@@ -780,6 +780,11 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-mono text-xs rounded-md bg-muted px-2 py-0.5 font-bold">{c.case_code}</span>
                         <span className="text-[11px] rounded-full gradient-gold text-gold-foreground px-2 py-0.5 font-bold">{getStage(deriveStageKey(c)).label}</span>
+                        {(c.revision_design_done || c.revision_design_file_path) && (actor === "technician" || actor === "admin") && (
+                          <span className="text-[10px] rounded-full bg-amber-500 text-white px-2 py-0.5 font-bold inline-flex items-center gap-1" title="ملف التصميم المعدّل من المصمم — أحدث نسخة">
+                            <RefreshCw className="size-3" /> ملف معدّل · آخر تحديث
+                          </span>
+                        )}
                         {c.pinned && view === "archive" && (
                           <span className="text-[10px] rounded-full bg-gold/20 text-gold px-2 py-0.5 font-bold inline-flex items-center gap-1">
                             <Pin className="size-3" /> مثبتة
