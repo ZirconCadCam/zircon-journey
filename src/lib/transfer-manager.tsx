@@ -15,6 +15,8 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Pause, Play, X, Download, ExternalLink, FileDown, CheckCircle2, Upload as UploadIcon, Eye } from "lucide-react";
 import { saveToCenter, fileManagerSupported } from "@/lib/file-manager";
+import { isNativeApp, openNativeUri } from "@/lib/native-fs";
+import type { CaseFileLocation } from "@/lib/case-folders";
 import { InAppFileViewer } from "@/components/in-app-file-viewer";
 
 export type TransferKind = "upload" | "download";
@@ -43,6 +45,8 @@ export interface CompletedPopup {
   mime?: string | null;
   /** Original remote URL — used by the in-app viewer when no blobUrl exists. */
   sourceUrl?: string;
+  /** Native file uri (Android) — opened with the device's viewer on "عرض". */
+  nativeUri?: string;
 }
 
 /* ----------------------------- tiny store ----------------------------- */
@@ -168,6 +172,8 @@ export async function transferDownload(opts: {
   mime?: string | null;
   saveToCenter?: boolean;
   subfolder?: string;
+  /** Full taxonomy location (role/doctor/patient/case) for device folders. */
+  location?: CaseFileLocation;
 }): Promise<{ ok: boolean; canceled: boolean; savedPath?: string; fallback?: boolean }> {
   const id = uid();
   const control: Control = { paused: false, canceled: false };
@@ -189,18 +195,28 @@ export async function transferDownload(opts: {
 
     let savedPath: string | undefined;
     let fallback = false;
-    const wantCenter = opts.saveToCenter !== false && fileManagerSupported();
-    if (wantCenter) {
-      const r = await saveToCenter(blob, opts.filename, opts.subfolder ?? "ملفات");
+    let nativeUri: string | undefined;
+    const native = await isNativeApp();
+    if (native) {
+      // Always persist into the device taxonomy folders on the Android app.
+      const r = await saveToCenter(blob, opts.filename, opts.subfolder ?? "ملفات", opts.location);
       savedPath = r.path;
       fallback = r.fallback;
+      nativeUri = r.uri;
     } else {
-      triggerBrowserDownload(blob, opts.filename);
-      fallback = true;
+      const wantCenter = opts.saveToCenter !== false && fileManagerSupported();
+      if (wantCenter) {
+        const r = await saveToCenter(blob, opts.filename, opts.subfolder ?? "ملفات", opts.location);
+        savedPath = r.path;
+        fallback = r.fallback;
+      } else {
+        triggerBrowserDownload(blob, opts.filename);
+        fallback = true;
+      }
     }
 
     const blobUrl = URL.createObjectURL(blob);
-    pushPopup({ id: uid(), filename: opts.filename, kind: "download", blobUrl, savedPath, fallback, mime: opts.mime, sourceUrl: opts.url });
+    pushPopup({ id: uid(), filename: opts.filename, kind: "download", blobUrl, savedPath, fallback, mime: opts.mime, sourceUrl: opts.url, nativeUri });
 
     setTimeout(() => removeTransfer(id), 1200);
     return { ok: true, canceled: false, savedPath, fallback };
@@ -349,7 +365,13 @@ function TransferDonePopup({ p }: { p: CompletedPopup }) {
       </div>
       <div className="flex items-center gap-1 shrink-0">
         {canView && (
-          <button onClick={() => setViewerOpen(true)}
+          <button onClick={async () => {
+            if (p.nativeUri) {
+              const ok = await openNativeUri(p.nativeUri, p.mime);
+              if (ok) { dismissPopup(p.id); return; }
+            }
+            setViewerOpen(true);
+          }}
             className="rounded-lg gradient-gold text-gold-foreground p-1.5" aria-label="عرض الملف" title="عرض الملف"><Eye className="size-3.5" /></button>
         )}
         {!isUpload && p.blobUrl && (

@@ -136,6 +136,15 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     return m;
   }, [doctors]);
 
+  /** Build the device-folder location (role/doctor/case) for a case file. */
+  function locFor(c: Case, category?: import("@/lib/case-folders").FileCategory): import("@/lib/case-folders").CaseFileLocation {
+    const role: import("@/lib/case-folders").CaseRole =
+      actor === "designer" ? "designer" : actor === "technician" ? "technician" : "admin";
+    const doctorName = doctorMap.get(c.doctor_slot)?.name ?? `Slot ${c.doctor_slot}`;
+    return { role, doctorName, patientName: c.patient_name, caseCode: c.case_code, category };
+  }
+
+
   const grouped = useMemo(() => {
     const counts = new Map<number, number>();
     cases.forEach(c => counts.set(c.doctor_slot, (counts.get(c.doctor_slot) ?? 0) + 1));
@@ -305,7 +314,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
       const blob = pdf.output("blob");
 
       if (fileManagerSupported()) {
-        const r = await saveToCenter(blob, filename, c.case_code);
+        const r = await saveToCenter(blob, filename, c.case_code, locFor(c, "downloaded"));
         if (r.fallback) toast.success("تم تنزيل ملف PDF");
         else toast.success(`تم الحفظ في ${r.path}`);
       } else {
@@ -400,7 +409,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
       const filename = `${c.case_code}-${c.patient_name.replace(/[^\p{L}\d_-]+/gu, "_").slice(0, 30)}.pdf`;
 
       if (fileManagerSupported()) {
-        const r = await saveToCenter(blob, filename, c.case_code);
+        const r = await saveToCenter(blob, filename, c.case_code, locFor(c, "downloaded"));
         if (r.fallback) toast.success("تم تنزيل ملف PDF");
         else toast.success(`تم الحفظ في ${r.path}`);
       } else {
@@ -494,7 +503,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
         outBlob = await zip.generateAsync({ type: "blob" });
       }
       task.update(96);
-      const r = await saveToCenter(outBlob, fileName, c.case_code);
+      const r = await saveToCenter(outBlob, fileName, c.case_code, locFor(c, "downloaded"));
       const blobUrl = URL.createObjectURL(outBlob);
       task.done({ blobUrl, savedPath: r.path, fallback: r.fallback, mime: "application/zip" });
       toast.success(r.fallback ? "تم تنزيل الملف" : `تم الحفظ في ${r.path}`);
@@ -548,7 +557,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
       const { transferDownload } = await import("@/lib/transfer-manager");
       await transferDownload({
         url: resolved, filename: `${baseName}.rar`,
-        saveToCenter: fileManagerSupported(), subfolder: c.case_code,
+        saveToCenter: fileManagerSupported(), subfolder: c.case_code, location: locFor(c, "downloaded"),
       });
     } catch (e: any) {
       console.error(e);
@@ -557,12 +566,12 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
   }
 
   /** Item 2: make any stored file (cloud path or URL) clickable to download. */
-  async function downloadCloudFile(path: string | null | undefined, name: string, mime?: string | null) {
+  async function downloadCloudFile(path: string | null | undefined, name: string, mime?: string | null, location?: import("@/lib/case-folders").CaseFileLocation) {
     if (!path) { toast.error("لا يوجد ملف للتنزيل"); return; }
     try {
       const resolved = /^https?:\/\//i.test(path) ? path : (await getSignedUrl(path, 3600)) ?? path;
       const { transferDownload } = await import("@/lib/transfer-manager");
-      await transferDownload({ url: resolved, filename: name, mime, saveToCenter: fileManagerSupported() });
+      await transferDownload({ url: resolved, filename: name, mime, saveToCenter: fileManagerSupported(), location });
     } catch (e: any) {
       toast.error(e.message || "تعذر تنزيل الملف");
     }
@@ -819,7 +828,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                         <div className="mt-3 space-y-2">
                           <button
                             type="button"
-                            onClick={() => downloadCloudFile(c.scan_path, c.scan_name || `${c.case_code}-scan`, c.scan_mime)}
+                            onClick={() => downloadCloudFile(c.scan_path, c.scan_name || `${c.case_code}-scan`, c.scan_mime, locFor(c, "downloaded"))}
                             className="inline-flex items-center gap-2 text-xs bg-gold/10 border border-gold/30 rounded-lg px-3 py-1.5 hover:gradient-gold hover:text-gold-foreground transition cursor-pointer"
                             title="انقر لتنزيل ملف المسح من السحابة"
                           >
@@ -832,7 +841,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                           {(c.revision_design_file_path) && (actor === "technician" || actor === "admin") && (
                             <button
                               type="button"
-                              onClick={() => downloadCloudFile(c.revision_design_file_path, c.revision_design_file_name || `${c.case_code}-معدّل.rar`, "application/vnd.rar")}
+                              onClick={() => downloadCloudFile(c.revision_design_file_path, c.revision_design_file_name || `${c.case_code}-معدّل.rar`, "application/vnd.rar", locFor(c, "downloaded"))}
                               className="flex items-center gap-2 text-xs bg-amber-500/10 border border-amber-500/40 rounded-lg px-3 py-1.5 hover:bg-amber-500 hover:text-white transition cursor-pointer"
                               title="تنزيل ملف التصميم المعدّل (آخر تحديث) من السحابة"
                             >

@@ -1,12 +1,26 @@
 /**
- * File Manager — persists a user-chosen device folder ("مركز زركون CAD/CAM")
- * via the File System Access API and IndexedDB to store the directory handle.
+ * File Manager — unified device storage layer.
  *
- * Falls back gracefully on browsers that do not support the API
- * (Safari/Firefox) — saveToCenter() will trigger a normal browser download.
+ *  - On the Android (Capacitor) app: writes into the public Documents folder
+ *    under "حالات مركز زركون/..." via @capacitor/filesystem (see native-fs.ts).
+ *  - On the web: persists a user-chosen folder via the File System Access API
+ *    and IndexedDB, falling back to a normal browser download when unsupported.
  */
+import {
+  isNativeApp,
+  saveBlobNative,
+  readBlobNative,
+  getNativeUri,
+  openNativeUri,
+  saveAndOpenNative,
+  checkNativePermission,
+  requestNativePermission,
+  ensureBaseStructure,
+} from "@/lib/native-fs";
+import type { CaseFileLocation } from "@/lib/case-folders";
 
 export const CENTER_FOLDER_NAME = "مركز زركون CAD/CAM";
+
 const DB_NAME = "zircon-cadcam-fm";
 const STORE = "handles";
 const KEY = "center-dir";
@@ -103,6 +117,10 @@ export type CenterStatus = "unsupported" | "none" | "denied" | "ready";
  *  - "ready": linked and permission granted
  */
 export async function getCenterFolderStatus(): Promise<CenterStatus> {
+  if (await isNativeApp()) {
+    const p = await checkNativePermission();
+    return p === "granted" ? "ready" : p === "denied" ? "denied" : "none";
+  }
   if (!isSupported()) return "unsupported";
   const handle: any = await idbGet(KEY);
   if (!handle) return "none";
@@ -116,6 +134,11 @@ export async function getCenterFolderStatus(): Promise<CenterStatus> {
 
 /** Re-request permission (or prompt to pick a folder if none linked yet). */
 export async function requestCenterPermission(): Promise<boolean> {
+  if (await isNativeApp()) {
+    const ok = await requestNativePermission();
+    if (ok) await ensureBaseStructure();
+    return ok;
+  }
   const handle: any = await idbGet(KEY);
   if (!handle) return pickCenterFolder();
   return ensurePermission(handle, "readwrite");
@@ -248,7 +271,16 @@ export async function saveToCenter(
   blob: Blob,
   filename: string,
   subfolder?: string,
-): Promise<{ saved: boolean; fallback: boolean; path?: string }> {
+  location?: CaseFileLocation,
+): Promise<{ saved: boolean; fallback: boolean; path?: string; uri?: string }> {
+  // Native Android app: write into the taxonomy folders on the device.
+  if (await isNativeApp()) {
+    const loc: CaseFileLocation = location ?? { role: "admin", caseCode: subfolder };
+    const r = await saveBlobNative(blob, filename, loc);
+    if (r.saved) return { saved: true, fallback: false, path: r.path, uri: r.uri };
+    fallbackDownload(blob, filename);
+    return { saved: true, fallback: true };
+  }
   if (!isSupported()) {
     fallbackDownload(blob, filename);
     return { saved: true, fallback: true };
@@ -278,6 +310,29 @@ export async function saveToCenter(
     fallbackDownload(blob, filename);
     return { saved: true, fallback: true };
   }
+}
+
+/**
+ * Save a case file using the full folder taxonomy (role/doctor/patient/case)
+ * and return its native uri when on the device app.
+ */
+export async function saveCaseFile(
+  blob: Blob,
+  filename: string,
+  location: CaseFileLocation,
+): Promise<{ saved: boolean; fallback: boolean; path?: string; uri?: string }> {
+  return saveToCenter(blob, filename, location.caseCode, location);
+}
+
+/** Open a file with the native viewer on the device; returns false on web. */
+export async function openCaseFileNative(
+  blob: Blob,
+  filename: string,
+  location: CaseFileLocation,
+  mime?: string | null,
+): Promise<boolean> {
+  if (!(await isNativeApp())) return false;
+  return saveAndOpenNative(blob, filename, location, mime);
 }
 
 function fallbackDownload(blob: Blob, filename: string) {
