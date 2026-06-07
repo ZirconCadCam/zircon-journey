@@ -168,6 +168,8 @@ export async function transferDownload(opts: {
   mime?: string | null;
   saveToCenter?: boolean;
   subfolder?: string;
+  /** Full taxonomy location (role/doctor/patient/case) for device folders. */
+  location?: CaseFileLocation;
 }): Promise<{ ok: boolean; canceled: boolean; savedPath?: string; fallback?: boolean }> {
   const id = uid();
   const control: Control = { paused: false, canceled: false };
