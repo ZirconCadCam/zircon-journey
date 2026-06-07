@@ -314,7 +314,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
       const blob = pdf.output("blob");
 
       if (fileManagerSupported()) {
-        const r = await saveToCenter(blob, filename, c.case_code);
+        const r = await saveToCenter(blob, filename, c.case_code, locFor(c, "downloaded"));
         if (r.fallback) toast.success("تم تنزيل ملف PDF");
         else toast.success(`تم الحفظ في ${r.path}`);
       } else {
@@ -409,7 +409,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
       const filename = `${c.case_code}-${c.patient_name.replace(/[^\p{L}\d_-]+/gu, "_").slice(0, 30)}.pdf`;
 
       if (fileManagerSupported()) {
-        const r = await saveToCenter(blob, filename, c.case_code);
+        const r = await saveToCenter(blob, filename, c.case_code, locFor(c, "downloaded"));
         if (r.fallback) toast.success("تم تنزيل ملف PDF");
         else toast.success(`تم الحفظ في ${r.path}`);
       } else {
@@ -503,7 +503,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
         outBlob = await zip.generateAsync({ type: "blob" });
       }
       task.update(96);
-      const r = await saveToCenter(outBlob, fileName, c.case_code);
+      const r = await saveToCenter(outBlob, fileName, c.case_code, locFor(c, "downloaded"));
       const blobUrl = URL.createObjectURL(outBlob);
       task.done({ blobUrl, savedPath: r.path, fallback: r.fallback, mime: "application/zip" });
       toast.success(r.fallback ? "تم تنزيل الملف" : `تم الحفظ في ${r.path}`);
@@ -557,7 +557,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
       const { transferDownload } = await import("@/lib/transfer-manager");
       await transferDownload({
         url: resolved, filename: `${baseName}.rar`,
-        saveToCenter: fileManagerSupported(), subfolder: c.case_code,
+        saveToCenter: fileManagerSupported(), subfolder: c.case_code, location: locFor(c, "downloaded"),
       });
     } catch (e: any) {
       console.error(e);
