@@ -91,6 +91,7 @@ function RootComponent() {
       <Outlet />
       <Toaster position="top-center" richColors />
       <InstallPrompt />
+      <NativeBootstrap />
       <TransferOverlay />
       <BackgroundKeepAlive />
     </QueryClientProvider>
