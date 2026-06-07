@@ -136,6 +136,15 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     return m;
   }, [doctors]);
 
+  /** Build the device-folder location (role/doctor/case) for a case file. */
+  function locFor(c: Case, category?: import("@/lib/case-folders").FileCategory): import("@/lib/case-folders").CaseFileLocation {
+    const role: import("@/lib/case-folders").CaseRole =
+      actor === "designer" ? "designer" : actor === "technician" ? "technician" : "admin";
+    const doctorName = doctorMap.get(c.doctor_slot)?.name ?? `Slot ${c.doctor_slot}`;
+    return { role, doctorName, patientName: c.patient_name, caseCode: c.case_code, category };
+  }
+
+
   const grouped = useMemo(() => {
     const counts = new Map<number, number>();
     cases.forEach(c => counts.set(c.doctor_slot, (counts.get(c.doctor_slot) ?? 0) + 1));
