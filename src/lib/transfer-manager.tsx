@@ -365,7 +365,13 @@ function TransferDonePopup({ p }: { p: CompletedPopup }) {
       </div>
       <div className="flex items-center gap-1 shrink-0">
         {canView && (
-          <button onClick={() => setViewerOpen(true)}
+          <button onClick={async () => {
+            if (p.nativeUri) {
+              const ok = await openNativeUri(p.nativeUri, p.mime);
+              if (ok) { dismissPopup(p.id); return; }
+            }
+            setViewerOpen(true);
+          }}
             className="rounded-lg gradient-gold text-gold-foreground p-1.5" aria-label="عرض الملف" title="عرض الملف"><Eye className="size-3.5" /></button>
         )}
         {!isUpload && p.blobUrl && (
