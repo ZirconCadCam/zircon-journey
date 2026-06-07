@@ -117,6 +117,10 @@ export type CenterStatus = "unsupported" | "none" | "denied" | "ready";
  *  - "ready": linked and permission granted
  */
 export async function getCenterFolderStatus(): Promise<CenterStatus> {
+  if (await isNativeApp()) {
+    const p = await checkNativePermission();
+    return p === "granted" ? "ready" : p === "denied" ? "denied" : "none";
+  }
   if (!isSupported()) return "unsupported";
   const handle: any = await idbGet(KEY);
   if (!handle) return "none";
@@ -130,6 +134,11 @@ export async function getCenterFolderStatus(): Promise<CenterStatus> {
 
 /** Re-request permission (or prompt to pick a folder if none linked yet). */
 export async function requestCenterPermission(): Promise<boolean> {
+  if (await isNativeApp()) {
+    const ok = await requestNativePermission();
+    if (ok) await ensureBaseStructure();
+    return ok;
+  }
   const handle: any = await idbGet(KEY);
   if (!handle) return pickCenterFolder();
   return ensurePermission(handle, "readwrite");
