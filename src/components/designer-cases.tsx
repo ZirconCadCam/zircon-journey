@@ -566,12 +566,12 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
   }
 
   /** Item 2: make any stored file (cloud path or URL) clickable to download. */
-  async function downloadCloudFile(path: string | null | undefined, name: string, mime?: string | null) {
+  async function downloadCloudFile(path: string | null | undefined, name: string, mime?: string | null, location?: import("@/lib/case-folders").CaseFileLocation) {
     if (!path) { toast.error("لا يوجد ملف للتنزيل"); return; }
     try {
       const resolved = /^https?:\/\//i.test(path) ? path : (await getSignedUrl(path, 3600)) ?? path;
       const { transferDownload } = await import("@/lib/transfer-manager");
-      await transferDownload({ url: resolved, filename: name, mime, saveToCenter: fileManagerSupported() });
+      await transferDownload({ url: resolved, filename: name, mime, saveToCenter: fileManagerSupported(), location });
     } catch (e: any) {
       toast.error(e.message || "تعذر تنزيل الملف");
     }
