@@ -15,6 +15,8 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Pause, Play, X, Download, ExternalLink, FileDown, CheckCircle2, Upload as UploadIcon, Eye } from "lucide-react";
 import { saveToCenter, fileManagerSupported } from "@/lib/file-manager";
+import { isNativeApp, openNativeUri } from "@/lib/native-fs";
+import type { CaseFileLocation } from "@/lib/case-folders";
 import { InAppFileViewer } from "@/components/in-app-file-viewer";
 
 export type TransferKind = "upload" | "download";
