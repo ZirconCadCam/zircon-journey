@@ -828,7 +828,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                         <div className="mt-3 space-y-2">
                           <button
                             type="button"
-                            onClick={() => downloadCloudFile(c.scan_path, c.scan_name || `${c.case_code}-scan`, c.scan_mime)}
+                            onClick={() => downloadCloudFile(c.scan_path, c.scan_name || `${c.case_code}-scan`, c.scan_mime, locFor(c, "downloaded"))}
                             className="inline-flex items-center gap-2 text-xs bg-gold/10 border border-gold/30 rounded-lg px-3 py-1.5 hover:gradient-gold hover:text-gold-foreground transition cursor-pointer"
                             title="انقر لتنزيل ملف المسح من السحابة"
                           >
@@ -841,7 +841,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                           {(c.revision_design_file_path) && (actor === "technician" || actor === "admin") && (
                             <button
                               type="button"
-                              onClick={() => downloadCloudFile(c.revision_design_file_path, c.revision_design_file_name || `${c.case_code}-معدّل.rar`, "application/vnd.rar")}
+                              onClick={() => downloadCloudFile(c.revision_design_file_path, c.revision_design_file_name || `${c.case_code}-معدّل.rar`, "application/vnd.rar", locFor(c, "downloaded"))}
                               className="flex items-center gap-2 text-xs bg-amber-500/10 border border-amber-500/40 rounded-lg px-3 py-1.5 hover:bg-amber-500 hover:text-white transition cursor-pointer"
                               title="تنزيل ملف التصميم المعدّل (آخر تحديث) من السحابة"
                             >
