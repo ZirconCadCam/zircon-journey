@@ -1,12 +1,26 @@
 /**
- * File Manager — persists a user-chosen device folder ("مركز زركون CAD/CAM")
- * via the File System Access API and IndexedDB to store the directory handle.
+ * File Manager — unified device storage layer.
  *
- * Falls back gracefully on browsers that do not support the API
- * (Safari/Firefox) — saveToCenter() will trigger a normal browser download.
+ *  - On the Android (Capacitor) app: writes into the public Documents folder
+ *    under "حالات مركز زركون/..." via @capacitor/filesystem (see native-fs.ts).
+ *  - On the web: persists a user-chosen folder via the File System Access API
+ *    and IndexedDB, falling back to a normal browser download when unsupported.
  */
+import {
+  isNativeApp,
+  saveBlobNative,
+  readBlobNative,
+  getNativeUri,
+  openNativeUri,
+  saveAndOpenNative,
+  checkNativePermission,
+  requestNativePermission,
+  ensureBaseStructure,
+} from "@/lib/native-fs";
+import type { CaseFileLocation } from "@/lib/case-folders";
 
 export const CENTER_FOLDER_NAME = "مركز زركون CAD/CAM";
+
 const DB_NAME = "zircon-cadcam-fm";
 const STORE = "handles";
 const KEY = "center-dir";
