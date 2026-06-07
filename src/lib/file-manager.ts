@@ -271,7 +271,16 @@ export async function saveToCenter(
   blob: Blob,
   filename: string,
   subfolder?: string,
-): Promise<{ saved: boolean; fallback: boolean; path?: string }> {
+  location?: CaseFileLocation,
+): Promise<{ saved: boolean; fallback: boolean; path?: string; uri?: string }> {
+  // Native Android app: write into the taxonomy folders on the device.
+  if (await isNativeApp()) {
+    const loc: CaseFileLocation = location ?? { role: "admin", caseCode: subfolder };
+    const r = await saveBlobNative(blob, filename, loc);
+    if (r.saved) return { saved: true, fallback: false, path: r.path, uri: r.uri };
+    fallbackDownload(blob, filename);
+    return { saved: true, fallback: true };
+  }
   if (!isSupported()) {
     fallbackDownload(blob, filename);
     return { saved: true, fallback: true };
@@ -301,6 +310,29 @@ export async function saveToCenter(
     fallbackDownload(blob, filename);
     return { saved: true, fallback: true };
   }
+}
+
+/**
+ * Save a case file using the full folder taxonomy (role/doctor/patient/case)
+ * and return its native uri when on the device app.
+ */
+export async function saveCaseFile(
+  blob: Blob,
+  filename: string,
+  location: CaseFileLocation,
+): Promise<{ saved: boolean; fallback: boolean; path?: string; uri?: string }> {
+  return saveToCenter(blob, filename, location.caseCode, location);
+}
+
+/** Open a file with the native viewer on the device; returns false on web. */
+export async function openCaseFileNative(
+  blob: Blob,
+  filename: string,
+  location: CaseFileLocation,
+  mime?: string | null,
+): Promise<boolean> {
+  if (!(await isNativeApp())) return false;
+  return saveAndOpenNative(blob, filename, location, mime);
 }
 
 function fallbackDownload(blob: Blob, filename: string) {
