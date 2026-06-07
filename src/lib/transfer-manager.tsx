@@ -193,18 +193,28 @@ export async function transferDownload(opts: {
 
     let savedPath: string | undefined;
     let fallback = false;
-    const wantCenter = opts.saveToCenter !== false && fileManagerSupported();
-    if (wantCenter) {
-      const r = await saveToCenter(blob, opts.filename, opts.subfolder ?? "ملفات");
+    let nativeUri: string | undefined;
+    const native = await isNativeApp();
+    if (native) {
+      // Always persist into the device taxonomy folders on the Android app.
+      const r = await saveToCenter(blob, opts.filename, opts.subfolder ?? "ملفات", opts.location);
       savedPath = r.path;
       fallback = r.fallback;
+      nativeUri = r.uri;
     } else {
-      triggerBrowserDownload(blob, opts.filename);
-      fallback = true;
+      const wantCenter = opts.saveToCenter !== false && fileManagerSupported();
+      if (wantCenter) {
+        const r = await saveToCenter(blob, opts.filename, opts.subfolder ?? "ملفات", opts.location);
+        savedPath = r.path;
+        fallback = r.fallback;
+      } else {
+        triggerBrowserDownload(blob, opts.filename);
+        fallback = true;
+      }
     }
 
     const blobUrl = URL.createObjectURL(blob);
-    pushPopup({ id: uid(), filename: opts.filename, kind: "download", blobUrl, savedPath, fallback, mime: opts.mime, sourceUrl: opts.url });
+    pushPopup({ id: uid(), filename: opts.filename, kind: "download", blobUrl, savedPath, fallback, mime: opts.mime, sourceUrl: opts.url, nativeUri });
 
     setTimeout(() => removeTransfer(id), 1200);
     return { ok: true, canceled: false, savedPath, fallback };
