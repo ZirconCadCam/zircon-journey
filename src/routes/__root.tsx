@@ -9,6 +9,7 @@ import {
 import { Toaster } from "@/components/ui/sonner";
 import { InstallPrompt } from "@/components/install-prompt";
 import { TransferOverlay, BackgroundKeepAlive } from "@/lib/transfer-manager";
+import { NativeBootstrap } from "@/components/native-bootstrap";
 import appCss from "../styles.css?url";
 
 function NotFoundComponent() {
