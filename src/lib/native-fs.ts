@@ -150,7 +150,7 @@ export async function readBlobNative(
     const path = `${rootPath(buildCasePath(loc))}/${filename}`;
     const res = await Filesystem.readFile({ path, directory: Directory.Documents });
     const bytes = base64ToBytes(res.data as string);
-    return new Blob([bytes]);
+    return new Blob([bytes.buffer as ArrayBuffer]);
   } catch {
     return null;
   }
