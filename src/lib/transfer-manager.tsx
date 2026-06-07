@@ -45,6 +45,8 @@ export interface CompletedPopup {
   mime?: string | null;
   /** Original remote URL — used by the in-app viewer when no blobUrl exists. */
   sourceUrl?: string;
+  /** Native file uri (Android) — opened with the device's viewer on "عرض". */
+  nativeUri?: string;
 }
 
 /* ----------------------------- tiny store ----------------------------- */
