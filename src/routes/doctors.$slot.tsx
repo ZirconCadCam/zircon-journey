@@ -17,6 +17,8 @@ import { DoctorReportsPanel } from "@/components/doctor-reports-panel";
 import { StageTick, type TickState } from "@/components/stage-tick";
 import { CaseChatButton } from "@/components/case-chat-dialog";
 import { Z } from "@/lib/z-index";
+import { ShadeBadge } from "@/components/shade-badge";
+import { CaseSearch } from "@/components/case-search";
 
 /** Compute WhatsApp-style tick state for each visible stage from case flags + timing. */
 function stageTickState(stageKey: string, c: any): TickState {
@@ -210,7 +212,7 @@ function PasswordGate({ doctor, onOk }: { doctor: Doctor; onOk: () => void }) {
 
 function Portal({ doctor, actor, actorName, onLogout }: { doctor: Doctor; actor: Sender; actorName: string; onLogout: () => void }) {
   const { branch } = useAuth();
-  const [tab, setTab] = useState<"cases" | "files" | "reports">("cases");
+  const [tab, setTab] = useState<"cases" | "files" | "reports" | "search">("cases");
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
@@ -251,14 +253,16 @@ function Portal({ doctor, actor, actorName, onLogout }: { doctor: Doctor; actor:
           </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-3 gap-1 border-b border-border">
+        <div className="mt-6 grid grid-cols-4 gap-1 border-b border-border">
           <TabBtn active={tab==="cases"} onClick={()=>setTab("cases")} icon={<ClipboardList className="size-4" />} label="الحالات" badge={unread} />
+          <TabBtn active={tab==="search"} onClick={()=>setTab("search")} icon={<Search className="size-4" />} label="بحث" />
           <TabBtn active={tab==="files"} onClick={()=>setTab("files")} icon={<FilesIcon className="size-4" />} label="الملفات" />
           <TabBtn active={tab==="reports"} onClick={()=>setTab("reports")} icon={<FileSpreadsheet className="size-4" />} label="الكشوفات" />
         </div>
 
         <div className="mt-6">
           {tab === "cases" && <CasesPanel doctor={doctor} me={chatRole} myName={actorName || doctor.name} />}
+          {tab === "search" && <CaseSearch actor={chatRole as any} restrictSlot={doctor.slot} />}
           {tab === "files" && <FilesPanel doctor={doctor} actor={actor} />}
           {tab === "reports" && <DoctorReportsPanel doctor={doctor} />}
         </div>
@@ -705,8 +709,9 @@ function CaseCard({ c, doctorName, doctorSlot, me, myName, onEdit, onPin, onDele
           <div className="font-mono text-[11px] text-muted-foreground">{c.case_code}</div>
           <div className="font-bold text-base truncate">{c.patient_name}</div>
           <div className="text-[11px] text-muted-foreground mt-0.5">
-            {c.case_type || "—"}{c.tooth_number ? ` • سن ${c.tooth_number}` : ""}{c.teeth_count ? ` • عدد ${c.teeth_count}` : ""}{c.shade ? ` • ${c.shade}` : ""}
+            {c.case_type || "—"}{c.tooth_number ? ` • سن ${c.tooth_number}` : ""}{c.teeth_count ? ` • عدد ${c.teeth_count}` : ""}
           </div>
+          {c.shade && <div className="mt-2"><ShadeBadge shade={c.shade} size="sm" /></div>}
         </div>
         <span className="shrink-0 rounded-full gradient-gold text-gold-foreground text-[11px] font-bold px-2.5 py-1 shadow-gold">
           {stage.label}

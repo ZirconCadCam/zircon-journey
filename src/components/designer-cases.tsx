@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   Stethoscope, FileText, Download, Share2, Loader2,
-  ScanLine, User, Phone, Hash, Palette, ClipboardList, Calendar,
+  ScanLine, User, Phone, Hash, ClipboardList, Calendar,
   Archive, MoreVertical, FileArchive, Pin, PinOff, Trash2, ClipboardCheck, Eye,
   RefreshCw, Send,
 } from "lucide-react";
@@ -38,7 +38,8 @@ const H2C_ONCLONE = (doc: Document) => {
 };
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
-import { saveToCenter, downloadUrlToCenter, fileManagerSupported, CENTER_FOLDER_NAME } from "@/lib/file-manager";
+import { saveToCenter, downloadUrlToCenter, fileManagerSupported, CENTER_FOLDER_NAME, openCachedFile } from "@/lib/file-manager";
+import { ShadeBadge } from "@/components/shade-badge";
 
 interface Doctor { slot: number; name: string; branch: string | null; active: boolean }
 interface Case {
@@ -569,6 +570,11 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
   async function downloadCloudFile(path: string | null | undefined, name: string, mime?: string | null, location?: import("@/lib/case-folders").CaseFileLocation) {
     if (!path) { toast.error("لا يوجد ملف للتنزيل"); return; }
     try {
+      // Re-open from the device file manager if the file was already saved there.
+      if (location) {
+        const opened = await openCachedFile(name, location, mime);
+        if (opened) { toast.success("تم فتح الملف من جهازك"); return; }
+      }
       const resolved = /^https?:\/\//i.test(path) ? path : (await getSignedUrl(path, 3600)) ?? path;
       const { transferDownload } = await import("@/lib/transfer-manager");
       await transferDownload({ url: resolved, filename: name, mime, saveToCenter: fileManagerSupported(), location });
@@ -811,9 +817,14 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                         {doctor?.branch && <> • {doctor.branch === "sanaa" ? "صنعاء" : "إب"}</>}
                       </div>
 
+                      {c.shade && (
+                        <div className="mt-3">
+                          <ShadeBadge shade={c.shade} />
+                        </div>
+                      )}
+
                       <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                         {c.tooth_number && <Info icon={<Hash className="size-3" />} label="السن" value={c.tooth_number} />}
-                        {c.shade && <Info icon={<Palette className="size-3" />} label="اللون" value={c.shade} />}
                         {c.case_type && <Info icon={<ClipboardList className="size-3" />} label="النوع" value={c.case_type} />}
                         {c.patient_phone && <Info icon={<Phone className="size-3" />} label="الهاتف" value={c.patient_phone} />}
                       </div>

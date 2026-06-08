@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ChatModule } from "@/components/chat-module";
 import { DesignerCases } from "@/components/designer-cases";
+import { CaseSearch } from "@/components/case-search";
 import { DesignerArchive, DesignerDesignFiles, DesignerReports } from "@/components/designer-panels";
 import { TechnicianReports, TechnicianDesignFiles } from "@/components/technician-panels";
 import { AdminSettingsPanel } from "@/components/admin-settings-panel";
@@ -10,7 +11,7 @@ import { AdminVoiceListener } from "@/components/admin-voice-listener";
 
 import { ROLE_LABEL, STAFF_PASSWORDS, type RoleKey } from "@/lib/chat";
 import { getStage, deriveStageKey } from "@/lib/case-stages";
-import { Sparkles, ArrowRight, Lock, Stethoscope, MessageSquare, ClipboardList, Settings, Archive, FileArchive, FileText } from "lucide-react";
+import { Sparkles, ArrowRight, Lock, Stethoscope, MessageSquare, ClipboardList, Settings, Archive, FileArchive, FileText, Search } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/staff/$role")({
@@ -117,7 +118,7 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
   const [unread, setUnread] = useState<Record<number, number>>({});
   // Default tab: roles with a case list land on "cases"; admin stays on "chat".
   const initialTab: "chat" | "cases" | "settings" = role === "admin" ? "chat" : "cases";
-  const [tab, setTab] = useState<"chat" | "cases" | "settings" | "archive" | "designfiles" | "reports">(initialTab);
+  const [tab, setTab] = useState<"chat" | "cases" | "settings" | "archive" | "designfiles" | "reports" | "search">(initialTab);
 
   useEffect(() => {
     (async () => {
@@ -199,6 +200,10 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
 
         {(role === "designer" || role === "technician" || role === "secretary_sanaa" || role === "secretary_ibb" || role === "admin") && (
           <div className="mt-6 inline-flex flex-wrap rounded-xl border border-border bg-card p-1 shadow-luxury">
+            <button onClick={() => setTab("search")}
+              className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "search" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
+              <Search className="size-4" /> بحث
+            </button>
             {role === "admin" && (
               <button onClick={() => setTab("chat")}
                 className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "chat" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
@@ -267,6 +272,8 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
             <TechnicianReports />
           ) : role === "technician" && tab === "designfiles" ? (
             <TechnicianDesignFiles />
+          ) : (role === "designer" || role === "technician" || role === "secretary_sanaa" || role === "secretary_ibb" || role === "admin") && tab === "search" ? (
+            <CaseSearch actor={role as any} />
           ) : (role === "designer" || role === "technician" || role === "secretary_sanaa" || role === "secretary_ibb" || role === "admin") && tab === "cases" ? (
             <DesignerCases actor={role as any} actorName={ROLE_LABEL[role]} />
 
