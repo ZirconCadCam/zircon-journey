@@ -212,7 +212,7 @@ function PasswordGate({ doctor, onOk }: { doctor: Doctor; onOk: () => void }) {
 
 function Portal({ doctor, actor, actorName, onLogout }: { doctor: Doctor; actor: Sender; actorName: string; onLogout: () => void }) {
   const { branch } = useAuth();
-  const [tab, setTab] = useState<"cases" | "files" | "reports">("cases");
+  const [tab, setTab] = useState<"cases" | "files" | "reports" | "search">("cases");
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
