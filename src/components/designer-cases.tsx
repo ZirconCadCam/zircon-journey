@@ -570,6 +570,11 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
   async function downloadCloudFile(path: string | null | undefined, name: string, mime?: string | null, location?: import("@/lib/case-folders").CaseFileLocation) {
     if (!path) { toast.error("لا يوجد ملف للتنزيل"); return; }
     try {
+      // Re-open from the device file manager if the file was already saved there.
+      if (location) {
+        const opened = await openCachedFile(name, location, mime);
+        if (opened) { toast.success("تم فتح الملف من جهازك"); return; }
+      }
       const resolved = /^https?:\/\//i.test(path) ? path : (await getSignedUrl(path, 3600)) ?? path;
       const { transferDownload } = await import("@/lib/transfer-manager");
       await transferDownload({ url: resolved, filename: name, mime, saveToCenter: fileManagerSupported(), location });
