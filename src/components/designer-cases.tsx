@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   Stethoscope, FileText, Download, Share2, Loader2,
-  ScanLine, User, Phone, Hash, Palette, ClipboardList, Calendar,
+  ScanLine, User, Phone, Hash, ClipboardList, Calendar,
   Archive, MoreVertical, FileArchive, Pin, PinOff, Trash2, ClipboardCheck, Eye,
   RefreshCw, Send,
 } from "lucide-react";
