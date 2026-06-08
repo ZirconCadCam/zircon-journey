@@ -705,8 +705,9 @@ function CaseCard({ c, doctorName, doctorSlot, me, myName, onEdit, onPin, onDele
           <div className="font-mono text-[11px] text-muted-foreground">{c.case_code}</div>
           <div className="font-bold text-base truncate">{c.patient_name}</div>
           <div className="text-[11px] text-muted-foreground mt-0.5">
-            {c.case_type || "—"}{c.tooth_number ? ` • سن ${c.tooth_number}` : ""}{c.teeth_count ? ` • عدد ${c.teeth_count}` : ""}{c.shade ? ` • ${c.shade}` : ""}
+            {c.case_type || "—"}{c.tooth_number ? ` • سن ${c.tooth_number}` : ""}{c.teeth_count ? ` • عدد ${c.teeth_count}` : ""}
           </div>
+          {c.shade && <div className="mt-2"><ShadeBadge shade={c.shade} size="sm" /></div>}
         </div>
         <span className="shrink-0 rounded-full gradient-gold text-gold-foreground text-[11px] font-bold px-2.5 py-1 shadow-gold">
           {stage.label}
