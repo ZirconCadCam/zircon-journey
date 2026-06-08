@@ -817,9 +817,14 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                         {doctor?.branch && <> • {doctor.branch === "sanaa" ? "صنعاء" : "إب"}</>}
                       </div>
 
+                      {c.shade && (
+                        <div className="mt-3">
+                          <ShadeBadge shade={c.shade} />
+                        </div>
+                      )}
+
                       <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                         {c.tooth_number && <Info icon={<Hash className="size-3" />} label="السن" value={c.tooth_number} />}
-                        {c.shade && <Info icon={<Palette className="size-3" />} label="اللون" value={c.shade} />}
                         {c.case_type && <Info icon={<ClipboardList className="size-3" />} label="النوع" value={c.case_type} />}
                         {c.patient_phone && <Info icon={<Phone className="size-3" />} label="الهاتف" value={c.patient_phone} />}
                       </div>
