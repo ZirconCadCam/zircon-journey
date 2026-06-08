@@ -17,6 +17,8 @@ import { DoctorReportsPanel } from "@/components/doctor-reports-panel";
 import { StageTick, type TickState } from "@/components/stage-tick";
 import { CaseChatButton } from "@/components/case-chat-dialog";
 import { Z } from "@/lib/z-index";
+import { ShadeBadge } from "@/components/shade-badge";
+import { CaseSearch } from "@/components/case-search";
 
 /** Compute WhatsApp-style tick state for each visible stage from case flags + timing. */
 function stageTickState(stageKey: string, c: any): TickState {
