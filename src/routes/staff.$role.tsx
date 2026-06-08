@@ -200,6 +200,10 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
 
         {(role === "designer" || role === "technician" || role === "secretary_sanaa" || role === "secretary_ibb" || role === "admin") && (
           <div className="mt-6 inline-flex flex-wrap rounded-xl border border-border bg-card p-1 shadow-luxury">
+            <button onClick={() => setTab("search")}
+              className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "search" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
+              <Search className="size-4" /> بحث
+            </button>
             {role === "admin" && (
               <button onClick={() => setTab("chat")}
                 className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "chat" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
