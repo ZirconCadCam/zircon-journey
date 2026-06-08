@@ -11,7 +11,7 @@ import { AdminVoiceListener } from "@/components/admin-voice-listener";
 
 import { ROLE_LABEL, STAFF_PASSWORDS, type RoleKey } from "@/lib/chat";
 import { getStage, deriveStageKey } from "@/lib/case-stages";
-import { Sparkles, ArrowRight, Lock, Stethoscope, MessageSquare, ClipboardList, Settings, Archive, FileArchive, FileText } from "lucide-react";
+import { Sparkles, ArrowRight, Lock, Stethoscope, MessageSquare, ClipboardList, Settings, Archive, FileArchive, FileText, Search } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/staff/$role")({
