@@ -253,14 +253,16 @@ function Portal({ doctor, actor, actorName, onLogout }: { doctor: Doctor; actor:
           </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-3 gap-1 border-b border-border">
+        <div className="mt-6 grid grid-cols-4 gap-1 border-b border-border">
           <TabBtn active={tab==="cases"} onClick={()=>setTab("cases")} icon={<ClipboardList className="size-4" />} label="الحالات" badge={unread} />
+          <TabBtn active={tab==="search"} onClick={()=>setTab("search")} icon={<Search className="size-4" />} label="بحث" />
           <TabBtn active={tab==="files"} onClick={()=>setTab("files")} icon={<FilesIcon className="size-4" />} label="الملفات" />
           <TabBtn active={tab==="reports"} onClick={()=>setTab("reports")} icon={<FileSpreadsheet className="size-4" />} label="الكشوفات" />
         </div>
 
         <div className="mt-6">
           {tab === "cases" && <CasesPanel doctor={doctor} me={chatRole} myName={actorName || doctor.name} />}
+          {tab === "search" && <CaseSearch actor={chatRole as any} restrictSlot={doctor.slot} />}
           {tab === "files" && <FilesPanel doctor={doctor} actor={actor} />}
           {tab === "reports" && <DoctorReportsPanel doctor={doctor} />}
         </div>
