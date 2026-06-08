@@ -272,6 +272,8 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
             <TechnicianReports />
           ) : role === "technician" && tab === "designfiles" ? (
             <TechnicianDesignFiles />
+          ) : (role === "designer" || role === "technician" || role === "secretary_sanaa" || role === "secretary_ibb" || role === "admin") && tab === "search" ? (
+            <CaseSearch actor={role as any} />
           ) : (role === "designer" || role === "technician" || role === "secretary_sanaa" || role === "secretary_ibb" || role === "admin") && tab === "cases" ? (
             <DesignerCases actor={role as any} actorName={ROLE_LABEL[role]} />
 
