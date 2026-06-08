@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ChatModule } from "@/components/chat-module";
 import { DesignerCases } from "@/components/designer-cases";
+import { CaseSearch } from "@/components/case-search";
 import { DesignerArchive, DesignerDesignFiles, DesignerReports } from "@/components/designer-panels";
 import { TechnicianReports, TechnicianDesignFiles } from "@/components/technician-panels";
 import { AdminSettingsPanel } from "@/components/admin-settings-panel";
