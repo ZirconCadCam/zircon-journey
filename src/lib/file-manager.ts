@@ -335,6 +335,43 @@ export async function openCaseFileNative(
   return saveAndOpenNative(blob, filename, location, mime);
 }
 
+/**
+ * If a file was already saved to the device file manager (at its automatic
+ * taxonomy path), open it directly from there instead of downloading again.
+ *
+ *  - Android (native): resolves the stored file's uri and opens it with the
+ *    device's native viewer / image viewer.
+ *  - Web (File System Access API): reads the cached file and opens it in a new
+ *    browser tab.
+ *
+ * Returns true when an existing copy was found and opened; false otherwise so
+ * the caller can fall back to a fresh download.
+ */
+export async function openCachedFile(
+  filename: string,
+  location: CaseFileLocation,
+  mime?: string | null,
+  webSubfolder?: string,
+): Promise<boolean> {
+  try {
+    if (await isNativeApp()) {
+      const uri = await getNativeUri(filename, location);
+      if (!uri) return false;
+      return await openNativeUri(uri, mime);
+    }
+    if (!isSupported()) return false;
+    // transferDownload saves web copies under the "ملفات" subfolder by default.
+    const blob = await readFromCenter(filename, webSubfolder ?? "ملفات");
+    if (!blob) return false;
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank");
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function fallbackDownload(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
