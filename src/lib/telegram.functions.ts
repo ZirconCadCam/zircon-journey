@@ -28,16 +28,13 @@ export const sendCaseToTelegram = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
     const TELEGRAM_API_KEY = process.env.TELEGRAM_API_KEY;
-    const chatId = process.env.TELEGRAM_CHAT_ID;
+    // Archive group "مركز زركون CadCam لتجميل الاسنان" — overridable via secret.
+    const chatId = process.env.TELEGRAM_CHAT_ID || "-1003242061826";
 
     if (!LOVABLE_API_KEY || !TELEGRAM_API_KEY) {
       throw new Error("تكامل تلجرام غير مُهيّأ.");
     }
-    if (!chatId) {
-      throw new Error(
-        "لم يتم ضبط معرف جروب تلجرام (TELEGRAM_CHAT_ID) بعد.",
-      );
-    }
+
 
     const headers = {
       Authorization: `Bearer ${LOVABLE_API_KEY}`,

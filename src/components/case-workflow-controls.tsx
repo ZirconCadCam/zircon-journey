@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import {
   CheckSquare, Square, Loader2, AlertCircle,
   FileArchive, FileCode, ChevronDown, ChevronUp, Check, Send, Truck,
-  ThumbsUp, Pencil, X, Archive, Download, Type,
+  ThumbsUp, Pencil, X, Archive, Download, Type, FileText,
 } from "lucide-react";
 import type { RoleKey } from "@/lib/chat";
 import { ROLE_LABEL, getSignedUrl } from "@/lib/chat";
@@ -1127,22 +1127,15 @@ function DoctorControls({ c, actorName, doctorName }: {
                 />
               </div>
               {revFiles.length > 0 && (
-                <ul className="space-y-1 max-h-32 overflow-auto">
+                <div className="grid grid-cols-3 gap-2 max-h-56 overflow-auto">
                   {revFiles.map((f, i) => (
-                    <li key={i} className="flex items-center justify-between gap-2 rounded-md border border-border bg-muted/40 px-2 py-1 text-[11px]">
-                      <span className="truncate flex-1">{f.name}</span>
-                      <span className="text-muted-foreground font-mono text-[10px]">{(f.size / 1024).toFixed(1)} KB</span>
-                      <button
-                        type="button"
-                        onClick={() => setRevFiles(prev => prev.filter((_, j) => j !== i))}
-                        className="rounded p-0.5 hover:bg-destructive/10 text-destructive"
-                        aria-label="حذف"
-                      >
-                        <X className="size-3" />
-                      </button>
-                    </li>
+                    <RevAttachmentPreview
+                      key={i}
+                      file={f}
+                      onRemove={() => setRevFiles(prev => prev.filter((_, j) => j !== i))}
+                    />
                   ))}
-                </ul>
+                </div>
               )}
             </div>
 
@@ -1162,4 +1155,43 @@ function DoctorControls({ c, actorName, doctorName }: {
     </div>
   );
 }
+
+/** Preview tile for a revision attachment: shows the image inline, or a file
+ *  icon for non-images, with a remove button. */
+function RevAttachmentPreview({ file, onRemove }: { file: File; onRemove: () => void }) {
+  const isImage = file.type.startsWith("image/");
+  const [url, setUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isImage) return;
+    const u = URL.createObjectURL(file);
+    setUrl(u);
+    return () => URL.revokeObjectURL(u);
+  }, [file, isImage]);
+
+  return (
+    <div className="relative group rounded-lg border border-border bg-muted/40 overflow-hidden">
+      <button
+        type="button"
+        onClick={onRemove}
+        className="absolute top-1 left-1 z-10 rounded-full bg-black/55 text-white p-0.5 hover:bg-destructive"
+        aria-label="حذف"
+      >
+        <X className="size-3" />
+      </button>
+      {isImage && url ? (
+        <img src={url} alt={file.name} className="h-20 w-full object-cover" />
+      ) : (
+        <div className="h-20 w-full grid place-items-center text-muted-foreground">
+          <FileText className="size-7" />
+        </div>
+      )}
+      <div className="px-1.5 py-1 border-t border-border/60">
+        <div className="truncate text-[10px] font-bold" title={file.name}>{file.name}</div>
+        <div className="text-[9px] text-muted-foreground font-mono">{(file.size / 1024).toFixed(1)} KB</div>
+      </div>
+    </div>
+  );
+}
+
 
