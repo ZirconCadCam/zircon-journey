@@ -1156,3 +1156,42 @@ function DoctorControls({ c, actorName, doctorName }: {
   );
 }
 
+/** Preview tile for a revision attachment: shows the image inline, or a file
+ *  icon for non-images, with a remove button. */
+function RevAttachmentPreview({ file, onRemove }: { file: File; onRemove: () => void }) {
+  const isImage = file.type.startsWith("image/");
+  const [url, setUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isImage) return;
+    const u = URL.createObjectURL(file);
+    setUrl(u);
+    return () => URL.revokeObjectURL(u);
+  }, [file, isImage]);
+
+  return (
+    <div className="relative group rounded-lg border border-border bg-muted/40 overflow-hidden">
+      <button
+        type="button"
+        onClick={onRemove}
+        className="absolute top-1 left-1 z-10 rounded-full bg-black/55 text-white p-0.5 hover:bg-destructive"
+        aria-label="حذف"
+      >
+        <X className="size-3" />
+      </button>
+      {isImage && url ? (
+        <img src={url} alt={file.name} className="h-20 w-full object-cover" />
+      ) : (
+        <div className="h-20 w-full grid place-items-center text-muted-foreground">
+          <FileText className="size-7" />
+        </div>
+      )}
+      <div className="px-1.5 py-1 border-t border-border/60">
+        <div className="truncate text-[10px] font-bold" title={file.name}>{file.name}</div>
+        <div className="text-[9px] text-muted-foreground font-mono">{(file.size / 1024).toFixed(1)} KB</div>
+      </div>
+    </div>
+  );
+}
+
+
