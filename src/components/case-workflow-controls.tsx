@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import {
   CheckSquare, Square, Loader2, AlertCircle,
   FileArchive, FileCode, ChevronDown, ChevronUp, Check, Send, Truck,
-  ThumbsUp, Pencil, X, Archive, Download, Type,
+  ThumbsUp, Pencil, X, Archive, Download, Type, FileText,
 } from "lucide-react";
 import type { RoleKey } from "@/lib/chat";
 import { ROLE_LABEL, getSignedUrl } from "@/lib/chat";
