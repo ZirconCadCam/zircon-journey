@@ -68,17 +68,6 @@ async function resolveUrl(path: string): Promise<string | null> {
   return await getSignedUrl(path, 3600);
 }
 
-async function downloadFile(path: string, fileName: string) {
-  const url = await resolveUrl(path);
-  if (!url) { toast.error("تعذر الوصول للملف"); return; }
-  try {
-    const { transferDownload } = await import("@/lib/transfer-manager");
-    await transferDownload({ url, filename: fileName, saveToCenter: fileManagerSupported() });
-  } catch (e: any) {
-    toast.error(e.message || "تعذر تنزيل الملف");
-  }
-}
-
 /* ------------------------------------------------------------------ */
 /* Shared data hook                                                    */
 /* ------------------------------------------------------------------ */
