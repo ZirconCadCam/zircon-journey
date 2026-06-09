@@ -446,7 +446,37 @@ export function TechnicianDesignFiles() {
     const name = file.fileName.endsWith(".rar")
       ? `${safe(f.patientName)} - ${file.label}.rar`
       : `${safe(f.patientName)}.rar`;
-    await downloadFile(file.path, name);
+    // Device location for the technician (role/doctor/case folder taxonomy).
+    const loc: CaseFileLocation = {
+      role: "technician",
+      doctorName: f.doctorName,
+      caseCode: f.key,
+    };
+    const mime = "application/x-rar-compressed";
+    try {
+      // 1) If this RAR was already saved to the device file manager, open it
+      //    directly from its stored path (no re-download).
+      const opened = await openCachedFile(name, loc, mime, "ملفات");
+      if (opened) {
+        toast.success("تم فتح الملف من مدير ملفات الجهاز");
+        setBusy(null);
+        return;
+      }
+      // 2) Otherwise download once, auto-save into the device file manager and
+      //    remember its path for next time.
+      const url = await resolveUrl(file.path);
+      if (!url) { toast.error("تعذر الوصول للملف"); setBusy(null); return; }
+      await transferDownload({
+        url,
+        filename: name,
+        mime,
+        saveToCenter: fileManagerSupported(),
+        subfolder: "ملفات",
+        location: loc,
+      });
+    } catch (e: any) {
+      toast.error(e?.message || "تعذر تنزيل الملف");
+    }
     setBusy(null);
   }
 
