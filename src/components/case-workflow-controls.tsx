@@ -1127,22 +1127,15 @@ function DoctorControls({ c, actorName, doctorName }: {
                 />
               </div>
               {revFiles.length > 0 && (
-                <ul className="space-y-1 max-h-32 overflow-auto">
+                <div className="grid grid-cols-3 gap-2 max-h-56 overflow-auto">
                   {revFiles.map((f, i) => (
-                    <li key={i} className="flex items-center justify-between gap-2 rounded-md border border-border bg-muted/40 px-2 py-1 text-[11px]">
-                      <span className="truncate flex-1">{f.name}</span>
-                      <span className="text-muted-foreground font-mono text-[10px]">{(f.size / 1024).toFixed(1)} KB</span>
-                      <button
-                        type="button"
-                        onClick={() => setRevFiles(prev => prev.filter((_, j) => j !== i))}
-                        className="rounded p-0.5 hover:bg-destructive/10 text-destructive"
-                        aria-label="حذف"
-                      >
-                        <X className="size-3" />
-                      </button>
-                    </li>
+                    <RevAttachmentPreview
+                      key={i}
+                      file={f}
+                      onRemove={() => setRevFiles(prev => prev.filter((_, j) => j !== i))}
+                    />
                   ))}
-                </ul>
+                </div>
               )}
             </div>
 
