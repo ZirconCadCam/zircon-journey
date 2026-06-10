@@ -28,8 +28,15 @@ export const sendCaseToTelegram = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
     const TELEGRAM_API_KEY = process.env.TELEGRAM_API_KEY;
-    // Archive group "مركز زركون CadCam لتجميل الاسنان" — overridable via secret.
-    const chatId = process.env.TELEGRAM_CHAT_ID || "-1003242061826";
+    // Archive group "مركز زركون CadCam لتجميل الاسنان".
+    // The verified destination is the supergroup below. A TELEGRAM_CHAT_ID
+    // override is honoured ONLY when it is a valid group/channel id
+    // (e.g. -100xxxxxxxxxx). An invalid value such as the bot's own id causes
+    // Telegram's "Forbidden: bot can't send messages to the bot" 403, so we
+    // ignore it and fall back to the known-good group id.
+    const DEFAULT_CHAT_ID = "-1003242061826";
+    const envChat = (process.env.TELEGRAM_CHAT_ID || "").trim();
+    const chatId = /^-100\d{6,}$/.test(envChat) ? envChat : DEFAULT_CHAT_ID;
 
     if (!LOVABLE_API_KEY || !TELEGRAM_API_KEY) {
       throw new Error("تكامل تلجرام غير مُهيّأ.");
