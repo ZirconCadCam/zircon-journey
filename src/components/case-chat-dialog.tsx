@@ -114,6 +114,7 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
   const [c, setC] = useState<any>(null);
   const [files, setFiles] = useState<CaseAttachment[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
+  const [progress, setProgress] = useState<Record<string, number>>({});
   const [viewer, setViewer] = useState<CaseAttachment | null>(null);
 
   useEffect(() => {
