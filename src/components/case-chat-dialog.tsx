@@ -4,7 +4,7 @@ import { ChatModule } from "@/components/chat-module";
 import type { RoleKey } from "@/lib/chat";
 import { Z } from "@/lib/z-index";
 import { supabase } from "@/integrations/supabase/client";
-import { downloadUrlToCenter, autoCacheFile, saveToCenter } from "@/lib/file-manager";
+import { autoCacheFile, saveToCenter } from "@/lib/file-manager";
 import { InAppFileViewer } from "@/components/in-app-file-viewer";
 import { toast } from "sonner";
 
