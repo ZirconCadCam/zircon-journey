@@ -451,12 +451,24 @@ function TechnicianControls({ c, actorName, doctorName, target }: {
 
   async function toggleFabDone() {
     if (busy) return;
+    // Single click on "تم النحت": mark carved AND auto-send the case data to
+    // the branch secretary (and notify the doctor) in one step.
+    if (!fabDone) {
+      if (target && !dataSent) { await sendDataToSecretary(); return; }
+      setBusy(true);
+      const { error } = await supabase.from("slot_cases")
+        .update({ fabrication_done: true }).eq("id", c.id);
+      setBusy(false);
+      if (error) toast.error(error.message);
+      else toast.success("✅ تم النحت");
+      return;
+    }
     setBusy(true);
     const { error } = await supabase.from("slot_cases")
-      .update({ fabrication_done: !fabDone }).eq("id", c.id);
+      .update({ fabrication_done: false }).eq("id", c.id);
     setBusy(false);
     if (error) toast.error(error.message);
-    else toast.success(!fabDone ? "✅ تم النحت" : "تم إلغاء العلامة");
+    else toast.success("تم إلغاء العلامة");
   }
 
   async function sendDataToSecretary() {
@@ -499,7 +511,7 @@ function TechnicianControls({ c, actorName, doctorName, target }: {
       }).eq("id", c.id);
     setBusy(false);
     if (error) toast.error(error.message);
-    else toast.success(`تم إرسال بيانات الحالة إلى ${ROLE_LABEL[target]} والطبيب`);
+    else toast.success(`✅ تم النحت وإرسال بيانات الحالة إلى ${ROLE_LABEL[target]} والطبيب`);
   }
 
   return (

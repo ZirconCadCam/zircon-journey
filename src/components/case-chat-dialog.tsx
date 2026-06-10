@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { MessageSquare, X, FileArchive, Download, Loader2, User, Phone, Hash, Palette, ExternalLink } from "lucide-react";
+import { MessageSquare, X, FileArchive, Download, Loader2, User, Phone, Hash, Palette } from "lucide-react";
 import { ChatModule } from "@/components/chat-module";
 import type { RoleKey } from "@/lib/chat";
 import { Z } from "@/lib/z-index";
 import { supabase } from "@/integrations/supabase/client";
-import { downloadUrlToCenter, autoCacheFile } from "@/lib/file-manager";
+import { autoCacheFile, saveToCenter } from "@/lib/file-manager";
 import { InAppFileViewer } from "@/components/in-app-file-viewer";
 import { toast } from "sonner";
 
@@ -114,6 +114,7 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
   const [c, setC] = useState<any>(null);
   const [files, setFiles] = useState<CaseAttachment[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
+  const [progress, setProgress] = useState<Record<string, number>>({});
   const [viewer, setViewer] = useState<CaseAttachment | null>(null);
 
   useEffect(() => {
@@ -175,12 +176,40 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
 
   async function downloadOne(att: CaseAttachment) {
     setBusy(att.url);
+    setProgress(p => ({ ...p, [att.url]: 0 }));
     try {
-      const r = await downloadUrlToCenter(att.url, att.name, caseCode);
+      const res = await fetch(att.url);
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const total = Number(res.headers.get("content-length")) || 0;
+      let blob: Blob;
+      if (res.body && total > 0) {
+        const reader = res.body.getReader();
+        const chunks: BlobPart[] = [];
+        let received = 0;
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (value) {
+            chunks.push(value);
+            received += value.length;
+            setProgress(p => ({ ...p, [att.url]: Math.round((received / total) * 100) }));
+          }
+        }
+        blob = new Blob(chunks);
+      } else {
+        blob = await res.blob();
+      }
+      setProgress(p => ({ ...p, [att.url]: 100 }));
+      const r = await saveToCenter(blob, att.name, caseCode);
       toast.success(r.fallback ? "تم تنزيل الملف" : `تم الحفظ في ${r.path}`);
     } catch (e: any) {
       toast.error(e?.message || "تعذر تنزيل الملف");
-    } finally { setBusy(null); }
+    } finally {
+      setBusy(null);
+      setTimeout(() => setProgress(p => {
+        const n = { ...p }; delete n[att.url]; return n;
+      }), 1200);
+    }
   }
 
   if (!c) {
@@ -224,30 +253,38 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
             {files.map(f => {
               const isRar = /\.rar$/i.test(f.name);
               return (
-                <li key={f.url} className="flex items-center justify-between gap-2 p-2">
-                  <button
-                    onClick={() => downloadOne(f)}
-                    className="flex items-center gap-2 min-w-0 text-start hover:text-gold transition"
-                    title="حفظ في مدير ملفات الجهاز ثم فتحه"
-                  >
-                    <FileArchive className={`size-4 shrink-0 ${isRar ? "text-amber-700" : "text-gold"}`} />
-                    <span className="text-xs font-bold truncate">{f.name}</span>
-                    <span className="text-[10px] rounded-full bg-muted px-1.5 py-0.5 font-bold shrink-0">
-                      {sourceLabel(f.source)}
-                    </span>
-                  </button>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button onClick={() => setViewer(f)}
-                      className="rounded-lg border border-border p-1.5 hover:border-gold transition"
-                      aria-label="فتح داخل التطبيق" title="فتح داخل التطبيق (من ذاكرة الجهاز إن وُجدت)">
-                      <ExternalLink className="size-3.5" />
+                <li key={f.url} className="flex flex-col gap-1.5 p-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <button
+                      onClick={() => downloadOne(f)}
+                      className="flex items-center gap-2 min-w-0 text-start hover:text-gold transition"
+                      title="حفظ في مدير ملفات الجهاز ثم فتحه"
+                    >
+                      <FileArchive className={`size-4 shrink-0 ${isRar ? "text-amber-700" : "text-gold"}`} />
+                      <span className="text-xs font-bold truncate">{f.name}</span>
+                      <span className="text-[10px] rounded-full bg-muted px-1.5 py-0.5 font-bold shrink-0">
+                        {sourceLabel(f.source)}
+                      </span>
                     </button>
                     <button onClick={() => downloadOne(f)} disabled={busy === f.url}
-                      className="rounded-lg border border-border p-1.5 hover:border-gold transition disabled:opacity-60"
+                      className="rounded-lg border border-border p-1.5 hover:border-gold transition disabled:opacity-60 shrink-0"
                       aria-label="تنزيل" title="تنزيل الملف">
                       {busy === f.url ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
                     </button>
                   </div>
+                  {progress[f.url] != null && (
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
+                        <div
+                          className="h-full rounded-full gradient-gold transition-all duration-200"
+                          style={{ width: `${progress[f.url]}%` }}
+                        />
+                      </div>
+                      <span className="text-[10px] font-bold text-muted-foreground tabular-nums shrink-0">
+                        {progress[f.url]}%
+                      </span>
+                    </div>
+                  )}
                 </li>
               );
             })}
