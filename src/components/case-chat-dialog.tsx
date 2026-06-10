@@ -253,30 +253,38 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
             {files.map(f => {
               const isRar = /\.rar$/i.test(f.name);
               return (
-                <li key={f.url} className="flex items-center justify-between gap-2 p-2">
-                  <button
-                    onClick={() => downloadOne(f)}
-                    className="flex items-center gap-2 min-w-0 text-start hover:text-gold transition"
-                    title="حفظ في مدير ملفات الجهاز ثم فتحه"
-                  >
-                    <FileArchive className={`size-4 shrink-0 ${isRar ? "text-amber-700" : "text-gold"}`} />
-                    <span className="text-xs font-bold truncate">{f.name}</span>
-                    <span className="text-[10px] rounded-full bg-muted px-1.5 py-0.5 font-bold shrink-0">
-                      {sourceLabel(f.source)}
-                    </span>
-                  </button>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button onClick={() => setViewer(f)}
-                      className="rounded-lg border border-border p-1.5 hover:border-gold transition"
-                      aria-label="فتح داخل التطبيق" title="فتح داخل التطبيق (من ذاكرة الجهاز إن وُجدت)">
-                      <ExternalLink className="size-3.5" />
+                <li key={f.url} className="flex flex-col gap-1.5 p-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <button
+                      onClick={() => downloadOne(f)}
+                      className="flex items-center gap-2 min-w-0 text-start hover:text-gold transition"
+                      title="حفظ في مدير ملفات الجهاز ثم فتحه"
+                    >
+                      <FileArchive className={`size-4 shrink-0 ${isRar ? "text-amber-700" : "text-gold"}`} />
+                      <span className="text-xs font-bold truncate">{f.name}</span>
+                      <span className="text-[10px] rounded-full bg-muted px-1.5 py-0.5 font-bold shrink-0">
+                        {sourceLabel(f.source)}
+                      </span>
                     </button>
                     <button onClick={() => downloadOne(f)} disabled={busy === f.url}
-                      className="rounded-lg border border-border p-1.5 hover:border-gold transition disabled:opacity-60"
+                      className="rounded-lg border border-border p-1.5 hover:border-gold transition disabled:opacity-60 shrink-0"
                       aria-label="تنزيل" title="تنزيل الملف">
                       {busy === f.url ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
                     </button>
                   </div>
+                  {progress[f.url] != null && (
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
+                        <div
+                          className="h-full rounded-full gradient-gold transition-all duration-200"
+                          style={{ width: `${progress[f.url]}%` }}
+                        />
+                      </div>
+                      <span className="text-[10px] font-bold text-muted-foreground tabular-nums shrink-0">
+                        {progress[f.url]}%
+                      </span>
+                    </div>
+                  )}
                 </li>
               );
             })}
