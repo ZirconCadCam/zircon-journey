@@ -819,7 +819,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
 
                       {c.shade && (
                         <div className="mt-3">
-                          <ShadeBadge shade={c.shade} />
+                          <ShadeConfirm shade={c.shade} caseCode={c.case_code} />
                         </div>
                       )}
 
