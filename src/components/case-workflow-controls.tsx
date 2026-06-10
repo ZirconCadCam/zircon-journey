@@ -511,7 +511,7 @@ function TechnicianControls({ c, actorName, doctorName, target }: {
       }).eq("id", c.id);
     setBusy(false);
     if (error) toast.error(error.message);
-    else toast.success(`تم إرسال بيانات الحالة إلى ${ROLE_LABEL[target]} والطبيب`);
+    else toast.success(`✅ تم النحت وإرسال بيانات الحالة إلى ${ROLE_LABEL[target]} والطبيب`);
   }
 
   return (
