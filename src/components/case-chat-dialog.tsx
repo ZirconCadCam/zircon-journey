@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { MessageSquare, X, FileArchive, Download, Loader2, User, Phone, Hash, Palette, ExternalLink } from "lucide-react";
+import { MessageSquare, X, FileArchive, Download, Loader2, User, Phone, Hash, Palette } from "lucide-react";
 import { ChatModule } from "@/components/chat-module";
 import type { RoleKey } from "@/lib/chat";
 import { Z } from "@/lib/z-index";
