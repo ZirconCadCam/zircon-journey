@@ -9,7 +9,7 @@
  * Files are written under the device's public Documents folder so they appear
  * in the phone's file manager under:  Documents/حالات مركز زركون/...
  */
-import { ROOT_FOLDER, buildCasePath, baseStructure, type CaseFileLocation } from "@/lib/case-folders";
+import { ROOT_FOLDER, buildCasePath, baseStructure, sanitizeSegment, type CaseFileLocation } from "@/lib/case-folders";
 
 let nativeChecked = false;
 let nativeValue = false;
@@ -117,6 +117,16 @@ export interface NativeSaveResult {
   uri?: string; // native uri for opening
 }
 
+function sanitizeFileName(filename: string): string {
+  const trimmed = (filename || "").trim();
+  if (!trimmed) return "file";
+  const safe = sanitizeSegment(trimmed)
+    .replace(/[\u0000-\u001f\u007f]+/g, "_")
+    .replace(/^\.+/, "")
+    .slice(0, 180);
+  return safe || "file";
+}
+
 /** Persist a blob into the taxonomy folder for `loc`. */
 export async function saveBlobNative(
   blob: Blob,
@@ -127,13 +137,18 @@ export async function saveBlobNative(
   try {
     const { Filesystem, Directory } = await fs();
     const folderSegs = buildCasePath(loc);
+    const safeName = sanitizeFileName(filename);
     const folder = rootPath(folderSegs);
     await Filesystem.mkdir({ path: folder, directory: Directory.Documents, recursive: true }).catch(() => {});
-    const path = `${folder}/${filename}`;
+    const path = `${folder}/${safeName}`;
     const data = await blobToBase64(blob);
     await Filesystem.writeFile({ path, directory: Directory.Documents, data, recursive: true });
-    const uriRes = await Filesystem.getUri({ path, directory: Directory.Documents });
-    return { saved: true, path: `${ROOT_FOLDER}/${folderSegs.join("/")}/${filename}`, uri: uriRes.uri };
+    try {
+      const uriRes = await Filesystem.getUri({ path, directory: Directory.Documents });
+      return { saved: true, path: `${ROOT_FOLDER}/${folderSegs.join("/")}/${safeName}`, uri: uriRes.uri };
+    } catch {
+      return { saved: true, path: `${ROOT_FOLDER}/${folderSegs.join("/")}/${safeName}` };
+    }
   } catch {
     return { saved: false };
   }
@@ -147,7 +162,7 @@ export async function readBlobNative(
   if (!(await isNativeApp())) return null;
   try {
     const { Filesystem, Directory } = await fs();
-    const path = `${rootPath(buildCasePath(loc))}/${filename}`;
+    const path = `${rootPath(buildCasePath(loc))}/${sanitizeFileName(filename)}`;
     const res = await Filesystem.readFile({ path, directory: Directory.Documents });
     const bytes = base64ToBytes(res.data as string);
     return new Blob([bytes.buffer as ArrayBuffer]);
@@ -161,7 +176,7 @@ export async function getNativeUri(filename: string, loc: CaseFileLocation): Pro
   if (!(await isNativeApp())) return null;
   try {
     const { Filesystem, Directory } = await fs();
-    const path = `${rootPath(buildCasePath(loc))}/${filename}`;
+    const path = `${rootPath(buildCasePath(loc))}/${sanitizeFileName(filename)}`;
     const res = await Filesystem.getUri({ path, directory: Directory.Documents });
     return res.uri || null;
   } catch {

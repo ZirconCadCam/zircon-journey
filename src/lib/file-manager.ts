@@ -302,11 +302,11 @@ export async function saveToCenter(
     const loc: CaseFileLocation = location ?? { role: "admin", caseCode: subfolder };
     const r = await saveBlobNative(blob, filename, loc);
     if (r.saved) return { saved: true, fallback: false, path: r.path, uri: r.uri };
-    fallbackDownload(blob, filename);
+    await fallbackDownload(blob, filename);
     return { saved: true, fallback: true };
   }
   if (!isSupported()) {
-    fallbackDownload(blob, filename);
+    await fallbackDownload(blob, filename);
     return { saved: true, fallback: true };
   }
   let dir = await getCenterFolder();
@@ -331,7 +331,12 @@ export async function saveToCenter(
     await writable.close();
     return { saved: true, fallback: false, path: `${CENTER_FOLDER_NAME}${subfolder ? "/" + subfolder : ""}/${filename}` };
   } catch {
-    fallbackDownload(blob, filename);
+    try {
+      await clearCenterFolder();
+    } catch {
+      /* ignore stale handle cleanup errors */
+    }
+    await fallbackDownload(blob, filename);
     return { saved: true, fallback: true };
   }
 }
@@ -396,12 +401,46 @@ export async function openCachedFile(
   }
 }
 
-function fallbackDownload(blob: Blob, filename: string) {
+async function fallbackDownload(blob: Blob, filename: string): Promise<void> {
+  const safeName = filename?.trim() || "file";
+
+  try {
+    const nav = navigator as Navigator & {
+      share?: (data: { title?: string; files?: File[] }) => Promise<void>;
+      canShare?: (data: { files?: File[] }) => boolean;
+    };
+    if (typeof File !== "undefined" && nav.share) {
+      const file = new File([blob], safeName, {
+        type: blob.type || "application/octet-stream",
+        lastModified: Date.now(),
+      });
+      const payload = { title: safeName, files: [file] };
+      if (!nav.canShare || nav.canShare(payload)) {
+        await nav.share(payload);
+        return;
+      }
+    }
+  } catch (e: any) {
+    if (e?.name === "AbortError") return;
+  }
+
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = filename;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 4000);
+  try {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = safeName;
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } catch {
+    try {
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch {
+      /* ignore */
+    }
+  }
+  setTimeout(() => URL.revokeObjectURL(url), 120000);
 }
 
 /** Fetch a remote URL into the center folder. */
