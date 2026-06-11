@@ -898,9 +898,11 @@ function DoctorControls({ c, actorName, doctorName }: {
 
   async function requestRevision() {
     if (notes.trim().length < 3) { toast.error("اكتب ملاحظات التعديل"); return; }
-    if (c.shade && !revShadeConfirmed) { toast.error("الرجاء تأكيد اللون قبل إرسال طلب التعديل"); return; }
+    const nextShade = revShade.trim();
+    if (nextShade && !revShadeConfirmed) { toast.error("الرجاء تأكيد اللون قبل إرسال طلب التعديل"); return; }
     setBusy(true);
     const trimmed = notes.trim();
+    const shadeChanged = (c.shade ?? "").trim().toUpperCase() !== nextShade.toUpperCase();
     const { error } = await supabase.from("slot_cases")
       .update({
         doctor_decision: "revision",
@@ -908,15 +910,25 @@ function DoctorControls({ c, actorName, doctorName }: {
         revision_design_done: false,
         revision_approved_by_tech: false,
         temporary_delivered: true,
+        shade: nextShade || null,
         shade_confirmed_doctor: true,
         shade_confirmed_designer: false,
         shade_confirmed_technician: false,
         review_read_at: new Date().toISOString(),
       }).eq("id", c.id);
     if (!error) {
-      await appendAudit(c, { actor: actorName || "الطبيب", action: "طلب تعديل التصميم", notes: trimmed });
-      const designerBody = `🔁 طلب تعديل تصميم — الحالة ${c.case_code} (${c.patient_name})\nملاحظات:\n${trimmed}`;
-      const techBody = `🔁 طلب تعديل من الطبيب — الحالة ${c.case_code} (${c.patient_name}). بانتظار وصول ملف rar المعدل من المصمم.\nملاحظات الطبيب:\n${trimmed}`;
+      await appendAudit(c, {
+        actor: actorName || "الطبيب",
+        action: shadeChanged ? `طلب تعديل التصميم (تغيير اللون إلى ${nextShade || "—"})` : "طلب تعديل التصميم",
+        notes: trimmed,
+      });
+      const shadeLine = nextShade
+        ? shadeChanged
+          ? `\n🎨 تم تعديل اللون إلى: ${nextShade}`
+          : `\n🎨 اللون: ${nextShade}`
+        : "";
+      const designerBody = `🔁 طلب تعديل تصميم — الحالة ${c.case_code} (${c.patient_name})${shadeLine}\nملاحظات:\n${trimmed}`;
+      const techBody = `🔁 طلب تعديل من الطبيب — الحالة ${c.case_code} (${c.patient_name}). بانتظار وصول ملف rar المعدل من المصمم.${shadeLine}\nملاحظات الطبيب:\n${trimmed}`;
       // Upload each attachment ONCE (with progress tube), then reference the
       // same stored path in both the designer and technician conversations.
       const uploaded: { name: string; path: string; mime: string | null; size: number }[] = [];
