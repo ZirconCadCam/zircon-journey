@@ -134,10 +134,16 @@ export function CaseShadeConfirm({
 
   if (!shade) return null;
 
-  async function confirm(column: string) {
+  async function confirm(which: "doctor" | "designer" | "technician") {
     if (saving) return;
     setSaving(true);
-    const { error } = await supabase.from("slot_cases").update({ [column]: true }).eq("id", caseId);
+    const patch =
+      which === "doctor"
+        ? { shade_confirmed_doctor: true }
+        : which === "designer"
+          ? { shade_confirmed_designer: true }
+          : { shade_confirmed_technician: true };
+    const { error } = await supabase.from("slot_cases").update(patch).eq("id", caseId);
     setSaving(false);
     if (error) toast.error(error.message);
     else toast.success("تم تأكيد اللون");
