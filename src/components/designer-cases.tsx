@@ -569,6 +569,60 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     } finally { setBusyId(null); }
   }
 
+  /** Locate the latest design .rar (storage path + display name) for a case. */
+  async function findDesignRar(c: Case): Promise<{ path: string; name: string | null } | null> {
+    if ((c as any).revision_design_file_path) {
+      return {
+        path: (c as any).revision_design_file_path as string,
+        name: (c as any).revision_design_file_name ?? `${c.case_code}.rar`,
+      };
+    }
+    const { data: convs } = await supabase.from("chat_conversations")
+      .select("id, participants").eq("doctor_slot", c.doctor_slot);
+    const ids = ((convs ?? []) as any[])
+      .filter(cv => Array.isArray(cv.participants)
+        && cv.participants.includes("designer")
+        && cv.participants.includes("technician"))
+      .map(cv => cv.id);
+    if (!ids.length) return null;
+    const { data: msgs } = await supabase.from("chat_messages")
+      .select("attachment_path, attachment_name, content, created_at")
+      .in("conversation_id", ids)
+      .eq("sender", "designer")
+      .eq("message_type", "file")
+      .order("created_at", { ascending: false }).limit(50);
+    const hit = ((msgs ?? []) as any[]).find(m =>
+      /\.rar$/i.test(m.attachment_name || "") &&
+      (m.content || "").includes(c.case_code));
+    return hit ? { path: hit.attachment_path, name: hit.attachment_name ?? null } : null;
+  }
+
+  /** Open an archive (ZIP for designer/admin, RAR for technician) inside the
+   * in-app viewer. Resolves a fetchable signed URL first — the viewer fetches
+   * the URL directly, so a raw storage path would fail. */
+  async function openArchivePreview(c: Case, kind: "zip" | "rar") {
+    setBusyId(c.id);
+    try {
+      let path: string | null = null;
+      let name: string | null = null;
+      if (kind === "zip") {
+        path = c.scan_path ?? null;
+        name = c.scan_name ?? null;
+        if (!path) { toast.error("لا يوجد ملف ZIP مرفق"); return; }
+      } else {
+        const found = await findDesignRar(c);
+        if (!found) { toast.error("لم يصل ملف التصميم (.rar) بعد"); return; }
+        path = found.path;
+        name = found.name ?? `${c.case_code}.rar`;
+      }
+      const resolved = /^https?:\/\//i.test(path) ? path : (await getSignedUrl(path, 3600)) ?? path;
+      setZipPreview({ url: resolved, name });
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e.message || "تعذر فتح الأرشيف");
+    } finally { setBusyId(null); }
+  }
+
   /** Item 2: make any stored file (cloud path or URL) clickable to download. */
   async function downloadCloudFile(path: string | null | undefined, name: string, mime?: string | null, location?: import("@/lib/case-folders").CaseFileLocation) {
     if (!path) { toast.error("لا يوجد ملف للتنزيل"); return; }
