@@ -2,8 +2,27 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Sparkles, ArrowRight, Stethoscope, Plus, Pencil, Search } from "lucide-react";
-import { useAuth, BRANCH_LABELS } from "@/hooks/use-auth";
+import { BRANCH_LABELS } from "@/hooks/use-auth";
 import { toast } from "sonner";
+
+/**
+ * The slot workflow authenticates admins via a localStorage flag set on the
+ * master-password login (see src/routes/login.tsx), NOT via a real Supabase
+ * Auth session. So admin-only controls on this page must check that flag —
+ * using useAuth().role here would never be "admin" and the Add-Doctor button
+ * would never appear.
+ */
+function useIsSlotAdmin() {
+  const [isAdmin, setIsAdmin] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setIsAdmin(
+      localStorage.getItem("zircon_admin_all") === "1" ||
+        localStorage.getItem("zircon_staff_admin") === "1",
+    );
+  }, []);
+  return isAdmin;
+}
 
 export const Route = createFileRoute("/doctors/")({
   component: DoctorsGrid,
