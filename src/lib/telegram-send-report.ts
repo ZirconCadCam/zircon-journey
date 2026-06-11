@@ -62,11 +62,13 @@ export function buildTelegramSendReport(input: TelegramSendReportInput): Telegra
   }
 
   if (failed.length) {
-    const names = failed.map((s) => s.filename).join(SEP);
+    const names = failed
+      .map((s) => (s.error ? `${s.filename} (${s.error})` : s.filename))
+      .join(SEP);
     toasts.push({
       kind: "warning",
       text: `تم إرسال البيانات لكن فشل إرسال ${failed.length} ملف: ${names}`,
-      duration: 7000,
+      duration: 8000,
     });
   } else if (documentCount === 0) {
     toasts.push({
