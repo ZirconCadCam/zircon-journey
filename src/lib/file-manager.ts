@@ -78,15 +78,24 @@ async function ensurePermission(handle: any, mode: "read" | "readwrite" = "readw
 
 /** Prompt the user once to pick a base folder; we then create the center subfolder inside. */
 export async function pickCenterFolder(): Promise<boolean> {
-  if (!isSupported()) return false;
-  try {
-    const base: any = await (window as any).showDirectoryPicker({ mode: "readwrite" });
-    const center = await base.getDirectoryHandle(CENTER_FOLDER_NAME, { create: true });
-    await idbSet(KEY, center);
-    return true;
-  } catch {
-    return false;
+  if (!isSupported()) {
+    const err: any = new Error("unsupported");
+    err.name = "UnsupportedError";
+    throw err;
   }
+  // IMPORTANT: showDirectoryPicker() must be the first awaited call so the
+  // browser's transient user-activation (from the click) is still valid.
+  let base: any;
+  try {
+    base = await (window as any).showDirectoryPicker({ mode: "readwrite" });
+  } catch (e: any) {
+    // User dismissed the picker — treat as a silent cancel.
+    if (e?.name === "AbortError") return false;
+    throw e;
+  }
+  const center = await base.getDirectoryHandle(CENTER_FOLDER_NAME, { create: true });
+  await idbSet(KEY, center);
+  return true;
 }
 
 export async function getCenterFolder(): Promise<FileSystemDirectoryHandle | null> {
