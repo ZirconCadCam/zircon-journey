@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as HelpIndexRouteImport } from './routes/help.index'
 import { Route as DoctorsIndexRouteImport } from './routes/doctors.index'
 import { Route as StaffRoleRouteImport } from './routes/staff.$role'
+import { Route as HelpRoleRouteImport } from './routes/help.$role'
 import { Route as DoctorsSlotRouteImport } from './routes/doctors.$slot'
 import { Route as CasesNewRouteImport } from './routes/cases.new'
 import { Route as CasesIdRouteImport } from './routes/cases.$id'
@@ -51,6 +52,11 @@ const DoctorsIndexRoute = DoctorsIndexRouteImport.update({
 const StaffRoleRoute = StaffRoleRouteImport.update({
   id: '/staff/$role',
   path: '/staff/$role',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HelpRoleRoute = HelpRoleRouteImport.update({
+  id: '/help/$role',
+  path: '/help/$role',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DoctorsSlotRoute = DoctorsSlotRouteImport.update({
@@ -99,6 +105,7 @@ export interface FileRoutesByFullPath {
   '/cases/$id': typeof CasesIdRoute
   '/cases/new': typeof CasesNewRoute
   '/doctors/$slot': typeof DoctorsSlotRoute
+  '/help/$role': typeof HelpRoleRoute
   '/staff/$role': typeof StaffRoleRoute
   '/doctors/': typeof DoctorsIndexRoute
   '/help/': typeof HelpIndexRoute
@@ -114,6 +121,7 @@ export interface FileRoutesByTo {
   '/cases/$id': typeof CasesIdRoute
   '/cases/new': typeof CasesNewRoute
   '/doctors/$slot': typeof DoctorsSlotRoute
+  '/help/$role': typeof HelpRoleRoute
   '/staff/$role': typeof StaffRoleRoute
   '/doctors': typeof DoctorsIndexRoute
   '/help': typeof HelpIndexRoute
@@ -130,6 +138,7 @@ export interface FileRoutesById {
   '/cases/$id': typeof CasesIdRoute
   '/cases/new': typeof CasesNewRoute
   '/doctors/$slot': typeof DoctorsSlotRoute
+  '/help/$role': typeof HelpRoleRoute
   '/staff/$role': typeof StaffRoleRoute
   '/doctors/': typeof DoctorsIndexRoute
   '/help/': typeof HelpIndexRoute
@@ -147,6 +156,7 @@ export interface FileRouteTypes {
     | '/cases/$id'
     | '/cases/new'
     | '/doctors/$slot'
+    | '/help/$role'
     | '/staff/$role'
     | '/doctors/'
     | '/help/'
@@ -162,6 +172,7 @@ export interface FileRouteTypes {
     | '/cases/$id'
     | '/cases/new'
     | '/doctors/$slot'
+    | '/help/$role'
     | '/staff/$role'
     | '/doctors'
     | '/help'
@@ -177,6 +188,7 @@ export interface FileRouteTypes {
     | '/cases/$id'
     | '/cases/new'
     | '/doctors/$slot'
+    | '/help/$role'
     | '/staff/$role'
     | '/doctors/'
     | '/help/'
@@ -193,6 +205,7 @@ export interface RootRouteChildren {
   CasesIdRoute: typeof CasesIdRoute
   CasesNewRoute: typeof CasesNewRoute
   DoctorsSlotRoute: typeof DoctorsSlotRoute
+  HelpRoleRoute: typeof HelpRoleRoute
   StaffRoleRoute: typeof StaffRoleRoute
   DoctorsIndexRoute: typeof DoctorsIndexRoute
   HelpIndexRoute: typeof HelpIndexRoute
@@ -241,6 +254,13 @@ declare module '@tanstack/react-router' {
       path: '/staff/$role'
       fullPath: '/staff/$role'
       preLoaderRoute: typeof StaffRoleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/help/$role': {
+      id: '/help/$role'
+      path: '/help/$role'
+      fullPath: '/help/$role'
+      preLoaderRoute: typeof HelpRoleRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/doctors/$slot': {
@@ -305,6 +325,7 @@ const rootRouteChildren: RootRouteChildren = {
   CasesIdRoute: CasesIdRoute,
   CasesNewRoute: CasesNewRoute,
   DoctorsSlotRoute: DoctorsSlotRoute,
+  HelpRoleRoute: HelpRoleRoute,
   StaffRoleRoute: StaffRoleRoute,
   DoctorsIndexRoute: DoctorsIndexRoute,
   HelpIndexRoute: HelpIndexRoute,
