@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Check, Circle, Lock, Palette } from "lucide-react";
+import { Check, ChevronDown, Circle, Lock, Palette } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ShadeBadge } from "@/components/shade-badge";
 import { SHADE_COLORS, shadeColor } from "@/lib/shades";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,18 +16,19 @@ export function ShadePicker({
   value,
   onChange,
   className = "",
+  collapsible = false,
 }: {
   value?: string | null;
   onChange: (shade: string) => void;
   className?: string;
+  collapsible?: boolean;
 }) {
+  const [open, setOpen] = useState(true);
   const current = (value ?? "").trim().toUpperCase();
   const shades = Object.keys(SHADE_COLORS);
-  return (
-    <div className={`space-y-2 ${className}`}>
-      <div className="flex items-center gap-1.5 text-[11px] font-bold text-foreground">
-        <Palette className="size-3.5 text-gold" /> اختر لون السن
-      </div>
+
+  const grid = (
+    <>
       <div className="grid grid-cols-5 gap-1.5">
         {shades.map((s) => {
           const color = shadeColor(s) ?? "#ccc";
@@ -69,7 +71,35 @@ export function ShadePicker({
           className="w-full rounded-lg border border-input bg-background px-2.5 py-1.5 text-xs font-mono outline-none focus:border-gold"
         />
       </div>
-    </div>
+    </>
+  );
+
+  if (!collapsible) {
+    return (
+      <div className={`space-y-2 ${className}`}>
+        <div className="flex items-center gap-1.5 text-[11px] font-bold text-foreground">
+          <Palette className="size-3.5 text-gold" /> اختر لون السن
+        </div>
+        {grid}
+      </div>
+    );
+  }
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen} className={`space-y-2 ${className}`}>
+      <CollapsibleTrigger asChild>
+        <button
+          type="button"
+          className="flex w-full items-center justify-between gap-1.5 rounded-lg border border-gold/30 bg-gold/10 px-2.5 py-1.5 text-[11px] font-bold text-foreground hover:bg-gold/20 transition"
+        >
+          <span className="flex items-center gap-1.5">
+            <Palette className="size-3.5 text-gold" /> اختر لون السن
+          </span>
+          <ChevronDown className={`size-3.5 text-gold transition-transform ${open ? "rotate-180" : ""}`} />
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="space-y-2">{grid}</CollapsibleContent>
+    </Collapsible>
   );
 }
 
