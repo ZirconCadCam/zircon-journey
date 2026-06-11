@@ -1015,7 +1015,7 @@ function DoctorControls({ c, actorName, doctorName }: {
               className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 text-white px-3 py-2 text-xs font-bold shadow">
               <ThumbsUp className="size-3.5" /> معتمد للدائم
             </button>
-            <button onClick={() => setRevOpen(true)} disabled={busy}
+            <button onClick={() => { setRevShadeConfirmed(false); setRevOpen(true); }} disabled={busy}
               className="inline-flex items-center gap-2 rounded-lg bg-amber-600 text-white px-3 py-2 text-xs font-bold shadow">
               <Pencil className="size-3.5" /> يلزم تعديل
             </button>
@@ -1156,6 +1156,19 @@ function DoctorControls({ c, actorName, doctorName }: {
                 </div>
               )}
             </div>
+
+            {c.shade && (
+              <div className="mt-3 rounded-xl border border-gold/40 bg-gold/5 p-3 space-y-1.5">
+                <div className="text-[11px] font-bold text-amber-800">
+                  أعد تأكيد لون السن قبل إرسال طلب التعديل — سيُطلب من المصمم والفني تأكيده مجدداً.
+                </div>
+                <ShadeConfirm
+                  shade={c.shade}
+                  confirmed={revShadeConfirmed}
+                  onConfirm={() => setRevShadeConfirmed(true)}
+                />
+              </div>
+            )}
 
             <div className="flex justify-end gap-2 mt-3">
               <button onClick={() => setRevOpen(false)} className="rounded-lg border border-border px-3 py-2 text-xs font-bold">

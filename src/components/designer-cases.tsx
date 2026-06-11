@@ -651,32 +651,65 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
       const safe = (s: string) => s.replace(/[\\/:*?"<>|]+/g, "_").trim();
       const documents: { url: string; filename: string }[] = [];
 
-      // (a) scan file (zip)
+      // (a) ZIP from the doctor to the designer — before the revision.
       if (c.scan_path) {
         const url = /^https?:\/\//i.test(c.scan_path) ? c.scan_path : await getSignedUrl(c.scan_path, 3600);
         const ext = /\.zip$/i.test(c.scan_name || "") ? "zip" : (c.scan_name?.split(".").pop() || "zip");
-        if (url) documents.push({ url, filename: `${safe(c.patient_name)} - ملف الحالة.${ext}` });
+        if (url) documents.push({ url, filename: `${safe(c.patient_name)} - ملف الحالة (قبل التعديل).${ext}` });
       }
 
-      // (b) rar files before & after edit
+      // Gather conversation messages once (files + designer→technician text revision).
       const { data: convs } = await supabase.from("chat_conversations")
         .select("id, participants").eq("doctor_slot", c.doctor_slot);
-      const convIds = ((convs ?? []) as any[]).map(cv => cv.id);
+      const convList = ((convs ?? []) as any[]);
+      const convIds = convList.map(cv => cv.id);
+      const designerTechConvIds = convList
+        .filter(cv => Array.isArray(cv.participants)
+          && cv.participants.includes("designer") && cv.participants.includes("technician"))
+        .map(cv => cv.id);
+
       let beforeRar: string | null = null;
       let afterRar: string | null = c.revision_design_file_path ?? null;
+      let afterZip: string | null = null;
+      let afterZipName: string | null = null;
+      let designerTextRevision: string | null = null;
+
       if (convIds.length) {
-        const { data: rarMsgs } = await supabase.from("chat_messages")
-          .select("attachment_path, attachment_name, content, message_type, created_at")
+        const { data: msgs } = await supabase.from("chat_messages")
+          .select("attachment_path, attachment_name, content, message_type, sender, conversation_id, created_at")
           .in("conversation_id", convIds)
-          .eq("message_type", "file")
-          .order("created_at", { ascending: true }).limit(200);
-        for (const m of (rarMsgs ?? []) as any[]) {
-          if (!m.attachment_path || !/\.rar$/i.test(m.attachment_name || "")) continue;
-          if (!(m.content || "").includes(c.case_code)) continue;
-          const isRev = /تعديل|revision/i.test(m.content || "");
-          if (isRev) { if (!afterRar) afterRar = m.attachment_path; }
-          else { beforeRar = m.attachment_path; }
+          .order("created_at", { ascending: true }).limit(400);
+        for (const m of (msgs ?? []) as any[]) {
+          const content = m.content || "";
+          if (!content.includes(c.case_code) && m.message_type !== "file") {
+            // text messages might not embed the code; only filter file messages by code below
+          }
+          const isRev = /تعديل|revision/i.test(content);
+          // --- file messages: rar (before/after) + zip after edit ---
+          if (m.message_type === "file" && m.attachment_path && content.includes(c.case_code)) {
+            if (/\.rar$/i.test(m.attachment_name || "")) {
+              if (isRev) { if (!afterRar) afterRar = m.attachment_path; }
+              else beforeRar = m.attachment_path;
+            } else if (/\.zip$/i.test(m.attachment_name || "") && isRev) {
+              afterZip = m.attachment_path;
+              afterZipName = m.attachment_name;
+            }
+          }
+          // --- designer → technician text revision ---
+          if (
+            m.message_type === "text" && m.sender === "designer"
+            && designerTechConvIds.includes(m.conversation_id)
+            && isRev && content.includes(c.case_code)
+          ) {
+            designerTextRevision = content;
+          }
         }
+      }
+
+      if (afterZip) {
+        const url = /^https?:\/\//i.test(afterZip) ? afterZip : await getSignedUrl(afterZip, 3600);
+        const ext = /\.zip$/i.test(afterZipName || "") ? "zip" : (afterZipName?.split(".").pop() || "zip");
+        if (url) documents.push({ url, filename: `${safe(c.patient_name)} - ملف الحالة (بعد التعديل).${ext}` });
       }
       if (beforeRar) {
         const url = /^https?:\/\//i.test(beforeRar) ? beforeRar : await getSignedUrl(beforeRar, 3600);
@@ -687,12 +720,19 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
         if (url) documents.push({ url, filename: `${safe(c.patient_name)} - التصميم بعد التعديل.rar` });
       }
 
+      // Designer → technician text revision (sent as part of the case caption).
+      let finalCaption = caption;
+      if (designerTextRevision) {
+        finalCaption += `\n\n✏️ تعديل المصمم النصي للفني:\n${designerTextRevision}`;
+      }
+
       // (c) conversations PDF
       const pdfUrl = await buildAndUploadConversationsPdf(c, convIds);
       if (pdfUrl) documents.push({ url: pdfUrl, filename: `${safe(c.patient_name)} - المحادثات.pdf` });
 
+
       const { sendCaseToTelegram } = await import("@/lib/telegram.functions");
-      const res: any = await sendCaseToTelegram({ data: { caption, documents } });
+      const res: any = await sendCaseToTelegram({ data: { caption: finalCaption, documents } });
       const failed = (res?.sent || []).filter((s: any) => !s.ok);
       if (failed.length) toast.warning(`تم الإرسال — تعذّر ${failed.length} ملف`);
       else toast.success("تم إرسال تفاصيل الحالة إلى تلجرام");
