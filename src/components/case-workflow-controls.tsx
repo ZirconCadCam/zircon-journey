@@ -1178,6 +1178,7 @@ function DoctorControls({ c, actorName, doctorName }: {
               <ShadePicker
                 value={revShade}
                 onChange={(s) => { setRevShade(s); setRevShadeConfirmed(false); }}
+                collapsible
               />
               {revShade.trim() && (
                 <div className="pt-1 border-t border-gold/30">
