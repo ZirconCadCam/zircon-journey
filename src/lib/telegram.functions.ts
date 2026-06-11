@@ -70,24 +70,78 @@ export const sendCaseToTelegram = createServerFn({ method: "POST" })
     }
 
     // 2) Each file as a document.
+    //
+    // Telegram's "send by URL" path silently fails for many real files: it has
+    // a hard ~20 MB limit and frequently rejects archives (.rar/.zip) it can't
+    // fetch. So we download the file ourselves and upload the bytes as
+    // multipart/form-data (50 MB limit, no Telegram-side fetch). We only fall
+    // back to the URL method if the download itself fails.
     const sent: { filename: string; ok: boolean; error: string | null }[] = [];
     for (const doc of data.documents) {
       try {
-        const res = await fetch(`${GATEWAY}/sendDocument`, {
-          method: "POST",
-          headers,
-          body: JSON.stringify({
-            chat_id: chatId,
-            document: doc.url,
-            caption: doc.filename,
-          }),
-        });
-        const j: any = await res.json().catch(() => ({}));
-        sent.push({
-          filename: doc.filename,
-          ok: res.ok && !!j?.ok,
-          error: j?.ok ? null : j?.description ?? `HTTP ${res.status}`,
-        });
+        let uploaded = false;
+        let lastError: string | null = null;
+
+        // --- Preferred path: download + multipart upload ---
+        try {
+          const fileRes = await fetch(doc.url);
+          if (!fileRes.ok) {
+            lastError = `تعذّر تنزيل الملف من المصدر [HTTP ${fileRes.status}]`;
+          } else {
+            const bytes = await fileRes.arrayBuffer();
+            if (bytes.byteLength > MAX_UPLOAD_BYTES) {
+              lastError = `حجم الملف ${(bytes.byteLength / 1048576).toFixed(1)}MB يتجاوز حد تلجرام (50MB)`;
+            } else {
+              const form = new FormData();
+              form.append("chat_id", chatId);
+              form.append("caption", doc.filename);
+              form.append(
+                "document",
+                new Blob([bytes], { type: "application/octet-stream" }),
+                doc.filename,
+              );
+              const res = await fetch(`${GATEWAY}/sendDocument`, {
+                method: "POST",
+                headers: multipartHeaders,
+                body: form,
+              });
+              const j: any = await res.json().catch(() => ({}));
+              if (res.ok && j?.ok) {
+                uploaded = true;
+              } else {
+                lastError = j?.description ?? `HTTP ${res.status}`;
+              }
+            }
+          }
+        } catch (e: any) {
+          lastError = e?.message ?? "خطأ أثناء التنزيل";
+        }
+
+        // --- Fallback path: let Telegram fetch the URL directly ---
+        if (!uploaded) {
+          try {
+            const res = await fetch(`${GATEWAY}/sendDocument`, {
+              method: "POST",
+              headers,
+              body: JSON.stringify({
+                chat_id: chatId,
+                document: doc.url,
+                caption: doc.filename,
+              }),
+            });
+            const j: any = await res.json().catch(() => ({}));
+            if (res.ok && j?.ok) {
+              uploaded = true;
+              lastError = null;
+            } else {
+              lastError = j?.description ?? lastError ?? `HTTP ${res.status}`;
+            }
+          } catch (e: any) {
+            lastError = e?.message ?? lastError ?? "خطأ";
+          }
+        }
+
+        sent.push({ filename: doc.filename, ok: uploaded, error: uploaded ? null : lastError });
       } catch (e: any) {
         sent.push({ filename: doc.filename, ok: false, error: e?.message ?? "خطأ" });
       }
