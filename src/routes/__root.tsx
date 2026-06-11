@@ -10,6 +10,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { InstallPrompt } from "@/components/install-prompt";
 import { TransferOverlay, BackgroundKeepAlive } from "@/lib/transfer-manager";
 import { NativeBootstrap } from "@/components/native-bootstrap";
+import { StoragePermissionPrompt } from "@/components/storage-permission-prompt";
 import appCss from "../styles.css?url";
 
 function NotFoundComponent() {
@@ -92,6 +93,7 @@ function RootComponent() {
       <Toaster position="top-center" richColors />
       <InstallPrompt />
       <NativeBootstrap />
+      <StoragePermissionPrompt />
       <TransferOverlay />
       <BackgroundKeepAlive />
     </QueryClientProvider>
