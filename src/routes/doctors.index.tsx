@@ -13,7 +13,6 @@ interface Doctor {
   slot: number;
   name: string;
   branch: "sanaa" | "ibb" | null;
-  password: string;
   active: boolean;
 }
 
