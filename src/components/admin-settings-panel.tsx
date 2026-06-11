@@ -246,7 +246,7 @@ function AddDoctorCard({ doctors, onDone }: { doctors: Doctor[]; onDone: () => v
     const { error } = await supabase.rpc("upsert_doctor", {
       p_slot: nextSlot,
       p_name: name.trim(),
-      p_branch: branch || null,
+      p_branch: (branch || null) as string,
       p_active: true,
     });
     if (!error) {
