@@ -2,8 +2,27 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Sparkles, ArrowRight, Stethoscope, Plus, Pencil, Search } from "lucide-react";
-import { useAuth, BRANCH_LABELS } from "@/hooks/use-auth";
+import { BRANCH_LABELS } from "@/hooks/use-auth";
 import { toast } from "sonner";
+
+/**
+ * The slot workflow authenticates admins via a localStorage flag set on the
+ * master-password login (see src/routes/login.tsx), NOT via a real Supabase
+ * Auth session. So admin-only controls on this page must check that flag —
+ * using useAuth().role here would never be "admin" and the Add-Doctor button
+ * would never appear.
+ */
+function useIsSlotAdmin() {
+  const [isAdmin, setIsAdmin] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setIsAdmin(
+      localStorage.getItem("zircon_admin_all") === "1" ||
+        localStorage.getItem("zircon_staff_admin") === "1",
+    );
+  }, []);
+  return isAdmin;
+}
 
 export const Route = createFileRoute("/doctors/")({
   component: DoctorsGrid,
@@ -18,7 +37,7 @@ interface Doctor {
 
 function DoctorsGrid() {
   const nav = useNavigate();
-  const { role } = useAuth();
+  const isAdmin = useIsSlotAdmin();
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [filter, setFilter] = useState<"all" | "sanaa" | "ibb">("all");
   const [q, setQ] = useState("");
@@ -86,7 +105,7 @@ function DoctorsGrid() {
           <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
             <Stethoscope className="size-7 text-gold" /> أطباء المركز
           </h1>
-          {role === "admin" && (
+          {isAdmin && (
             <button onClick={() => setAdding(true)}
               className="inline-flex items-center gap-2 rounded-xl gradient-brown px-4 py-2 text-sm font-bold shadow-luxury hover:brightness-105 transition">
               <Plus className="size-4" /> إضافة طبيب
@@ -95,14 +114,14 @@ function DoctorsGrid() {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
-          {visible.map(d => <DoctorTile key={d.slot} d={d} isAdmin={role === "admin"} onEdit={() => setEditing(d)} />)}
+          {visible.map(d => <DoctorTile key={d.slot} d={d} isAdmin={isAdmin} onEdit={() => setEditing(d)} />)}
         </div>
       </main>
 
-      {editing && role === "admin" && (
+      {editing && isAdmin && (
         <EditDialog d={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />
       )}
-      {adding && role === "admin" && (
+      {adding && isAdmin && (
         <AddDialog
           nextSlot={doctors.reduce((m, d) => Math.max(m, d.slot), 0) + 1}
           onClose={() => setAdding(false)}
