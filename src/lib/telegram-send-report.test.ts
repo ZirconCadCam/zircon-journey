@@ -94,6 +94,19 @@ describe("buildTelegramSendReport — زر إرسال إلى تلجرام", () =
     expect(warn!.text).toContain("التصميم بعد التعديل.rar");
   });
 
+  it("يذكر سبب فشل إرسال الملف عند توفّره", () => {
+    const reports = buildTelegramSendReport({
+      missing: [],
+      urlFailed: [],
+      failed: [
+        { filename: "حسام - التصميم بعد التعديل.rar", error: "حجم الملف 63.0MB يتجاوز حد تلجرام (50MB)" },
+      ],
+      documentCount: 2,
+    });
+    const warn = reports.find((r) => r.kind === "warning");
+    expect(warn!.text).toContain("يتجاوز حد تلجرام");
+  });
+
   it("ينجح نصيًا عندما لا توجد ملفات مرفقة", () => {
     const reports = buildTelegramSendReport({
       missing: [],

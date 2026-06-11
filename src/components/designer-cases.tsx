@@ -754,7 +754,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
       const reports = buildTelegramSendReport({
         missing,
         urlFailed,
-        failed: failed.map((s: any) => ({ filename: s.filename })),
+        failed: failed.map((s: any) => ({ filename: s.filename, error: s.error })),
         documentCount: documents.length,
       });
       for (const r of reports) {

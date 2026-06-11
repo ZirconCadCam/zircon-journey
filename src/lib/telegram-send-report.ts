@@ -29,7 +29,7 @@ export interface TelegramSendReportInput {
   /** Items whose download/signed URL could not be prepared. */
   urlFailed: string[];
   /** Files that Telegram rejected (returned from the server function). */
-  failed: { filename: string }[];
+  failed: { filename: string; error?: string | null }[];
   /** Number of documents that were attached to the send. */
   documentCount: number;
 }
@@ -62,11 +62,13 @@ export function buildTelegramSendReport(input: TelegramSendReportInput): Telegra
   }
 
   if (failed.length) {
-    const names = failed.map((s) => s.filename).join(SEP);
+    const names = failed
+      .map((s) => (s.error ? `${s.filename} (${s.error})` : s.filename))
+      .join(SEP);
     toasts.push({
       kind: "warning",
       text: `تم إرسال البيانات لكن فشل إرسال ${failed.length} ملف: ${names}`,
-      duration: 7000,
+      duration: 8000,
     });
   } else if (documentCount === 0) {
     toasts.push({
