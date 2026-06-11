@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Check, Circle, Lock, Palette } from "lucide-react";
+import { Check, ChevronDown, Circle, Lock, Palette } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ShadeBadge } from "@/components/shade-badge";
 import { SHADE_COLORS, shadeColor } from "@/lib/shades";
 import { supabase } from "@/integrations/supabase/client";
