@@ -23,7 +23,7 @@ export function ShadePicker({
   className?: string;
   collapsible?: boolean;
 }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const current = (value ?? "").trim().toUpperCase();
   const shades = Object.keys(SHADE_COLORS);
 
