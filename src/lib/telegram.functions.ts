@@ -48,6 +48,13 @@ export const sendCaseToTelegram = createServerFn({ method: "POST" })
       "X-Connection-Api-Key": TELEGRAM_API_KEY,
       "Content-Type": "application/json",
     };
+    // For multipart uploads we must NOT set Content-Type (fetch adds the boundary).
+    const multipartHeaders = {
+      Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      "X-Connection-Api-Key": TELEGRAM_API_KEY,
+    };
+    // Telegram's bot API allows up to 50 MB per document when uploaded directly.
+    const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 
     // 1) Case data as a text message.
     const msgRes = await fetch(`${GATEWAY}/sendMessage`, {
