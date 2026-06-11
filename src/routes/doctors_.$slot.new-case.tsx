@@ -123,6 +123,10 @@ function NewSlotCase() {
       toast.error("ملف المسح يجب أن يكون بصيغة .zip فقط");
       return;
     }
+    if (!shadeConfirmed) {
+      toast.error("الرجاء تأكيد اللون قبل حفظ الحالة");
+      return;
+    }
     const parsed = patientSchema.safeParse({
       patient_name: form.patient_name,
       patient_phone: form.patient_phone,
@@ -213,6 +217,7 @@ function NewSlotCase() {
         tooth_number: form.tooth_number.trim() || null,
         teeth_count: form.teeth_count.trim() || null,
         shade: form.shade || null,
+        shade_confirmed_doctor: shadeConfirmed,
         case_type: form.case_type || null,
         notes: form.notes.trim() || null,
         scan_path, scan_name, scan_size, scan_mime,
