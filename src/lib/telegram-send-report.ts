@@ -29,7 +29,7 @@ export interface TelegramSendReportInput {
   /** Items whose download/signed URL could not be prepared. */
   urlFailed: string[];
   /** Files that Telegram rejected (returned from the server function). */
-  failed: { filename: string }[];
+  failed: { filename: string; error?: string | null }[];
   /** Number of documents that were attached to the send. */
   documentCount: number;
 }
