@@ -143,6 +143,7 @@ export async function saveBlobNative(
     const path = `${folder}/${safeName}`;
     const data = await blobToBase64(blob);
     await Filesystem.writeFile({ path, directory: Directory.Documents, data, recursive: true });
+    await Filesystem.stat({ path, directory: Directory.Documents });
     try {
       const uriRes = await Filesystem.getUri({ path, directory: Directory.Documents });
       return { saved: true, path: `${ROOT_FOLDER}/${folderSegs.join("/")}/${safeName}`, uri: uriRes.uri };
@@ -177,6 +178,7 @@ export async function getNativeUri(filename: string, loc: CaseFileLocation): Pro
   try {
     const { Filesystem, Directory } = await fs();
     const path = `${rootPath(buildCasePath(loc))}/${sanitizeFileName(filename)}`;
+    await Filesystem.stat({ path, directory: Directory.Documents });
     const res = await Filesystem.getUri({ path, directory: Directory.Documents });
     return res.uri || null;
   } catch {
