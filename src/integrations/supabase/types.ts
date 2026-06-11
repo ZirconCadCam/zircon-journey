@@ -552,6 +552,9 @@ export type Database = {
           scan_size: number | null
           secretary_received: boolean
           shade: string | null
+          shade_confirmed_designer: boolean
+          shade_confirmed_doctor: boolean
+          shade_confirmed_technician: boolean
           shipped_to_doctor: boolean
           status: string
           tech_data_sent_to_secretary: boolean
@@ -618,6 +621,9 @@ export type Database = {
           scan_size?: number | null
           secretary_received?: boolean
           shade?: string | null
+          shade_confirmed_designer?: boolean
+          shade_confirmed_doctor?: boolean
+          shade_confirmed_technician?: boolean
           shipped_to_doctor?: boolean
           status?: string
           tech_data_sent_to_secretary?: boolean
@@ -684,6 +690,9 @@ export type Database = {
           scan_size?: number | null
           secretary_received?: boolean
           shade?: string | null
+          shade_confirmed_designer?: boolean
+          shade_confirmed_doctor?: boolean
+          shade_confirmed_technician?: boolean
           shipped_to_doctor?: boolean
           status?: string
           tech_data_sent_to_secretary?: boolean
