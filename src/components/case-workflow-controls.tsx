@@ -897,6 +897,7 @@ function DoctorControls({ c, actorName, doctorName }: {
 
   async function requestRevision() {
     if (notes.trim().length < 3) { toast.error("اكتب ملاحظات التعديل"); return; }
+    if (c.shade && !revShadeConfirmed) { toast.error("الرجاء تأكيد اللون قبل إرسال طلب التعديل"); return; }
     setBusy(true);
     const trimmed = notes.trim();
     const { error } = await supabase.from("slot_cases")
@@ -906,6 +907,9 @@ function DoctorControls({ c, actorName, doctorName }: {
         revision_design_done: false,
         revision_approved_by_tech: false,
         temporary_delivered: true,
+        shade_confirmed_doctor: true,
+        shade_confirmed_designer: false,
+        shade_confirmed_technician: false,
         review_read_at: new Date().toISOString(),
       }).eq("id", c.id);
     if (!error) {
