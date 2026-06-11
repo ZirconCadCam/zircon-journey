@@ -162,7 +162,7 @@ export async function readBlobNative(
   if (!(await isNativeApp())) return null;
   try {
     const { Filesystem, Directory } = await fs();
-    const path = `${rootPath(buildCasePath(loc))}/${filename}`;
+    const path = `${rootPath(buildCasePath(loc))}/${sanitizeFileName(filename)}`;
     const res = await Filesystem.readFile({ path, directory: Directory.Documents });
     const bytes = base64ToBytes(res.data as string);
     return new Blob([bytes.buffer as ArrayBuffer]);
@@ -176,7 +176,7 @@ export async function getNativeUri(filename: string, loc: CaseFileLocation): Pro
   if (!(await isNativeApp())) return null;
   try {
     const { Filesystem, Directory } = await fs();
-    const path = `${rootPath(buildCasePath(loc))}/${filename}`;
+    const path = `${rootPath(buildCasePath(loc))}/${sanitizeFileName(filename)}`;
     const res = await Filesystem.getUri({ path, directory: Directory.Documents });
     return res.uri || null;
   } catch {
