@@ -157,20 +157,20 @@ export function CaseShadeConfirm({
       <div className="flex flex-wrap items-center gap-2">
         <ShadeBadge shade={shade} />
         {actor === "doctor" && (
-          <ConfirmButton confirmed={docOk} onClick={() => confirm("shade_confirmed_doctor")} />
+          <ConfirmButton confirmed={docOk} onClick={() => confirm("doctor")} />
         )}
         {actor === "designer" && (
           <ConfirmButton
             confirmed={desOk}
             disabled={!docOk}
-            onClick={() => confirm("shade_confirmed_designer")}
+            onClick={() => confirm("designer")}
           />
         )}
         {actor === "technician" && (
           <ConfirmButton
             confirmed={techOk}
             disabled={!docOk}
-            onClick={() => confirm("shade_confirmed_technician")}
+            onClick={() => confirm("technician")}
           />
         )}
       </div>
