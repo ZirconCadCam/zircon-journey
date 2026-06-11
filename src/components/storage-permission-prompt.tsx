@@ -86,7 +86,16 @@ export function StoragePermissionPrompt() {
         }
         setShow(false);
       } else {
-        toast.error("لم يتم منح الإذن. يمكنك المحاولة لاحقاً من الإعدادات");
+        // false = user dismissed the folder picker without choosing.
+        toast.message("لم يتم اختيار مجلد. اختر مجلداً للسماح بالحفظ التلقائي");
+      }
+    } catch (e: any) {
+      if (e?.name === "UnsupportedError") {
+        toast.error("متصفحك لا يدعم الحفظ التلقائي على الجهاز. سيتم تنزيل الملفات بدلاً من ذلك");
+      } else if (e?.name === "SecurityError" || e?.name === "NotAllowedError") {
+        toast.error("تعذّر فتح نافذة اختيار المجلد. تأكد من فتح التطبيق في نافذة مستقلة وأعد المحاولة");
+      } else {
+        toast.error("حدث خطأ أثناء تمكين التخزين. حاول مرة أخرى");
       }
     } finally {
       setGranting(false);
