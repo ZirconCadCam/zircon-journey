@@ -58,20 +58,19 @@ function LoginPage() {
         return;
       }
 
-      // 3) Doctor password — match against doctor_profiles.password
-      const { data, error } = await supabase
-        .from("doctor_profiles")
-        .select("slot,name,active,password")
-        .eq("password", password)
-        .maybeSingle();
+      // 3) Doctor password — verified server-side (password never leaves the server)
+      const { data, error } = await supabase.rpc("verify_doctor_login", {
+        p_password: password,
+      });
       if (error) throw error;
-      if (data && data.active) {
-        localStorage.setItem(`zircon_doctor_${data.slot}_authed`, "1");
-        toast.success(`مرحبًا ${data.name}`);
-        nav({ to: "/doctors/$slot", params: { slot: String(data.slot) } });
+      const row = Array.isArray(data) ? data[0] : null;
+      if (row && row.active) {
+        localStorage.setItem(`zircon_doctor_${row.slot}_authed`, "1");
+        toast.success(`مرحبًا ${row.name}`);
+        nav({ to: "/doctors/$slot", params: { slot: String(row.slot) } });
         return;
       }
-      if (data && !data.active) {
+      if (row && !row.active) {
         setErr("هذه الخانة غير مفعّلة. تواصل مع الإدارة.");
         return;
       }
