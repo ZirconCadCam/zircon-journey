@@ -9,7 +9,7 @@ import {
 import type { RoleKey } from "@/lib/chat";
 import { ROLE_LABEL, getSignedUrl } from "@/lib/chat";
 import { CaseFileActivityLog } from "@/components/case-file-activity-log";
-import { ShadeConfirm } from "@/components/shade-confirm";
+import { ShadeConfirm, ShadePicker } from "@/components/shade-confirm";
 
 export interface WorkflowCase {
   id: string;
@@ -829,6 +829,7 @@ function DoctorControls({ c, actorName, doctorName }: {
   const [logOpen, setLogOpen] = useState(false);
   const [confirmApprove, setConfirmApprove] = useState(false);
   const [revShadeConfirmed, setRevShadeConfirmed] = useState(false);
+  const [revShade, setRevShade] = useState(c.shade ?? "");
 
   // Review is ready as soon as the technician dispatches the data.
   // The doctor no longer needs to confirm receipt of the temporary first.
@@ -897,9 +898,11 @@ function DoctorControls({ c, actorName, doctorName }: {
 
   async function requestRevision() {
     if (notes.trim().length < 3) { toast.error("اكتب ملاحظات التعديل"); return; }
-    if (c.shade && !revShadeConfirmed) { toast.error("الرجاء تأكيد اللون قبل إرسال طلب التعديل"); return; }
+    const nextShade = revShade.trim();
+    if (nextShade && !revShadeConfirmed) { toast.error("الرجاء تأكيد اللون قبل إرسال طلب التعديل"); return; }
     setBusy(true);
     const trimmed = notes.trim();
+    const shadeChanged = (c.shade ?? "").trim().toUpperCase() !== nextShade.toUpperCase();
     const { error } = await supabase.from("slot_cases")
       .update({
         doctor_decision: "revision",
@@ -907,15 +910,25 @@ function DoctorControls({ c, actorName, doctorName }: {
         revision_design_done: false,
         revision_approved_by_tech: false,
         temporary_delivered: true,
+        shade: nextShade || null,
         shade_confirmed_doctor: true,
         shade_confirmed_designer: false,
         shade_confirmed_technician: false,
         review_read_at: new Date().toISOString(),
       }).eq("id", c.id);
     if (!error) {
-      await appendAudit(c, { actor: actorName || "الطبيب", action: "طلب تعديل التصميم", notes: trimmed });
-      const designerBody = `🔁 طلب تعديل تصميم — الحالة ${c.case_code} (${c.patient_name})\nملاحظات:\n${trimmed}`;
-      const techBody = `🔁 طلب تعديل من الطبيب — الحالة ${c.case_code} (${c.patient_name}). بانتظار وصول ملف rar المعدل من المصمم.\nملاحظات الطبيب:\n${trimmed}`;
+      await appendAudit(c, {
+        actor: actorName || "الطبيب",
+        action: shadeChanged ? `طلب تعديل التصميم (تغيير اللون إلى ${nextShade || "—"})` : "طلب تعديل التصميم",
+        notes: trimmed,
+      });
+      const shadeLine = nextShade
+        ? shadeChanged
+          ? `\n🎨 تم تعديل اللون إلى: ${nextShade}`
+          : `\n🎨 اللون: ${nextShade}`
+        : "";
+      const designerBody = `🔁 طلب تعديل تصميم — الحالة ${c.case_code} (${c.patient_name})${shadeLine}\nملاحظات:\n${trimmed}`;
+      const techBody = `🔁 طلب تعديل من الطبيب — الحالة ${c.case_code} (${c.patient_name}). بانتظار وصول ملف rar المعدل من المصمم.${shadeLine}\nملاحظات الطبيب:\n${trimmed}`;
       // Upload each attachment ONCE (with progress tube), then reference the
       // same stored path in both the designer and technician conversations.
       const uploaded: { name: string; path: string; mime: string | null; size: number }[] = [];
@@ -1015,7 +1028,7 @@ function DoctorControls({ c, actorName, doctorName }: {
               className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 text-white px-3 py-2 text-xs font-bold shadow">
               <ThumbsUp className="size-3.5" /> معتمد للدائم
             </button>
-            <button onClick={() => { setRevShadeConfirmed(false); setRevOpen(true); }} disabled={busy}
+            <button onClick={() => { setRevShade(c.shade ?? ""); setRevShadeConfirmed(false); setRevOpen(true); }} disabled={busy}
               className="inline-flex items-center gap-2 rounded-lg bg-amber-600 text-white px-3 py-2 text-xs font-bold shadow">
               <Pencil className="size-3.5" /> يلزم تعديل
             </button>
@@ -1157,18 +1170,26 @@ function DoctorControls({ c, actorName, doctorName }: {
               )}
             </div>
 
-            {c.shade && (
-              <div className="mt-3 rounded-xl border border-gold/40 bg-gold/5 p-3 space-y-1.5">
-                <div className="text-[11px] font-bold text-amber-800">
-                  أعد تأكيد لون السن قبل إرسال طلب التعديل — سيُطلب من المصمم والفني تأكيده مجدداً.
-                </div>
-                <ShadeConfirm
-                  shade={c.shade}
-                  confirmed={revShadeConfirmed}
-                  onConfirm={() => setRevShadeConfirmed(true)}
-                />
+            <div className="mt-3 rounded-xl border border-gold/40 bg-gold/5 p-3 space-y-2.5">
+              <div className="text-[11px] font-bold text-amber-800">
+                يمكنك تعديل لون السن أثناء كتابة الملاحظات — ثم أعد تأكيد اللون.
+                سيُطلب من المصمم والفني تأكيده مجدداً.
               </div>
-            )}
+              <ShadePicker
+                value={revShade}
+                onChange={(s) => { setRevShade(s); setRevShadeConfirmed(false); }}
+              />
+              {revShade.trim() && (
+                <div className="pt-1 border-t border-gold/30">
+                  <ShadeConfirm
+                    shade={revShade}
+                    confirmed={revShadeConfirmed}
+                    onConfirm={() => setRevShadeConfirmed(true)}
+                  />
+                </div>
+              )}
+            </div>
+
 
             <div className="flex justify-end gap-2 mt-3">
               <button onClick={() => setRevOpen(false)} className="rounded-lg border border-border px-3 py-2 text-xs font-bold">

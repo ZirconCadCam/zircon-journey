@@ -1,8 +1,78 @@
 import { useEffect, useState } from "react";
-import { Check, Circle, Lock } from "lucide-react";
+import { Check, Circle, Lock, Palette } from "lucide-react";
 import { ShadeBadge } from "@/components/shade-badge";
+import { SHADE_COLORS, shadeColor } from "@/lib/shades";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+
+/**
+ * `ShadePicker`: a controlled tool to edit/choose a tooth shade. Renders the
+ * full VITA-style swatch grid plus a free-text field for non-standard codes.
+ * Used (for example) by the doctor while writing revision notes so the target
+ * color can be corrected before the revision request is sent.
+ */
+export function ShadePicker({
+  value,
+  onChange,
+  className = "",
+}: {
+  value?: string | null;
+  onChange: (shade: string) => void;
+  className?: string;
+}) {
+  const current = (value ?? "").trim().toUpperCase();
+  const shades = Object.keys(SHADE_COLORS);
+  return (
+    <div className={`space-y-2 ${className}`}>
+      <div className="flex items-center gap-1.5 text-[11px] font-bold text-foreground">
+        <Palette className="size-3.5 text-gold" /> اختر لون السن
+      </div>
+      <div className="grid grid-cols-5 gap-1.5">
+        {shades.map((s) => {
+          const color = shadeColor(s) ?? "#ccc";
+          const selected = current === s.toUpperCase();
+          return (
+            <button
+              key={s}
+              type="button"
+              onClick={() => onChange(s)}
+              aria-pressed={selected}
+              title={s}
+              className={`flex flex-col items-center gap-1 rounded-lg border-2 p-1.5 transition ${
+                selected ? "border-gold shadow-gold" : "border-border hover:border-gold/60"
+              }`}
+            >
+              <span
+                className="size-6 rounded-full ring-2 ring-foreground/10 shadow-inner"
+                style={{ background: `radial-gradient(circle at 30% 30%, #ffffff55, ${color})` }}
+                aria-hidden
+              />
+              <span
+                className={`text-[10px] font-extrabold leading-none ${
+                  selected ? "text-gold" : "text-muted-foreground"
+                }`}
+              >
+                {s}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="text-[10px] text-muted-foreground font-bold whitespace-nowrap">
+          أو رمز مخصص:
+        </span>
+        <input
+          value={value ?? ""}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="مثال: A2"
+          className="w-full rounded-lg border border-input bg-background px-2.5 py-1.5 text-xs font-mono outline-none focus:border-gold"
+        />
+      </div>
+    </div>
+  );
+}
+
 
 /**
  * Tooth-shade confirmation tooling.
