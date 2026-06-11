@@ -296,29 +296,30 @@ export async function saveToCenter(
   filename: string,
   subfolder?: string,
   location?: CaseFileLocation,
+  fallbackUrl?: string,
 ): Promise<{ saved: boolean; fallback: boolean; path?: string; uri?: string }> {
   // Native Android app: write into the taxonomy folders on the device.
   if (await isNativeApp()) {
     const loc: CaseFileLocation = location ?? { role: "admin", caseCode: subfolder };
     const r = await saveBlobNative(blob, filename, loc);
     if (r.saved) return { saved: true, fallback: false, path: r.path, uri: r.uri };
-    await fallbackDownload(blob, filename);
+    await fallbackDownload(blob, filename, fallbackUrl);
     return { saved: true, fallback: true };
   }
   if (!isSupported()) {
-    await fallbackDownload(blob, filename);
+    await fallbackDownload(blob, filename, fallbackUrl);
     return { saved: true, fallback: true };
   }
   let dir = await getCenterFolder();
   if (!dir) {
     const ok = await pickCenterFolder();
     if (!ok) {
-      fallbackDownload(blob, filename);
+      await fallbackDownload(blob, filename, fallbackUrl);
       return { saved: true, fallback: true };
     }
     dir = await getCenterFolder();
     if (!dir) {
-      fallbackDownload(blob, filename);
+      await fallbackDownload(blob, filename, fallbackUrl);
       return { saved: true, fallback: true };
     }
   }
@@ -336,7 +337,7 @@ export async function saveToCenter(
     } catch {
       /* ignore stale handle cleanup errors */
     }
-    await fallbackDownload(blob, filename);
+    await fallbackDownload(blob, filename, fallbackUrl);
     return { saved: true, fallback: true };
   }
 }
@@ -401,8 +402,37 @@ export async function openCachedFile(
   }
 }
 
-async function fallbackDownload(blob: Blob, filename: string): Promise<void> {
+function isHttpUrl(url?: string | null): url is string {
+  return !!url && /^https?:\/\//i.test(url);
+}
+
+async function directUrlDownload(url: string, filename: string): Promise<boolean> {
+  try {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename?.trim() || "file";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    return true;
+  } catch {
+    try {
+      window.open(url, "_blank", "noopener,noreferrer");
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+
+async function fallbackDownload(blob: Blob, filename: string, fallbackUrl?: string): Promise<void> {
   const safeName = filename?.trim() || "file";
+
+  if (isHttpUrl(fallbackUrl)) {
+    const ok = await directUrlDownload(fallbackUrl, safeName);
+    if (ok) return;
+  }
 
   try {
     const nav = navigator as Navigator & {
@@ -448,7 +478,7 @@ export async function downloadUrlToCenter(url: string, filename: string, subfold
   const res = await fetch(url);
   if (!res.ok) throw new Error("HTTP " + res.status);
   const blob = await res.blob();
-  return saveToCenter(blob, filename, subfolder);
+  return saveToCenter(blob, filename, subfolder, undefined, url);
 }
 
 /**
@@ -491,7 +521,7 @@ export async function getCachedOrFetchBlobUrl(
     const res = await fetch(remoteUrl);
     if (!res.ok) throw new Error("HTTP " + res.status);
     const blob = await res.blob();
-    if (cacheRemote) { try { await saveToCenter(blob, filename, subfolder); } catch {} }
+    if (cacheRemote) { try { await saveToCenter(blob, filename, subfolder, undefined, remoteUrl); } catch {} }
     const u = URL.createObjectURL(blob);
     return { url: u, cached: false, revoke: () => URL.revokeObjectURL(u) };
   } catch {

@@ -494,8 +494,11 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     const { registerDownloadTask, fetchBlobWithProgress } = await import("@/lib/transfer-manager");
     const task = registerDownloadTask(fileName);
     try {
+      const resolved = /^https?:\/\//i.test(c.scan_path)
+        ? c.scan_path
+        : (await getSignedUrl(c.scan_path, 3600)) ?? c.scan_path;
       // Streaming counts for 90% of the bar; packaging/saving the rest.
-      const blob = await fetchBlobWithProgress(c.scan_path, (loaded, total) => {
+      const blob = await fetchBlobWithProgress(resolved, (loaded, total) => {
         if (total > 0) task.update((loaded / total) * 90, loaded, total);
       });
       const isZip = (c.scan_mime || "").includes("zip") || /\.zip$/i.test(c.scan_name || "");
@@ -507,7 +510,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
         outBlob = await zip.generateAsync({ type: "blob" });
       }
       task.update(96);
-      const r = await saveToCenter(outBlob, fileName, c.case_code, locFor(c, "downloaded"));
+      const r = await saveToCenter(outBlob, fileName, c.case_code, locFor(c, "downloaded"), isZip ? resolved : undefined);
       const blobUrl = URL.createObjectURL(outBlob);
       task.done({ blobUrl, savedPath: r.path, fallback: r.fallback, mime: "application/zip" });
       toast.success(r.fallback ? "تم تنزيل الملف" : `تم الحفظ في ${r.path}`);
