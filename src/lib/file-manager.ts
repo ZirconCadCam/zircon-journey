@@ -8,6 +8,7 @@
  */
 import {
   isNativeApp,
+  isNativeAppSync,
   saveBlobNative,
   readBlobNative,
   getNativeUri,
