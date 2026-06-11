@@ -144,14 +144,28 @@ export async function getCenterFolderStatus(): Promise<CenterStatus> {
 
 /** Re-request permission (or prompt to pick a folder if none linked yet). */
 export async function requestCenterPermission(): Promise<boolean> {
+  // Native shell first (uses the sync flag so we don't lose user-activation
+  // on web before the directory picker runs).
+  if (isNativeAppSync()) {
+    const ok = await requestNativePermission();
+    if (ok) await ensureBaseStructure();
+    return ok;
+  }
+  // Web (File System Access API): the directory picker MUST be invoked without
+  // any preceding await, otherwise the click's transient activation expires and
+  // the browser blocks the picker (which previously surfaced as "permission not
+  // granted"). Re-picking the folder also re-grants read/write when revoked.
+  if (isSupported()) {
+    return pickCenterFolder();
+  }
+  // Fallback: resolve native asynchronously for the rare case the sync flag
+  // wasn't warmed up yet.
   if (await isNativeApp()) {
     const ok = await requestNativePermission();
     if (ok) await ensureBaseStructure();
     return ok;
   }
-  const handle: any = await idbGet(KEY);
-  if (!handle) return pickCenterFolder();
-  return ensurePermission(handle, "readwrite");
+  return false;
 }
 
 /* ---------------------------------------------------------------------------
