@@ -80,6 +80,9 @@ interface Case {
   revision_design_file_path?: string | null;
   revision_design_file_name?: string | null;
   revision_design_done?: boolean | null;
+  shade_confirmed_doctor?: boolean | null;
+  shade_confirmed_designer?: boolean | null;
+  shade_confirmed_technician?: boolean | null;
 }
 
 import { CaseWorkflowControls } from "@/components/case-workflow-controls";
