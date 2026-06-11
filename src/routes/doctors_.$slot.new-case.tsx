@@ -372,9 +372,16 @@ function NewSlotCase() {
                   </Field>
                   <Field label="اللون (Shade)">
                     <select className="zinput" value={form.shade}
-                      onChange={e=>setForm({...form,shade:e.target.value})}>
+                      onChange={e=>{setForm({...form,shade:e.target.value}); setShadeConfirmed(false);}}>
                       {SHADES.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
+                    <div className="mt-2">
+                      <ShadeConfirm
+                        shade={form.shade}
+                        confirmed={shadeConfirmed}
+                        onConfirm={() => setShadeConfirmed(true)}
+                      />
+                    </div>
                   </Field>
                   <Field label="نوع الحالة">
                     <select className="zinput" value={form.case_type}
