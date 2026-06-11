@@ -37,7 +37,7 @@ interface Doctor {
 
 function DoctorsGrid() {
   const nav = useNavigate();
-  const { role } = useAuth();
+  const isAdmin = useIsSlotAdmin();
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [filter, setFilter] = useState<"all" | "sanaa" | "ibb">("all");
   const [q, setQ] = useState("");
