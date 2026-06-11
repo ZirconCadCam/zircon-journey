@@ -5,6 +5,7 @@ import { ArrowRight, Sparkles, Upload, FileText, X, Loader2, ScanLine, Plus, Pau
 import { toast } from "sonner";
 import { z } from "zod";
 import { ToothQuadrantPicker } from "@/components/tooth-quadrant-picker";
+import { ShadeConfirm } from "@/components/shade-confirm";
 import type { ResumableHandle } from "@/lib/resumable-upload";
 
 const patientSchema = z.object({
@@ -54,6 +55,7 @@ function NewSlotCase() {
   const uploadHandle = useRef<ResumableHandle | null>(null);
   const uploadCanceled = useRef(false);
   const [uploadPaused, setUploadPaused] = useState(false);
+  const [shadeConfirmed, setShadeConfirmed] = useState(false);
 
   // Signature of the case data currently in the form (incl. chosen scan).
   // Used to fade the save button once an identical case is already saved.
