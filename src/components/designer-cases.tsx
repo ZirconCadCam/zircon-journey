@@ -749,20 +749,19 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
       const res: any = await sendCaseToTelegram({ data: { caption: finalCaption, documents } });
       const failed = (res?.sent || []).filter((s: any) => !s.ok);
 
-      // Build a clear, non-silent summary of what happened.
-      if (missing.length) {
-        toast.info(`عناصر غير متوفّرة لهذه الحالة: ${missing.join("، ")}`, { duration: 6000 });
-      }
-      if (urlFailed.length) {
-        toast.warning(`تعذّر تجهيز رابط: ${urlFailed.join("، ")}`, { duration: 6000 });
-      }
-      if (failed.length) {
-        const names = failed.map((s: any) => s.filename).join("، ");
-        toast.warning(`تم إرسال البيانات لكن فشل إرسال ${failed.length} ملف: ${names}`, { duration: 7000 });
-      } else if (documents.length === 0) {
-        toast.success("تم إرسال بيانات الحالة (نصيًا) — لا توجد ملفات مرفقة للإرسال");
-      } else {
-        toast.success(`تم إرسال تفاصيل الحالة و${documents.length} ملف إلى تلجرام`);
+      // Build a clear, non-silent summary of what happened (pure + tested).
+      const { buildTelegramSendReport } = await import("@/lib/telegram-send-report");
+      const reports = buildTelegramSendReport({
+        missing,
+        urlFailed,
+        failed: failed.map((s: any) => ({ filename: s.filename })),
+        documentCount: documents.length,
+      });
+      for (const r of reports) {
+        if (r.kind === "info") toast.info(r.text, { duration: r.duration });
+        else if (r.kind === "warning") toast.warning(r.text, { duration: r.duration });
+        else if (r.kind === "error") toast.error(r.text, { duration: r.duration });
+        else toast.success(r.text, { duration: r.duration });
       }
     } catch (e: any) {
       console.error(e);
