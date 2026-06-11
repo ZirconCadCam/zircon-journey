@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Check, Circle, Lock, Palette } from "lucide-react";
 import { ShadeBadge } from "@/components/shade-badge";
-import { SHADE_COLORS, shadeColor, isLightColor } from "@/lib/shades";
+import { SHADE_COLORS, shadeColor } from "@/lib/shades";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
