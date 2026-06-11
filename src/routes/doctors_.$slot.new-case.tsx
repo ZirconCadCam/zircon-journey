@@ -72,6 +72,7 @@ function NewSlotCase() {
     setErrors({});
     setSavedOnce(false);
     setSavedSig(null);
+    setShadeConfirmed(false);
     if (fileInput.current) fileInput.current.value = "";
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
