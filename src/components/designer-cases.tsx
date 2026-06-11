@@ -494,11 +494,8 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     const { registerDownloadTask, fetchBlobWithProgress } = await import("@/lib/transfer-manager");
     const task = registerDownloadTask(fileName);
     try {
-      const resolved = /^https?:\/\//i.test(c.scan_path)
-        ? c.scan_path
-        : (await getSignedUrl(c.scan_path, 3600)) ?? c.scan_path;
       // Streaming counts for 90% of the bar; packaging/saving the rest.
-      const blob = await fetchBlobWithProgress(resolved, (loaded, total) => {
+      const blob = await fetchBlobWithProgress(c.scan_path, (loaded, total) => {
         if (total > 0) task.update((loaded / total) * 90, loaded, total);
       });
       const isZip = (c.scan_mime || "").includes("zip") || /\.zip$/i.test(c.scan_name || "");
@@ -510,7 +507,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
         outBlob = await zip.generateAsync({ type: "blob" });
       }
       task.update(96);
-      const r = await saveToCenter(outBlob, fileName, c.case_code, locFor(c, "downloaded"), isZip ? resolved : undefined);
+      const r = await saveToCenter(outBlob, fileName, c.case_code, locFor(c, "downloaded"));
       const blobUrl = URL.createObjectURL(outBlob);
       task.done({ blobUrl, savedPath: r.path, fallback: r.fallback, mime: "application/zip" });
       toast.success(r.fallback ? "تم تنزيل الملف" : `تم الحفظ في ${r.path}`);
@@ -569,60 +566,6 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     } catch (e: any) {
       console.error(e);
       toast.error(e.message || "تعذر تنزيل ملف التصميم");
-    } finally { setBusyId(null); }
-  }
-
-  /** Locate the latest design .rar (storage path + display name) for a case. */
-  async function findDesignRar(c: Case): Promise<{ path: string; name: string | null } | null> {
-    if ((c as any).revision_design_file_path) {
-      return {
-        path: (c as any).revision_design_file_path as string,
-        name: (c as any).revision_design_file_name ?? `${c.case_code}.rar`,
-      };
-    }
-    const { data: convs } = await supabase.from("chat_conversations")
-      .select("id, participants").eq("doctor_slot", c.doctor_slot);
-    const ids = ((convs ?? []) as any[])
-      .filter(cv => Array.isArray(cv.participants)
-        && cv.participants.includes("designer")
-        && cv.participants.includes("technician"))
-      .map(cv => cv.id);
-    if (!ids.length) return null;
-    const { data: msgs } = await supabase.from("chat_messages")
-      .select("attachment_path, attachment_name, content, created_at")
-      .in("conversation_id", ids)
-      .eq("sender", "designer")
-      .eq("message_type", "file")
-      .order("created_at", { ascending: false }).limit(50);
-    const hit = ((msgs ?? []) as any[]).find(m =>
-      /\.rar$/i.test(m.attachment_name || "") &&
-      (m.content || "").includes(c.case_code));
-    return hit ? { path: hit.attachment_path, name: hit.attachment_name ?? null } : null;
-  }
-
-  /** Open an archive (ZIP for designer/admin, RAR for technician) inside the
-   * in-app viewer. Resolves a fetchable signed URL first — the viewer fetches
-   * the URL directly, so a raw storage path would fail. */
-  async function openArchivePreview(c: Case, kind: "zip" | "rar") {
-    setBusyId(c.id);
-    try {
-      let path: string | null = null;
-      let name: string | null = null;
-      if (kind === "zip") {
-        path = c.scan_path ?? null;
-        name = c.scan_name ?? null;
-        if (!path) { toast.error("لا يوجد ملف ZIP مرفق"); return; }
-      } else {
-        const found = await findDesignRar(c);
-        if (!found) { toast.error("لم يصل ملف التصميم (.rar) بعد"); return; }
-        path = found.path;
-        name = found.name ?? `${c.case_code}.rar`;
-      }
-      const resolved = /^https?:\/\//i.test(path) ? path : (await getSignedUrl(path, 3600)) ?? path;
-      setZipPreview({ url: resolved, name });
-    } catch (e: any) {
-      console.error(e);
-      toast.error(e.message || "تعذر فتح الأرشيف");
     } finally { setBusyId(null); }
   }
 
@@ -1049,23 +992,12 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                       {/* In-app ZIP preview — available to designer + admin before final archive */}
                       {(actor === "designer" || actor === "admin") && view === "active" && c.scan_path && !c.final_archived && (
                         <button
-                          onClick={() => openArchivePreview(c, "zip")}
+                          onClick={() => setZipPreview({ url: c.scan_path!, name: c.scan_name })}
                           disabled={busy}
                           className="inline-flex items-center gap-1.5 rounded-lg border border-gold/60 bg-gold/10 px-3 py-1.5 text-xs font-bold hover:gradient-gold hover:text-gold-foreground transition disabled:opacity-60"
                           title="عرض محتوى ملف ZIP داخل التطبيق"
                         >
                           <Eye className="size-3.5" /> عرض ZIP
-                        </button>
-                      )}
-                      {/* In-app RAR preview — technician + admin can read the design archive */}
-                      {(actor === "technician" || actor === "admin") && view === "active" && (
-                        <button
-                          onClick={() => openArchivePreview(c, "rar")}
-                          disabled={busy}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-gold/60 bg-gold/10 px-3 py-1.5 text-xs font-bold hover:gradient-gold hover:text-gold-foreground transition disabled:opacity-60"
-                          title="عرض محتوى ملف التصميم RAR داخل التطبيق"
-                        >
-                          <Eye className="size-3.5" /> عرض RAR
                         </button>
                       )}
                       <DropdownMenu>

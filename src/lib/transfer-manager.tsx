@@ -18,7 +18,6 @@ import { saveToCenter, fileManagerSupported } from "@/lib/file-manager";
 import { isNativeApp, openNativeUri } from "@/lib/native-fs";
 import type { CaseFileLocation } from "@/lib/case-folders";
 import { InAppFileViewer } from "@/components/in-app-file-viewer";
-import { toast } from "sonner";
 
 export type TransferKind = "upload" | "download";
 export type TransferStatus = "active" | "paused" | "done" | "error" | "canceled";
@@ -200,18 +199,18 @@ export async function transferDownload(opts: {
     const native = await isNativeApp();
     if (native) {
       // Always persist into the device taxonomy folders on the Android app.
-      const r = await saveToCenter(blob, opts.filename, opts.subfolder ?? "ملفات", opts.location, opts.url);
+      const r = await saveToCenter(blob, opts.filename, opts.subfolder ?? "ملفات", opts.location);
       savedPath = r.path;
       fallback = r.fallback;
       nativeUri = r.uri;
     } else {
       const wantCenter = opts.saveToCenter !== false && fileManagerSupported();
       if (wantCenter) {
-        const r = await saveToCenter(blob, opts.filename, opts.subfolder ?? "ملفات", opts.location, opts.url);
+        const r = await saveToCenter(blob, opts.filename, opts.subfolder ?? "ملفات", opts.location);
         savedPath = r.path;
         fallback = r.fallback;
       } else {
-        await triggerBrowserDownload(blob, opts.filename);
+        triggerBrowserDownload(blob, opts.filename);
         fallback = true;
       }
     }
@@ -228,51 +227,17 @@ export async function transferDownload(opts: {
       return { ok: false, canceled: true };
     }
     patch(id, { status: "error" });
-    toast.error("تعذر حفظ الملف في مدير ملفات الجهاز. تم التحويل إلى طريقة حفظ بديلة إذا كانت متاحة");
     setTimeout(() => removeTransfer(id), 3500);
     throw err;
   }
 }
 
-async function triggerBrowserDownload(blob: Blob, filename: string) {
-  const safeName = filename?.trim() || "file";
-  try {
-    const nav = navigator as Navigator & {
-      share?: (data: { title?: string; files?: File[] }) => Promise<void>;
-      canShare?: (data: { files?: File[] }) => boolean;
-    };
-    if (typeof File !== "undefined" && nav.share) {
-      const file = new File([blob], safeName, {
-        type: blob.type || "application/octet-stream",
-        lastModified: Date.now(),
-      });
-      const payload = { title: safeName, files: [file] };
-      if (!nav.canShare || nav.canShare(payload)) {
-        await nav.share(payload);
-        return;
-      }
-    }
-  } catch (e: any) {
-    if (e?.name === "AbortError") return;
-  }
-
+function triggerBrowserDownload(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
-  try {
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = safeName;
-    a.rel = "noopener noreferrer";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  } catch {
-    try {
-      window.open(url, "_blank", "noopener,noreferrer");
-    } catch {
-      /* ignore */
-    }
-  }
-  setTimeout(() => URL.revokeObjectURL(url), 120000);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
 
 /* ----------------- manual transfer tasks (custom flows) ---------------- */

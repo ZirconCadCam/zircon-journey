@@ -8,7 +8,6 @@
  */
 import {
   isNativeApp,
-  isNativeAppSync,
   saveBlobNative,
   readBlobNative,
   getNativeUri,
@@ -78,24 +77,15 @@ async function ensurePermission(handle: any, mode: "read" | "readwrite" = "readw
 
 /** Prompt the user once to pick a base folder; we then create the center subfolder inside. */
 export async function pickCenterFolder(): Promise<boolean> {
-  if (!isSupported()) {
-    const err: any = new Error("unsupported");
-    err.name = "UnsupportedError";
-    throw err;
-  }
-  // IMPORTANT: showDirectoryPicker() must be the first awaited call so the
-  // browser's transient user-activation (from the click) is still valid.
-  let base: any;
+  if (!isSupported()) return false;
   try {
-    base = await (window as any).showDirectoryPicker({ mode: "readwrite" });
-  } catch (e: any) {
-    // User dismissed the picker — treat as a silent cancel.
-    if (e?.name === "AbortError") return false;
-    throw e;
+    const base: any = await (window as any).showDirectoryPicker({ mode: "readwrite" });
+    const center = await base.getDirectoryHandle(CENTER_FOLDER_NAME, { create: true });
+    await idbSet(KEY, center);
+    return true;
+  } catch {
+    return false;
   }
-  const center = await base.getDirectoryHandle(CENTER_FOLDER_NAME, { create: true });
-  await idbSet(KEY, center);
-  return true;
 }
 
 export async function getCenterFolder(): Promise<FileSystemDirectoryHandle | null> {
@@ -144,28 +134,14 @@ export async function getCenterFolderStatus(): Promise<CenterStatus> {
 
 /** Re-request permission (or prompt to pick a folder if none linked yet). */
 export async function requestCenterPermission(): Promise<boolean> {
-  // Native shell first (uses the sync flag so we don't lose user-activation
-  // on web before the directory picker runs).
-  if (isNativeAppSync()) {
-    const ok = await requestNativePermission();
-    if (ok) await ensureBaseStructure();
-    return ok;
-  }
-  // Web (File System Access API): the directory picker MUST be invoked without
-  // any preceding await, otherwise the click's transient activation expires and
-  // the browser blocks the picker (which previously surfaced as "permission not
-  // granted"). Re-picking the folder also re-grants read/write when revoked.
-  if (isSupported()) {
-    return pickCenterFolder();
-  }
-  // Fallback: resolve native asynchronously for the rare case the sync flag
-  // wasn't warmed up yet.
   if (await isNativeApp()) {
     const ok = await requestNativePermission();
     if (ok) await ensureBaseStructure();
     return ok;
   }
-  return false;
+  const handle: any = await idbGet(KEY);
+  if (!handle) return pickCenterFolder();
+  return ensurePermission(handle, "readwrite");
 }
 
 /* ---------------------------------------------------------------------------
@@ -296,30 +272,29 @@ export async function saveToCenter(
   filename: string,
   subfolder?: string,
   location?: CaseFileLocation,
-  fallbackUrl?: string,
 ): Promise<{ saved: boolean; fallback: boolean; path?: string; uri?: string }> {
   // Native Android app: write into the taxonomy folders on the device.
   if (await isNativeApp()) {
     const loc: CaseFileLocation = location ?? { role: "admin", caseCode: subfolder };
     const r = await saveBlobNative(blob, filename, loc);
     if (r.saved) return { saved: true, fallback: false, path: r.path, uri: r.uri };
-    await fallbackDownload(blob, filename, fallbackUrl);
+    fallbackDownload(blob, filename);
     return { saved: true, fallback: true };
   }
   if (!isSupported()) {
-    await fallbackDownload(blob, filename, fallbackUrl);
+    fallbackDownload(blob, filename);
     return { saved: true, fallback: true };
   }
   let dir = await getCenterFolder();
   if (!dir) {
     const ok = await pickCenterFolder();
     if (!ok) {
-      await fallbackDownload(blob, filename, fallbackUrl);
+      fallbackDownload(blob, filename);
       return { saved: true, fallback: true };
     }
     dir = await getCenterFolder();
     if (!dir) {
-      await fallbackDownload(blob, filename, fallbackUrl);
+      fallbackDownload(blob, filename);
       return { saved: true, fallback: true };
     }
   }
@@ -332,12 +307,7 @@ export async function saveToCenter(
     await writable.close();
     return { saved: true, fallback: false, path: `${CENTER_FOLDER_NAME}${subfolder ? "/" + subfolder : ""}/${filename}` };
   } catch {
-    try {
-      await clearCenterFolder();
-    } catch {
-      /* ignore stale handle cleanup errors */
-    }
-    await fallbackDownload(blob, filename, fallbackUrl);
+    fallbackDownload(blob, filename);
     return { saved: true, fallback: true };
   }
 }
@@ -402,75 +372,12 @@ export async function openCachedFile(
   }
 }
 
-function isHttpUrl(url?: string | null): url is string {
-  return !!url && /^https?:\/\//i.test(url);
-}
-
-async function directUrlDownload(url: string, filename: string): Promise<boolean> {
-  try {
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename?.trim() || "file";
-    a.rel = "noopener noreferrer";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    return true;
-  } catch {
-    try {
-      window.open(url, "_blank", "noopener,noreferrer");
-      return true;
-    } catch {
-      return false;
-    }
-  }
-}
-
-async function fallbackDownload(blob: Blob, filename: string, fallbackUrl?: string): Promise<void> {
-  const safeName = filename?.trim() || "file";
-
-  if (isHttpUrl(fallbackUrl)) {
-    const ok = await directUrlDownload(fallbackUrl, safeName);
-    if (ok) return;
-  }
-
-  try {
-    const nav = navigator as Navigator & {
-      share?: (data: { title?: string; files?: File[] }) => Promise<void>;
-      canShare?: (data: { files?: File[] }) => boolean;
-    };
-    if (typeof File !== "undefined" && nav.share) {
-      const file = new File([blob], safeName, {
-        type: blob.type || "application/octet-stream",
-        lastModified: Date.now(),
-      });
-      const payload = { title: safeName, files: [file] };
-      if (!nav.canShare || nav.canShare(payload)) {
-        await nav.share(payload);
-        return;
-      }
-    }
-  } catch (e: any) {
-    if (e?.name === "AbortError") return;
-  }
-
+function fallbackDownload(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
-  try {
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = safeName;
-    a.rel = "noopener noreferrer";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  } catch {
-    try {
-      window.open(url, "_blank", "noopener,noreferrer");
-    } catch {
-      /* ignore */
-    }
-  }
-  setTimeout(() => URL.revokeObjectURL(url), 120000);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
 
 /** Fetch a remote URL into the center folder. */
@@ -478,7 +385,7 @@ export async function downloadUrlToCenter(url: string, filename: string, subfold
   const res = await fetch(url);
   if (!res.ok) throw new Error("HTTP " + res.status);
   const blob = await res.blob();
-  return saveToCenter(blob, filename, subfolder, undefined, url);
+  return saveToCenter(blob, filename, subfolder);
 }
 
 /**
@@ -521,7 +428,7 @@ export async function getCachedOrFetchBlobUrl(
     const res = await fetch(remoteUrl);
     if (!res.ok) throw new Error("HTTP " + res.status);
     const blob = await res.blob();
-    if (cacheRemote) { try { await saveToCenter(blob, filename, subfolder, undefined, remoteUrl); } catch {} }
+    if (cacheRemote) { try { await saveToCenter(blob, filename, subfolder); } catch {} }
     const u = URL.createObjectURL(blob);
     return { url: u, cached: false, revoke: () => URL.revokeObjectURL(u) };
   } catch {
