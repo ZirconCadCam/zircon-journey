@@ -650,12 +650,18 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
 
       const safe = (s: string) => s.replace(/[\\/:*?"<>|]+/g, "_").trim();
       const documents: { url: string; filename: string }[] = [];
+      // Track which expected items were found so we can warn about gaps clearly.
+      const missing: string[] = [];
+      const urlFailed: string[] = [];
 
       // (a) ZIP from the doctor to the designer — before the revision.
       if (c.scan_path) {
         const url = /^https?:\/\//i.test(c.scan_path) ? c.scan_path : await getSignedUrl(c.scan_path, 3600);
         const ext = /\.zip$/i.test(c.scan_name || "") ? "zip" : (c.scan_name?.split(".").pop() || "zip");
         if (url) documents.push({ url, filename: `${safe(c.patient_name)} - ملف الحالة (قبل التعديل).${ext}` });
+        else urlFailed.push("ملف الحالة ZIP (قبل التعديل)");
+      } else {
+        missing.push("ملف الحالة ZIP من الطبيب (قبل التعديل)");
       }
 
       // Gather conversation messages once (files + designer→technician text revision).
