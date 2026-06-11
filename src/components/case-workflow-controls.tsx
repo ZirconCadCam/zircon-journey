@@ -9,6 +9,7 @@ import {
 import type { RoleKey } from "@/lib/chat";
 import { ROLE_LABEL, getSignedUrl } from "@/lib/chat";
 import { CaseFileActivityLog } from "@/components/case-file-activity-log";
+import { ShadeConfirm } from "@/components/shade-confirm";
 
 export interface WorkflowCase {
   id: string;
