@@ -1170,18 +1170,26 @@ function DoctorControls({ c, actorName, doctorName }: {
               )}
             </div>
 
-            {c.shade && (
-              <div className="mt-3 rounded-xl border border-gold/40 bg-gold/5 p-3 space-y-1.5">
-                <div className="text-[11px] font-bold text-amber-800">
-                  أعد تأكيد لون السن قبل إرسال طلب التعديل — سيُطلب من المصمم والفني تأكيده مجدداً.
-                </div>
-                <ShadeConfirm
-                  shade={c.shade}
-                  confirmed={revShadeConfirmed}
-                  onConfirm={() => setRevShadeConfirmed(true)}
-                />
+            <div className="mt-3 rounded-xl border border-gold/40 bg-gold/5 p-3 space-y-2.5">
+              <div className="text-[11px] font-bold text-amber-800">
+                يمكنك تعديل لون السن أثناء كتابة الملاحظات — ثم أعد تأكيد اللون.
+                سيُطلب من المصمم والفني تأكيده مجدداً.
               </div>
-            )}
+              <ShadePicker
+                value={revShade}
+                onChange={(s) => { setRevShade(s); setRevShadeConfirmed(false); }}
+              />
+              {revShade.trim() && (
+                <div className="pt-1 border-t border-gold/30">
+                  <ShadeConfirm
+                    shade={revShade}
+                    confirmed={revShadeConfirmed}
+                    onConfirm={() => setRevShadeConfirmed(true)}
+                  />
+                </div>
+              )}
+            </div>
+
 
             <div className="flex justify-end gap-2 mt-3">
               <button onClick={() => setRevOpen(false)} className="rounded-lg border border-border px-3 py-2 text-xs font-bold">
