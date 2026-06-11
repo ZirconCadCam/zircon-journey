@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as HelpIndexRouteImport } from './routes/help.index'
 import { Route as DoctorsIndexRouteImport } from './routes/doctors.index'
 import { Route as StaffRoleRouteImport } from './routes/staff.$role'
 import { Route as DoctorsSlotRouteImport } from './routes/doctors.$slot'
@@ -35,6 +36,11 @@ const DashboardRoute = DashboardRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HelpIndexRoute = HelpIndexRouteImport.update({
+  id: '/help/',
+  path: '/help/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DoctorsIndexRoute = DoctorsIndexRouteImport.update({
@@ -95,6 +101,7 @@ export interface FileRoutesByFullPath {
   '/doctors/$slot': typeof DoctorsSlotRoute
   '/staff/$role': typeof StaffRoleRoute
   '/doctors/': typeof DoctorsIndexRoute
+  '/help/': typeof HelpIndexRoute
   '/doctors/$slot/new-case': typeof DoctorsSlotNewCaseRoute
 }
 export interface FileRoutesByTo {
@@ -109,6 +116,7 @@ export interface FileRoutesByTo {
   '/doctors/$slot': typeof DoctorsSlotRoute
   '/staff/$role': typeof StaffRoleRoute
   '/doctors': typeof DoctorsIndexRoute
+  '/help': typeof HelpIndexRoute
   '/doctors/$slot/new-case': typeof DoctorsSlotNewCaseRoute
 }
 export interface FileRoutesById {
@@ -124,6 +132,7 @@ export interface FileRoutesById {
   '/doctors/$slot': typeof DoctorsSlotRoute
   '/staff/$role': typeof StaffRoleRoute
   '/doctors/': typeof DoctorsIndexRoute
+  '/help/': typeof HelpIndexRoute
   '/doctors_/$slot/new-case': typeof DoctorsSlotNewCaseRoute
 }
 export interface FileRouteTypes {
@@ -140,6 +149,7 @@ export interface FileRouteTypes {
     | '/doctors/$slot'
     | '/staff/$role'
     | '/doctors/'
+    | '/help/'
     | '/doctors/$slot/new-case'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -154,6 +164,7 @@ export interface FileRouteTypes {
     | '/doctors/$slot'
     | '/staff/$role'
     | '/doctors'
+    | '/help'
     | '/doctors/$slot/new-case'
   id:
     | '__root__'
@@ -168,6 +179,7 @@ export interface FileRouteTypes {
     | '/doctors/$slot'
     | '/staff/$role'
     | '/doctors/'
+    | '/help/'
     | '/doctors_/$slot/new-case'
   fileRoutesById: FileRoutesById
 }
@@ -183,6 +195,7 @@ export interface RootRouteChildren {
   DoctorsSlotRoute: typeof DoctorsSlotRoute
   StaffRoleRoute: typeof StaffRoleRoute
   DoctorsIndexRoute: typeof DoctorsIndexRoute
+  HelpIndexRoute: typeof HelpIndexRoute
   DoctorsSlotNewCaseRoute: typeof DoctorsSlotNewCaseRoute
 }
 
@@ -207,6 +220,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/help/': {
+      id: '/help/'
+      path: '/help'
+      fullPath: '/help/'
+      preLoaderRoute: typeof HelpIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/doctors/': {
@@ -287,8 +307,19 @@ const rootRouteChildren: RootRouteChildren = {
   DoctorsSlotRoute: DoctorsSlotRoute,
   StaffRoleRoute: StaffRoleRoute,
   DoctorsIndexRoute: DoctorsIndexRoute,
+  HelpIndexRoute: HelpIndexRoute,
   DoctorsSlotNewCaseRoute: DoctorsSlotNewCaseRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
