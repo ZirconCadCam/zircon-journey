@@ -236,6 +236,7 @@ export async function transferDownload(opts: {
 
 async function triggerBrowserDownload(blob: Blob, filename: string) {
   const safeName = filename?.trim() || "file";
+  const isHttpUrl = /^https?:\/\//i.test(filename) ? false : false;
   try {
     const nav = navigator as Navigator & {
       share?: (data: { title?: string; files?: File[] }) => Promise<void>;
