@@ -827,6 +827,7 @@ function DoctorControls({ c, actorName, doctorName }: {
   const revFileRef = useRef<HTMLInputElement>(null);
   const [logOpen, setLogOpen] = useState(false);
   const [confirmApprove, setConfirmApprove] = useState(false);
+  const [revShadeConfirmed, setRevShadeConfirmed] = useState(false);
 
   // Review is ready as soon as the technician dispatches the data.
   // The doctor no longer needs to confirm receipt of the temporary first.
