@@ -1015,7 +1015,7 @@ function DoctorControls({ c, actorName, doctorName }: {
               className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 text-white px-3 py-2 text-xs font-bold shadow">
               <ThumbsUp className="size-3.5" /> معتمد للدائم
             </button>
-            <button onClick={() => setRevOpen(true)} disabled={busy}
+            <button onClick={() => { setRevShadeConfirmed(false); setRevOpen(true); }} disabled={busy}
               className="inline-flex items-center gap-2 rounded-lg bg-amber-600 text-white px-3 py-2 text-xs font-bold shadow">
               <Pencil className="size-3.5" /> يلزم تعديل
             </button>
