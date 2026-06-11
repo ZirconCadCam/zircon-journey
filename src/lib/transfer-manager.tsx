@@ -200,14 +200,14 @@ export async function transferDownload(opts: {
     const native = await isNativeApp();
     if (native) {
       // Always persist into the device taxonomy folders on the Android app.
-      const r = await saveToCenter(blob, opts.filename, opts.subfolder ?? "ملفات", opts.location);
+      const r = await saveToCenter(blob, opts.filename, opts.subfolder ?? "ملفات", opts.location, opts.url);
       savedPath = r.path;
       fallback = r.fallback;
       nativeUri = r.uri;
     } else {
       const wantCenter = opts.saveToCenter !== false && fileManagerSupported();
       if (wantCenter) {
-        const r = await saveToCenter(blob, opts.filename, opts.subfolder ?? "ملفات", opts.location);
+        const r = await saveToCenter(blob, opts.filename, opts.subfolder ?? "ملفات", opts.location, opts.url);
         savedPath = r.path;
         fallback = r.fallback;
       } else {
