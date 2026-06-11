@@ -211,7 +211,7 @@ export async function transferDownload(opts: {
         savedPath = r.path;
         fallback = r.fallback;
       } else {
-        triggerBrowserDownload(blob, opts.filename);
+        await triggerBrowserDownload(blob, opts.filename);
         fallback = true;
       }
     }
@@ -234,12 +234,45 @@ export async function transferDownload(opts: {
   }
 }
 
-function triggerBrowserDownload(blob: Blob, filename: string) {
+async function triggerBrowserDownload(blob: Blob, filename: string) {
+  const safeName = filename?.trim() || "file";
+  try {
+    const nav = navigator as Navigator & {
+      share?: (data: { title?: string; files?: File[] }) => Promise<void>;
+      canShare?: (data: { files?: File[] }) => boolean;
+    };
+    if (typeof File !== "undefined" && nav.share) {
+      const file = new File([blob], safeName, {
+        type: blob.type || "application/octet-stream",
+        lastModified: Date.now(),
+      });
+      const payload = { title: safeName, files: [file] };
+      if (!nav.canShare || nav.canShare(payload)) {
+        await nav.share(payload);
+        return;
+      }
+    }
+  } catch (e: any) {
+    if (e?.name === "AbortError") return;
+  }
+
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = filename;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 4000);
+  try {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = safeName;
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } catch {
+    try {
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch {
+      /* ignore */
+    }
+  }
+  setTimeout(() => URL.revokeObjectURL(url), 120000);
 }
 
 /* ----------------- manual transfer tasks (custom flows) ---------------- */
