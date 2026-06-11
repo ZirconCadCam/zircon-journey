@@ -732,7 +732,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
 
 
       const { sendCaseToTelegram } = await import("@/lib/telegram.functions");
-      const res: any = await sendCaseToTelegram({ data: { caption, documents } });
+      const res: any = await sendCaseToTelegram({ data: { caption: finalCaption, documents } });
       const failed = (res?.sent || []).filter((s: any) => !s.ok);
       if (failed.length) toast.warning(`تم الإرسال — تعذّر ${failed.length} ملف`);
       else toast.success("تم إرسال تفاصيل الحالة إلى تلجرام");
