@@ -171,6 +171,17 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
   return (
     <Shell right={
       <>
+        {(role === "designer" || role === "technician") ? (
+          <Link to="/help/$role" params={{ role }}
+            className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-bold hover:border-gold transition">
+            دليل الاستخدام
+          </Link>
+        ) : (
+          <Link to="/help"
+            className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-bold hover:border-gold transition">
+            دليل الاستخدام
+          </Link>
+        )}
         {role === "admin" && (
           <Link to="/admin/archive" className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-bold hover:border-gold transition">
             أرشيف الإدارة
