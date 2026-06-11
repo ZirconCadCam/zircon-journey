@@ -12,13 +12,28 @@ interface ZipEntry {
 }
 
 /**
- * In-app preview for a remote ZIP file.
+ * In-app preview for a remote archive (ZIP **and RAR**, plus 7z/tar/…).
  *
- * The designer needs to confirm the contents of the patient scan archive
- * before a case is finally archived. We download the zip once via fetch,
- * parse it with JSZip in the browser, and render an entry list with
- * image thumbnails and per-file download.
+ * The designer (ZIP) and the technician (RAR) both need to confirm the
+ * contents of a patient/design archive before a case moves forward. JSZip
+ * could only read ZIP files, so RAR archives failed to open. We now use
+ * libarchive.js (a WASM build of libarchive) which transparently handles
+ * ZIP, RAR, 7z, TAR and more. We download the archive once via fetch,
+ * extract it in a Web Worker, and render an entry list with image
+ * thumbnails and per-file download.
  */
+
+let archivePromise: Promise<typeof import("libarchive.js")["Archive"]> | null = null;
+async function getArchive() {
+  if (!archivePromise) {
+    archivePromise = import("libarchive.js").then(({ Archive }) => {
+      Archive.init({ workerUrl: "/libarchive-worker.js" });
+      return Archive;
+    });
+  }
+  return archivePromise;
+}
+
 export function ZipViewerDialog({
   url, fileName, open, onOpenChange,
 }: {
@@ -39,31 +54,46 @@ export function ZipViewerDialog({
     const urlCache: string[] = [];
     (async () => {
       setLoading(true); setError(null); setEntries([]);
+      setPreviewUrl(null); setPreviewName(null);
       try {
         const res = await fetch(url);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const buf = await res.arrayBuffer();
-        const { default: JSZip } = await import("jszip");
-        const zip = await JSZip.loadAsync(buf);
-        const list: ZipEntry[] = [];
-        zip.forEach((path, entry) => {
-          list.push({
-            name: path,
-            size: (entry as any)._data?.uncompressedSize ?? 0,
-            dir: entry.dir,
+        const blob = await res.blob();
+
+        const Archive = await getArchive();
+        const archive = await Archive.open(
+          new File([blob], fileName || "archive", { type: "application/octet-stream" }),
+        );
+        const filesArray = await archive.getFilesArray();
+
+        const list: ZipEntry[] = filesArray.map(({ file, path }) => {
+          const full = `${path ?? ""}${file.name}`;
+          return {
+            name: full,
+            size: file.size ?? 0,
+            dir: false,
             getBlobUrl: async () => {
-              if (entry.dir) return null;
-              const blob = await entry.async("blob");
-              const u = URL.createObjectURL(blob);
+              const extracted = await (file as any).extract();
+              const u = URL.createObjectURL(extracted);
               urlCache.push(u);
               return u;
             },
-          });
+          } as ZipEntry;
         });
+
         list.sort((a, b) => a.name.localeCompare(b.name));
-        if (!cancelled) setEntries(list);
+        if (!cancelled) {
+          if (list.length === 0) setError("الأرشيف فارغ أو لا يمكن قراءته.");
+          setEntries(list);
+        }
       } catch (e: any) {
-        if (!cancelled) setError(e?.message ?? "تعذر فتح الملف");
+        if (!cancelled) {
+          setError(
+            e?.message?.includes("passphrase") || e?.message?.includes("encrypt")
+              ? "هذا الأرشيف محمي بكلمة مرور ولا يمكن فتحه داخل التطبيق."
+              : (e?.message ?? "تعذر فتح الأرشيف"),
+          );
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -72,7 +102,7 @@ export function ZipViewerDialog({
       cancelled = true;
       urlCache.forEach(u => URL.revokeObjectURL(u));
     };
-  }, [open, url]);
+  }, [open, url, fileName]);
 
   function isImage(name: string) {
     return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(name);
@@ -95,11 +125,15 @@ export function ZipViewerDialog({
 
   async function downloadEntry(e: ZipEntry) {
     if (e.dir) return;
-    const u = await e.getBlobUrl();
-    if (!u) return;
-    const a = document.createElement("a");
-    a.href = u; a.download = e.name.split("/").pop() || e.name;
-    a.click();
+    try {
+      const u = await e.getBlobUrl();
+      if (!u) return;
+      const a = document.createElement("a");
+      a.href = u; a.download = e.name.split("/").pop() || e.name;
+      a.click();
+    } catch (err: any) {
+      toast.error(err?.message ?? "تعذر التنزيل");
+    }
   }
 
   return (
@@ -108,7 +142,7 @@ export function ZipViewerDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
             <FileArchive className="size-4 text-gold" />
-            معاينة ملف ZIP {fileName && <span className="font-normal text-xs text-muted-foreground truncate">— {fileName}</span>}
+            معاينة الأرشيف {fileName && <span className="font-normal text-xs text-muted-foreground truncate">— {fileName}</span>}
           </DialogTitle>
         </DialogHeader>
 
@@ -146,7 +180,7 @@ export function ZipViewerDialog({
               })}
             </ul>
 
-            <div className="rounded-xl border border-border bg-muted/30 grid place-items-center overflow-hidden min-h-[280px]">
+            <div className="relative rounded-xl border border-border bg-muted/30 grid place-items-center overflow-hidden min-h-[280px]">
               {previewUrl ? (
                 isImage(previewName || "") ? (
                   <img src={previewUrl} alt={previewName || ""} className="max-w-full max-h-[55vh] object-contain" />
