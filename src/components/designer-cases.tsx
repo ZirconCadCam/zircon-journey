@@ -1046,12 +1046,23 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                       {/* In-app ZIP preview — available to designer + admin before final archive */}
                       {(actor === "designer" || actor === "admin") && view === "active" && c.scan_path && !c.final_archived && (
                         <button
-                          onClick={() => setZipPreview({ url: c.scan_path!, name: c.scan_name })}
+                          onClick={() => openArchivePreview(c, "zip")}
                           disabled={busy}
                           className="inline-flex items-center gap-1.5 rounded-lg border border-gold/60 bg-gold/10 px-3 py-1.5 text-xs font-bold hover:gradient-gold hover:text-gold-foreground transition disabled:opacity-60"
                           title="عرض محتوى ملف ZIP داخل التطبيق"
                         >
                           <Eye className="size-3.5" /> عرض ZIP
+                        </button>
+                      )}
+                      {/* In-app RAR preview — technician + admin can read the design archive */}
+                      {(actor === "technician" || actor === "admin") && view === "active" && (
+                        <button
+                          onClick={() => openArchivePreview(c, "rar")}
+                          disabled={busy}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-gold/60 bg-gold/10 px-3 py-1.5 text-xs font-bold hover:gradient-gold hover:text-gold-foreground transition disabled:opacity-60"
+                          title="عرض محتوى ملف التصميم RAR داخل التطبيق"
+                        >
+                          <Eye className="size-3.5" /> عرض RAR
                         </button>
                       )}
                       <DropdownMenu>
