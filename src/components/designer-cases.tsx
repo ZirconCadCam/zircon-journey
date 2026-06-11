@@ -650,12 +650,18 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
 
       const safe = (s: string) => s.replace(/[\\/:*?"<>|]+/g, "_").trim();
       const documents: { url: string; filename: string }[] = [];
+      // Track which expected items were found so we can warn about gaps clearly.
+      const missing: string[] = [];
+      const urlFailed: string[] = [];
 
       // (a) ZIP from the doctor to the designer — before the revision.
       if (c.scan_path) {
         const url = /^https?:\/\//i.test(c.scan_path) ? c.scan_path : await getSignedUrl(c.scan_path, 3600);
         const ext = /\.zip$/i.test(c.scan_name || "") ? "zip" : (c.scan_name?.split(".").pop() || "zip");
         if (url) documents.push({ url, filename: `${safe(c.patient_name)} - ملف الحالة (قبل التعديل).${ext}` });
+        else urlFailed.push("ملف الحالة ZIP (قبل التعديل)");
+      } else {
+        missing.push("ملف الحالة ZIP من الطبيب (قبل التعديل)");
       }
 
       // Gather conversation messages once (files + designer→technician text revision).
@@ -710,32 +716,54 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
         const url = /^https?:\/\//i.test(afterZip) ? afterZip : await getSignedUrl(afterZip, 3600);
         const ext = /\.zip$/i.test(afterZipName || "") ? "zip" : (afterZipName?.split(".").pop() || "zip");
         if (url) documents.push({ url, filename: `${safe(c.patient_name)} - ملف الحالة (بعد التعديل).${ext}` });
+        else urlFailed.push("ملف الحالة ZIP (بعد التعديل)");
       }
       if (beforeRar) {
         const url = /^https?:\/\//i.test(beforeRar) ? beforeRar : await getSignedUrl(beforeRar, 3600);
         if (url) documents.push({ url, filename: `${safe(c.patient_name)} - التصميم قبل التعديل.rar` });
+        else urlFailed.push("ملف التصميم RAR (قبل التعديل)");
+      } else {
+        missing.push("ملف التصميم RAR من المصمم (قبل التعديل)");
       }
       if (afterRar) {
         const url = /^https?:\/\//i.test(afterRar) ? afterRar : await getSignedUrl(afterRar, 3600);
         if (url) documents.push({ url, filename: `${safe(c.patient_name)} - التصميم بعد التعديل.rar` });
+        else urlFailed.push("ملف التصميم RAR (بعد التعديل)");
       }
 
       // Designer → technician text revision (sent as part of the case caption).
       let finalCaption = caption;
       if (designerTextRevision) {
         finalCaption += `\n\n✏️ تعديل المصمم النصي للفني:\n${designerTextRevision}`;
+      } else {
+        missing.push("نص التعديل من المصمم للفني");
       }
 
       // (c) conversations PDF
       const pdfUrl = await buildAndUploadConversationsPdf(c, convIds);
       if (pdfUrl) documents.push({ url: pdfUrl, filename: `${safe(c.patient_name)} - المحادثات.pdf` });
+      else urlFailed.push("ملف PDF للمحادثات");
 
 
       const { sendCaseToTelegram } = await import("@/lib/telegram.functions");
       const res: any = await sendCaseToTelegram({ data: { caption: finalCaption, documents } });
       const failed = (res?.sent || []).filter((s: any) => !s.ok);
-      if (failed.length) toast.warning(`تم الإرسال — تعذّر ${failed.length} ملف`);
-      else toast.success("تم إرسال تفاصيل الحالة إلى تلجرام");
+
+      // Build a clear, non-silent summary of what happened.
+      if (missing.length) {
+        toast.info(`عناصر غير متوفّرة لهذه الحالة: ${missing.join("، ")}`, { duration: 6000 });
+      }
+      if (urlFailed.length) {
+        toast.warning(`تعذّر تجهيز رابط: ${urlFailed.join("، ")}`, { duration: 6000 });
+      }
+      if (failed.length) {
+        const names = failed.map((s: any) => s.filename).join("، ");
+        toast.warning(`تم إرسال البيانات لكن فشل إرسال ${failed.length} ملف: ${names}`, { duration: 7000 });
+      } else if (documents.length === 0) {
+        toast.success("تم إرسال بيانات الحالة (نصيًا) — لا توجد ملفات مرفقة للإرسال");
+      } else {
+        toast.success(`تم إرسال تفاصيل الحالة و${documents.length} ملف إلى تلجرام`);
+      }
     } catch (e: any) {
       console.error(e);
       toast.error(e.message || "تعذر الإرسال إلى تلجرام");
