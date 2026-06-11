@@ -18,6 +18,7 @@ import { saveToCenter, fileManagerSupported } from "@/lib/file-manager";
 import { isNativeApp, openNativeUri } from "@/lib/native-fs";
 import type { CaseFileLocation } from "@/lib/case-folders";
 import { InAppFileViewer } from "@/components/in-app-file-viewer";
+import { toast } from "sonner";
 
 export type TransferKind = "upload" | "download";
 export type TransferStatus = "active" | "paused" | "done" | "error" | "canceled";
@@ -227,6 +228,7 @@ export async function transferDownload(opts: {
       return { ok: false, canceled: true };
     }
     patch(id, { status: "error" });
+    toast.error("تعذر حفظ الملف في مدير ملفات الجهاز. تم التحويل إلى طريقة حفظ بديلة إذا كانت متاحة");
     setTimeout(() => removeTransfer(id), 3500);
     throw err;
   }
