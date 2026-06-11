@@ -331,6 +331,11 @@ export async function saveToCenter(
     await writable.close();
     return { saved: true, fallback: false, path: `${CENTER_FOLDER_NAME}${subfolder ? "/" + subfolder : ""}/${filename}` };
   } catch {
+    try {
+      await clearCenterFolder();
+    } catch {
+      /* ignore stale handle cleanup errors */
+    }
     fallbackDownload(blob, filename);
     return { saved: true, fallback: true };
   }
@@ -400,6 +405,8 @@ function fallbackDownload(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url; a.download = filename;
+  a.rel = "noopener";
+  a.target = "_blank";
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
