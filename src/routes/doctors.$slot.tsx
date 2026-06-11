@@ -72,7 +72,7 @@ export const Route = createFileRoute("/doctors/$slot")({
 
 type Sender = "doctor" | "designer" | "technician" | "secretary" | "admin";
 
-interface Doctor { slot: number; name: string; branch: string | null; password: string; active: boolean }
+interface Doctor { slot: number; name: string; branch: string | null; active: boolean }
 interface DocFile { id: string; doctor_slot: number; file_name: string; file_path: string; public_url: string | null; size_bytes: number | null; archived: boolean; uploaded_by: string; created_at: string }
 interface DocMsg {
   id: string; doctor_slot: number; sender: Sender; sender_name: string | null;
@@ -184,9 +184,11 @@ function ShellHeader({ children, right }: { children: React.ReactNode; right?: R
 function PasswordGate({ doctor, onOk }: { doctor: Doctor; onOk: () => void }) {
   const [pw, setPw] = useState("");
   const [err, setErr] = useState("");
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (pw === doctor.password) onOk();
+    const { data } = await supabase.rpc("verify_doctor_login", { p_password: pw });
+    const row = Array.isArray(data) ? data[0] : null;
+    if (row && row.slot === doctor.slot) onOk();
     else setErr("كلمة المرور غير صحيحة");
   }
   return (

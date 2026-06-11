@@ -17,7 +17,6 @@ interface Doctor {
   slot: number;
   name: string;
   branch: string | null;
-  password: string;
   active: boolean;
 }
 
@@ -29,7 +28,7 @@ export function AdminSettingsPanel() {
     setLoading(true);
     const { data } = await supabase
       .from("doctor_profiles")
-      .select("slot,name,branch,password,active")
+      .select("slot,name,branch,active")
       .order("slot");
     setDoctors((data as Doctor[]) ?? []);
     setLoading(false);
@@ -243,17 +242,24 @@ function AddDoctorCard({ doctors, onDone }: { doctors: Doctor[]; onDone: () => v
     if (!confirm(`هل أنت متأكد من إضافة الطبيب "${name}" في الخانة #${nextSlot}؟`)) return;
 
     setSaving(true);
-    const exists = doctors.find((d) => d.slot === nextSlot);
-    const payload = {
-      slot: nextSlot,
-      name: name.trim(),
-      branch: branch || null,
-      password: password.trim(),
-      active: true,
-    };
-    const { error } = exists
-      ? await supabase.from("doctor_profiles").update(payload).eq("slot", nextSlot)
-      : await supabase.from("doctor_profiles").insert(payload);
+    // Save non-secret fields, then set the password into the locked secrets table.
+    const { error } = await supabase.rpc("upsert_doctor", {
+      p_slot: nextSlot,
+      p_name: name.trim(),
+      p_branch: (branch || null) as string,
+      p_active: true,
+    });
+    if (!error) {
+      const sec = await supabase.rpc("set_doctor_secret", {
+        p_slot: nextSlot,
+        p_password: password.trim(),
+      });
+      if (sec.error) {
+        setSaving(false);
+        toast.error(sec.error.message);
+        return;
+      }
+    }
 
     setSaving(false);
     if (error) {

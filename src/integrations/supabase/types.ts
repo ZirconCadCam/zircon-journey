@@ -366,7 +366,6 @@ export type Database = {
           created_at: string
           icon: string | null
           name: string
-          password: string
           slot: number
           updated_at: string
         }
@@ -376,7 +375,6 @@ export type Database = {
           created_at?: string
           icon?: string | null
           name: string
-          password: string
           slot: number
           updated_at?: string
         }
@@ -386,6 +384,26 @@ export type Database = {
           created_at?: string
           icon?: string | null
           name?: string
+          slot?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      doctor_secrets: {
+        Row: {
+          created_at: string
+          password: string
+          slot: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          password: string
+          slot: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
           password?: string
           slot?: number
           updated_at?: string
@@ -746,6 +764,31 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      set_doctor_active: {
+        Args: { p_active: boolean; p_slot: number }
+        Returns: undefined
+      }
+      set_doctor_secret: {
+        Args: { p_password: string; p_slot: number }
+        Returns: undefined
+      }
+      upsert_doctor: {
+        Args: {
+          p_active: boolean
+          p_branch: string
+          p_name: string
+          p_slot: number
+        }
+        Returns: undefined
+      }
+      verify_doctor_login: {
+        Args: { p_password: string }
+        Returns: {
+          active: boolean
+          name: string
+          slot: number
+        }[]
       }
     }
     Enums: {

@@ -13,7 +13,6 @@ interface Doctor {
   slot: number;
   name: string;
   branch: "sanaa" | "ibb" | null;
-  password: string;
   active: boolean;
 }
 
@@ -152,16 +151,25 @@ function DoctorTile({ d, isAdmin, onEdit }: { d: Doctor; isAdmin: boolean; onEdi
 function EditDialog({ d, onClose, onSaved }: { d: Doctor; onClose: () => void; onSaved: () => void }) {
   const [name, setName] = useState(d.name);
   const [branch, setBranch] = useState<string>(d.branch ?? "");
-  const [password, setPassword] = useState(d.password);
+  const [password, setPassword] = useState("");
   const [active, setActive] = useState(d.active);
   const [saving, setSaving] = useState(false);
 
   async function save() {
     setSaving(true);
-    const { error } = await supabase.from("doctor_profiles")
-      .update({ name, branch: branch || null, password, active }).eq("slot", d.slot);
+    const { error } = await supabase.rpc("upsert_doctor", {
+      p_slot: d.slot,
+      p_name: name,
+      p_branch: (branch || null) as string,
+      p_active: active,
+    });
+    let secErr = error;
+    if (!secErr && password.trim()) {
+      const sec = await supabase.rpc("set_doctor_secret", { p_slot: d.slot, p_password: password.trim() });
+      secErr = sec.error;
+    }
     setSaving(false);
-    if (error) toast.error(error.message); else { toast.success("تم الحفظ"); onSaved(); }
+    if (secErr) toast.error(secErr.message); else { toast.success("تم الحفظ"); onSaved(); }
   }
 
   return (
@@ -211,13 +219,16 @@ function AddDialog({ nextSlot, onClose, onSaved }: { nextSlot: number; onClose: 
     if (trimmed.length < 2) { toast.error("الرجاء إدخال اسم الطبيب"); return; }
     if (!password.trim()) { toast.error("الرجاء إدخال كلمة مرور"); return; }
     setSaving(true);
-    const { error } = await supabase.from("doctor_profiles").insert({
-      slot: nextSlot,
-      name: trimmed,
-      branch: branch || null,
-      password: password.trim(),
-      active: true,
+    const { error } = await supabase.rpc("upsert_doctor", {
+      p_slot: nextSlot,
+      p_name: trimmed,
+      p_branch: (branch || null) as string,
+      p_active: true,
     });
+    if (!error) {
+      const sec = await supabase.rpc("set_doctor_secret", { p_slot: nextSlot, p_password: password.trim() });
+      if (sec.error) { setSaving(false); toast.error(sec.error.message); return; }
+    }
     setSaving(false);
     if (error) toast.error(error.message);
     else { toast.success(`تمت إضافة الطبيب في الخانة #${nextSlot}`); onSaved(); }
