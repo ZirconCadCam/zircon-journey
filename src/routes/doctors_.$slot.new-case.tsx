@@ -5,6 +5,7 @@ import { ArrowRight, Sparkles, Upload, FileText, X, Loader2, ScanLine, Plus, Pau
 import { toast } from "sonner";
 import { z } from "zod";
 import { ToothQuadrantPicker } from "@/components/tooth-quadrant-picker";
+import { ShadeConfirm } from "@/components/shade-confirm";
 import type { ResumableHandle } from "@/lib/resumable-upload";
 
 const patientSchema = z.object({
@@ -54,6 +55,7 @@ function NewSlotCase() {
   const uploadHandle = useRef<ResumableHandle | null>(null);
   const uploadCanceled = useRef(false);
   const [uploadPaused, setUploadPaused] = useState(false);
+  const [shadeConfirmed, setShadeConfirmed] = useState(false);
 
   // Signature of the case data currently in the form (incl. chosen scan).
   // Used to fade the save button once an identical case is already saved.
@@ -70,6 +72,7 @@ function NewSlotCase() {
     setErrors({});
     setSavedOnce(false);
     setSavedSig(null);
+    setShadeConfirmed(false);
     if (fileInput.current) fileInput.current.value = "";
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -118,6 +121,10 @@ function NewSlotCase() {
     }
     if (!/\.zip$/i.test(scan.name)) {
       toast.error("ملف المسح يجب أن يكون بصيغة .zip فقط");
+      return;
+    }
+    if (!shadeConfirmed) {
+      toast.error("الرجاء تأكيد اللون قبل حفظ الحالة");
       return;
     }
     const parsed = patientSchema.safeParse({
@@ -210,6 +217,7 @@ function NewSlotCase() {
         tooth_number: form.tooth_number.trim() || null,
         teeth_count: form.teeth_count.trim() || null,
         shade: form.shade || null,
+        shade_confirmed_doctor: shadeConfirmed,
         case_type: form.case_type || null,
         notes: form.notes.trim() || null,
         scan_path, scan_name, scan_size, scan_mime,
@@ -364,9 +372,16 @@ function NewSlotCase() {
                   </Field>
                   <Field label="اللون (Shade)">
                     <select className="zinput" value={form.shade}
-                      onChange={e=>setForm({...form,shade:e.target.value})}>
+                      onChange={e=>{setForm({...form,shade:e.target.value}); setShadeConfirmed(false);}}>
                       {SHADES.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
+                    <div className="mt-2">
+                      <ShadeConfirm
+                        shade={form.shade}
+                        confirmed={shadeConfirmed}
+                        onConfirm={() => setShadeConfirmed(true)}
+                      />
+                    </div>
                   </Field>
                   <Field label="نوع الحالة">
                     <select className="zinput" value={form.case_type}

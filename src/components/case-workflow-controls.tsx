@@ -9,6 +9,7 @@ import {
 import type { RoleKey } from "@/lib/chat";
 import { ROLE_LABEL, getSignedUrl } from "@/lib/chat";
 import { CaseFileActivityLog } from "@/components/case-file-activity-log";
+import { ShadeConfirm } from "@/components/shade-confirm";
 
 export interface WorkflowCase {
   id: string;
@@ -827,6 +828,7 @@ function DoctorControls({ c, actorName, doctorName }: {
   const revFileRef = useRef<HTMLInputElement>(null);
   const [logOpen, setLogOpen] = useState(false);
   const [confirmApprove, setConfirmApprove] = useState(false);
+  const [revShadeConfirmed, setRevShadeConfirmed] = useState(false);
 
   // Review is ready as soon as the technician dispatches the data.
   // The doctor no longer needs to confirm receipt of the temporary first.
@@ -895,6 +897,7 @@ function DoctorControls({ c, actorName, doctorName }: {
 
   async function requestRevision() {
     if (notes.trim().length < 3) { toast.error("اكتب ملاحظات التعديل"); return; }
+    if (c.shade && !revShadeConfirmed) { toast.error("الرجاء تأكيد اللون قبل إرسال طلب التعديل"); return; }
     setBusy(true);
     const trimmed = notes.trim();
     const { error } = await supabase.from("slot_cases")
@@ -904,6 +907,9 @@ function DoctorControls({ c, actorName, doctorName }: {
         revision_design_done: false,
         revision_approved_by_tech: false,
         temporary_delivered: true,
+        shade_confirmed_doctor: true,
+        shade_confirmed_designer: false,
+        shade_confirmed_technician: false,
         review_read_at: new Date().toISOString(),
       }).eq("id", c.id);
     if (!error) {
