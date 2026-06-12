@@ -13,6 +13,7 @@ import {
   type CenterStatus,
 } from "@/lib/file-manager";
 import { AvatarManagerPanel } from "@/components/avatar-manager-panel";
+import { PasswordManagerPanel } from "@/components/password-manager-panel";
 
 interface Doctor {
   slot: number;
