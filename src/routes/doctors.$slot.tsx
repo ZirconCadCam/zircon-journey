@@ -8,7 +8,7 @@ import {
   Sparkles, ArrowRight, Lock, Upload, FileText, Download, Archive,
   Trash2, Share2, MessageSquare, Files as FilesIcon, ArchiveRestore, Copy, Check, Search, Plus,
   ClipboardList, MoreHorizontal, Pencil, Pin, PinOff, Send, X, Loader2,
-  Palette, Shield, Building2, FileSpreadsheet,
+  Palette, Shield, Building2, FileSpreadsheet, Bell,
 } from "lucide-react";
 import { toast } from "sonner";
 import { STAGES, getStage, deriveStageKey, notifyRoleAboutCase, localNotify, type CaseStage } from "@/lib/case-stages";
