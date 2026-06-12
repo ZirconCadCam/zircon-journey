@@ -670,6 +670,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
       }
 
       // Gather conversation messages once (files + designer→technician text revision).
+      prog(25, "جلب المحادثات وملفات الحالة…");
       const { data: convs } = await supabase.from("chat_conversations")
         .select("id, participants").eq("doctor_slot", c.doctor_slot);
       const convList = ((convs ?? []) as any[]);
