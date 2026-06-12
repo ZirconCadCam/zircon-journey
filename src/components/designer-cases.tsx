@@ -974,14 +974,34 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                         />
                       )}
                       {actor === "admin" && view === "archive" && (
-                        <button
-                          onClick={() => sendToTelegram(c)}
-                          disabled={busy}
-                          className="inline-flex items-center gap-1.5 rounded-lg gradient-gold text-gold-foreground px-3 py-1.5 text-xs font-bold shadow-gold hover:opacity-90 transition disabled:opacity-60"
-                          title="إرسال بيانات الحالة وملفاتها ومحادثاتها إلى جروب تلجرام"
-                        >
-                          {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />} إرسال إلى تلجرام
-                        </button>
+                        <div className="flex flex-col gap-1.5 min-w-[200px]">
+                          <button
+                            onClick={() => sendToTelegram(c)}
+                            disabled={busy}
+                            className="inline-flex items-center justify-center gap-1.5 rounded-lg gradient-gold text-gold-foreground px-3 py-1.5 text-xs font-bold shadow-gold hover:opacity-90 transition disabled:opacity-60"
+                            title="إرسال بيانات الحالة وملفاتها ومحادثاتها إلى جروب تلجرام"
+                          >
+                            {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />} إرسال إلى تلجرام
+                          </button>
+                          {tgProgress?.id === c.id && (
+                            <div className="rounded-lg border border-gold/40 bg-card p-2 shadow-luxury">
+                              <div className="flex items-center justify-between text-[10px] font-bold mb-1">
+                                <span className={tgProgress.error ? "text-destructive" : "text-foreground"}>
+                                  {tgProgress.label}
+                                </span>
+                                <span className="text-gold">{tgProgress.pct}%</span>
+                              </div>
+                              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                                <div
+                                  className={`h-full rounded-full transition-all duration-500 ${
+                                    tgProgress.error ? "bg-destructive" : "gradient-gold"
+                                  }`}
+                                  style={{ width: `${tgProgress.pct}%` }}
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       )}
                       {view === "active" && actor === "technician" ? (
                         <button
