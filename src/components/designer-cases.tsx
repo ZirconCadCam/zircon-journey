@@ -90,6 +90,7 @@ import { deriveStageKey, getStage } from "@/lib/case-stages";
 import type { RoleKey } from "@/lib/chat";
 import { ROLE_LABEL, getSignedUrl } from "@/lib/chat";
 import { speak, arabicOrdinal } from "@/lib/voice-notify";
+import { DoctorAvatar } from "@/components/doctor-avatar";
 
 
 interface DesignerCasesProps {
