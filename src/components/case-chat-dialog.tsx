@@ -28,6 +28,11 @@ export function CaseChatButton(props: {
   const { doctorSlot, doctorName, me, myName, caseCode, caseLabel, className } = props;
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(0);
+  const [ringing, setRinging] = useState(false);
+  const myConvIds = useRef<Set<string>>(new Set());
+  const seen = useRef<Set<string>>(new Set());
+  const openRef = useRef(open);
+  openRef.current = open;
 
   useEffect(() => {
     let cancelled = false;
@@ -40,6 +45,7 @@ export function CaseChatButton(props: {
         Array.isArray(c.participants) && c.participants.includes(me)
         && typeof c.title === "string" && c.title.startsWith(prefix)
       );
+      myConvIds.current = new Set(mine.map(c => c.id as string));
       if (mine.length === 0) { if (!cancelled) setUnread(0); return; }
       const ids = mine.map(c => c.id);
       const { count } = await supabase.from("chat_messages")
@@ -51,17 +57,47 @@ export function CaseChatButton(props: {
     };
     refresh();
     const ch = supabase.channel(`case-chat-${doctorSlot}-${caseCode}-${me}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, (payload: any) => {
+        const m = payload.new;
+        if (!m || m.sender === me) return;
+        if (seen.current.has(m.id)) return;
+        if (!myConvIds.current.has(m.conversation_id)) return;
+        seen.current.add(m.id);
+        refresh();
+        // Fire the full alert (ring + device notification + toast) only when
+        // the chat dialog is closed — an open dialog is already being read.
+        if (!openRef.current) {
+          const sender = ROLE_LABEL[m.sender as RoleKey] ?? m.sender;
+          const snippet = (m.content || "بيانات جديدة").replace(/\s+/g, " ").slice(0, 90);
+          const title = `📩 رسالة جديدة — ${caseLabel}`;
+          const body = `${sender}: ${snippet}`;
+          incomingAlert({ title, body });
+          setRinging(true);
+          window.setTimeout(() => setRinging(false), 5000);
+          toast(title, {
+            description: body,
+            icon: <Phone className="size-4 text-gold" />,
+            duration: 6000,
+          });
+        }
+      })
       .on("postgres_changes", { event: "*", schema: "public", table: "chat_messages" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "chat_conversations", filter: `doctor_slot=eq.${doctorSlot}` }, refresh)
       .subscribe();
     return () => { cancelled = true; supabase.removeChannel(ch); };
-  }, [doctorSlot, caseCode, me, open]);
+  }, [doctorSlot, caseCode, caseLabel, me]);
+
+  function openChat() {
+    stopRing();
+    setRinging(false);
+    setOpen(true);
+  }
 
   return (
     <>
-      <button onClick={() => setOpen(true)}
-        className={className ?? "relative inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold hover:border-gold transition"}>
-        <MessageSquare className="size-3.5 text-gold" />
+      <button onClick={openChat}
+        className={className ?? `relative inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold transition ${ringing ? "border-gold gradient-gold text-gold-foreground animate-pulse shadow-gold" : "border-border bg-card hover:border-gold"}`}>
+        <MessageSquare className={`size-3.5 ${ringing ? "" : "text-gold"}`} />
         محادثة الحالة
         {unread > 0 && (
           <span className="absolute -top-1.5 -end-1.5 rounded-full gradient-gold text-gold-foreground text-[10px] font-bold px-1.5 min-w-[18px] h-[18px] grid place-items-center shadow-gold">
