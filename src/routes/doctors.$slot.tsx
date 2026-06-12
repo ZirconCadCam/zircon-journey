@@ -5,7 +5,7 @@ import { useAuth, ROLE_LABELS, type AppRole } from "@/hooks/use-auth";
 import { ChatModule } from "@/components/chat-module";
 import { ROLE_LABEL as CHAT_LABEL, ROLE_COLOR as CHAT_COLOR, type RoleKey } from "@/lib/chat";
 import {
-  Sparkles, ArrowRight, Lock, Upload, FileText, Download, Archive,
+  Sparkles, ArrowRight, Upload, FileText, Download, Archive,
   Trash2, Share2, MessageSquare, Files as FilesIcon, ArchiveRestore, Copy, Check, Search, Plus,
   ClipboardList, MoreHorizontal, Pencil, Pin, PinOff, Send, X, Loader2,
   Palette, Shield, Building2, FileSpreadsheet, Bell,
