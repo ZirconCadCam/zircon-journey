@@ -54,6 +54,9 @@ export interface WorkflowCase {
   tooth_number?: string | null;
   teeth_count?: string | null;
   shade?: string | null;
+  shade_confirmed_doctor?: boolean | null;
+  shade_confirmed_designer?: boolean | null;
+  shade_confirmed_technician?: boolean | null;
   case_type?: string | null;
   notes?: string | null;
   scan_path?: string | null;
