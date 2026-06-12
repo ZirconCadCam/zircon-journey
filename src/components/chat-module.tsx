@@ -647,7 +647,10 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
   }
 
   const otherParticipants = conv.participants.filter(p => p !== me);
-  const visibleMsgs = msgs.filter(m => showArchived ? archivedIds.has(m.id) : !archivedIds.has(m.id));
+  const visibleMsgs = msgs
+    .filter(m => showArchived ? archivedIds.has(m.id) : !archivedIds.has(m.id))
+    .slice()
+    .sort(compareByCreatedAt);
 
   return (
     <div className="rounded-2xl bg-card border border-border flex flex-col h-[640px] shadow-luxury">
