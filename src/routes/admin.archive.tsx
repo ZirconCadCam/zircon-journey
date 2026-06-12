@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ChatModule } from "@/components/chat-module";
+import { DoctorAvatar } from "@/components/doctor-avatar";
 import {
   ROLE_COLOR, ROLE_LABEL, STAFF_PASSWORDS, summarizeParticipants,
   type ChatConversation, type RoleKey,
@@ -167,9 +168,12 @@ function Inner({ onLogout }: { onLogout: () => void }) {
           <button onClick={()=>{ setOpenConv(null); load(); }} className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-xs font-bold hover:border-gold">
             <ArrowRight className="size-4" /> رجوع للأرشيف
           </button>
-          <div className="rounded-2xl gradient-brown text-primary-foreground p-5 shadow-luxury">
-            <div className="text-xs opacity-80">محادثة الطبيب</div>
-            <div className="text-xl font-extrabold mt-1">{doctor?.name ?? `Slot #${openConv.doctor_slot}`}</div>
+          <div className="rounded-2xl gradient-brown text-primary-foreground p-5 shadow-luxury flex items-center gap-3">
+            <DoctorAvatar name={doctor?.name} className="size-12 ring-white/40" />
+            <div>
+              <div className="text-xs opacity-80">محادثة الطبيب</div>
+              <div className="text-xl font-extrabold mt-1">{doctor?.name ?? `Slot #${openConv.doctor_slot}`}</div>
+            </div>
           </div>
           <ChatModule
             doctorSlot={openConv.doctor_slot}
@@ -286,7 +290,8 @@ function Inner({ onLogout }: { onLogout: () => void }) {
                         </span>
                         {c.archived && <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold">مؤرشفة</span>}
                       </div>
-                      <div className="text-[11px] text-muted-foreground mt-1 flex flex-wrap gap-1">
+                      <div className="text-[11px] text-muted-foreground mt-1 flex flex-wrap items-center gap-1">
+                        <DoctorAvatar name={doctor?.name} className="size-6" />
                         <span className="font-bold text-foreground">{doctor?.name ?? `Slot #${c.doctor_slot}`}</span>
                         <span>•</span>
                         {c.participants.map(p => (

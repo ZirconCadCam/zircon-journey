@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Sparkles, ArrowRight, Stethoscope, Plus, Pencil, Search } from "lucide-react";
 import { BRANCH_LABELS } from "@/hooks/use-auth";
 import { toast } from "sonner";
+import { DoctorAvatar } from "@/components/doctor-avatar";
+import { getDoctorAvatar } from "@/lib/doctor-avatars";
 
 /**
  * The slot workflow authenticates admins via a localStorage flag set on the
@@ -145,13 +147,17 @@ function DoctorTile({ d, isAdmin, onEdit }: { d: Doctor; isAdmin: boolean; onEdi
             : "border-dashed border-border bg-muted/30 opacity-60"
         }`}
       >
-        <div className="mx-auto size-20 rounded-full gradient-gold grid place-items-center shadow-gold mb-3">
-          {d.active ? (
-            <span className="text-3xl font-extrabold text-gold-foreground font-display">{initial}</span>
-          ) : (
-            <Plus className="size-8 text-gold-foreground" />
-          )}
-        </div>
+        {d.active && getDoctorAvatar(d.name) ? (
+          <DoctorAvatar name={d.name} className="size-20 mx-auto mb-3" />
+        ) : (
+          <div className="mx-auto size-20 rounded-full gradient-gold grid place-items-center shadow-gold mb-3">
+            {d.active ? (
+              <span className="text-3xl font-extrabold text-gold-foreground font-display">{initial}</span>
+            ) : (
+              <Plus className="size-8 text-gold-foreground" />
+            )}
+          </div>
+        )}
         <div className="font-bold text-sm leading-tight min-h-[2.5rem]">{d.name}</div>
         <div className="text-[10px] text-muted-foreground mt-1">
           {d.branch ? BRANCH_LABELS[d.branch] : "—"} • خانة #{d.slot}

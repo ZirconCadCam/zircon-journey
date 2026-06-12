@@ -5,7 +5,7 @@ import { useAuth, ROLE_LABELS, type AppRole } from "@/hooks/use-auth";
 import { ChatModule } from "@/components/chat-module";
 import { ROLE_LABEL as CHAT_LABEL, ROLE_COLOR as CHAT_COLOR, type RoleKey } from "@/lib/chat";
 import {
-  Sparkles, ArrowRight, Lock, Upload, FileText, Download, Archive,
+  Sparkles, ArrowRight, Upload, FileText, Download, Archive,
   Trash2, Share2, MessageSquare, Files as FilesIcon, ArchiveRestore, Copy, Check, Search, Plus,
   ClipboardList, MoreHorizontal, Pencil, Pin, PinOff, Send, X, Loader2,
   Palette, Shield, Building2, FileSpreadsheet, Bell,
@@ -21,6 +21,7 @@ import { ShadeBadge } from "@/components/shade-badge";
 import { CaseSearch } from "@/components/case-search";
 import { RoleNotifications } from "@/components/role-notifications";
 import { NotificationSettings } from "@/components/notification-settings";
+import { DoctorAvatar } from "@/components/doctor-avatar";
 
 /** Compute WhatsApp-style tick state for each visible stage from case flags + timing. */
 function stageTickState(stageKey: string, c: any): TickState {
@@ -197,8 +198,8 @@ function PasswordGate({ doctor, onOk }: { doctor: Doctor; onOk: () => void }) {
     <ShellHeader>
       <main className="container mx-auto px-6 py-16 grid place-items-center">
         <form onSubmit={submit} className="w-full max-w-md rounded-3xl bg-card border border-border p-8 shadow-luxury">
-          <div className="size-16 rounded-full gradient-gold grid place-items-center mx-auto shadow-gold">
-            <Lock className="size-7 text-gold-foreground" />
+          <div className="mx-auto w-fit">
+            <DoctorAvatar name={doctor.name} className="size-20 mx-auto" />
           </div>
           <div className="text-center mt-4">
             <div className="text-xl font-bold">{doctor.name}</div>
@@ -248,9 +249,7 @@ function Portal({ doctor, actor, actorName, onLogout }: { doctor: Doctor; actor:
 
         <div className="rounded-3xl gradient-brown text-primary-foreground p-6 sm:p-8 shadow-luxury flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-4">
-            <div className="size-16 rounded-2xl gradient-gold grid place-items-center shadow-gold">
-              <span className="text-2xl font-extrabold text-gold-foreground">{doctor.name.replace(/^د\.\s*/, "").charAt(0)}</span>
-            </div>
+            <DoctorAvatar name={doctor.name} className="size-16 ring-white/40" rounded="2xl" />
             <div>
               <div className="text-xs opacity-80">صفحة الطبيب</div>
               <div className="text-2xl font-extrabold">{doctor.name}</div>

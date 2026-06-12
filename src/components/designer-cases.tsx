@@ -90,6 +90,7 @@ import { deriveStageKey, getStage } from "@/lib/case-stages";
 import type { RoleKey } from "@/lib/chat";
 import { ROLE_LABEL, getSignedUrl } from "@/lib/chat";
 import { speak, arabicOrdinal } from "@/lib/voice-notify";
+import { DoctorAvatar } from "@/components/doctor-avatar";
 
 
 interface DesignerCasesProps {
@@ -895,9 +896,12 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                       <div className="mt-2 font-extrabold text-lg flex items-center gap-2">
                         <User className="size-4 text-gold" /> {c.patient_name}
                       </div>
-                      <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
-                        <Stethoscope className="size-3" /> {doctor?.name ?? `Slot ${c.doctor_slot}`}
-                        {doctor?.branch && <> • {doctor.branch === "sanaa" ? "صنعاء" : "إب"}</>}
+                      <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
+                        <DoctorAvatar name={doctor?.name} className="size-7" />
+                        <span className="flex items-center gap-1">
+                          {doctor?.name ?? `Slot ${c.doctor_slot}`}
+                          {doctor?.branch && <> • {doctor.branch === "sanaa" ? "صنعاء" : "إب"}</>}
+                        </span>
                       </div>
 
                       {/* Standalone confirmation status only for admin (read-only).
