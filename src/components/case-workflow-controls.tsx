@@ -1184,15 +1184,17 @@ function DoctorControls({ c, actorName, doctorName }: {
                 onChange={(s) => { setRevShade(s); setRevShadeConfirmed(false); }}
                 collapsible
               />
-              {revShade.trim() && (
-                <div className="pt-1 border-t border-gold/30">
+              <div className="pt-1 border-t border-gold/30">
+                {revShade.trim() ? (
                   <ShadeConfirm
                     shade={revShade}
                     confirmed={revShadeConfirmed}
                     onConfirm={() => setRevShadeConfirmed(true)}
                   />
-                </div>
-              )}
+                ) : (
+                  <div className="text-[11px] font-bold text-destructive">اختر لون السن أولاً (إلزامي).</div>
+                )}
+              </div>
             </div>
 
 
