@@ -7,6 +7,7 @@ import {
 import { toast } from "sonner";
 import { getStage, deriveStageKey } from "@/lib/case-stages";
 import { ShadeBadge } from "@/components/shade-badge";
+import { DoctorAvatar } from "@/components/doctor-avatar";
 import { getSignedUrl } from "@/lib/chat";
 import { fileManagerSupported, openCachedFile } from "@/lib/file-manager";
 import type { CaseFileLocation, CaseRole } from "@/lib/case-folders";
