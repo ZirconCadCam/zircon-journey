@@ -633,6 +633,9 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
   /** Item 3: send the whole archived case (data + zip + rar before/after + chat PDF) to Telegram. */
   async function sendToTelegram(c: Case) {
     setBusyId(c.id);
+    const prog = (pct: number, label: string, error = false) =>
+      setTgProgress({ id: c.id, pct, label, error });
+    prog(5, "تجهيز بيانات الحالة…");
     try {
       const doctor = doctorMap.get(c.doctor_slot);
       const branchAr = doctor?.branch === "sanaa" ? "صنعاء" : doctor?.branch === "ibb" ? "إب" : "—";
