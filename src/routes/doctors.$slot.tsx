@@ -250,7 +250,6 @@ function Portal({ doctor, actor, actorName, onLogout }: { doctor: Doctor; actor:
         <div className="rounded-3xl gradient-brown text-primary-foreground p-6 sm:p-8 shadow-luxury flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-4">
             <DoctorAvatar name={doctor.name} className="size-16 ring-white/40" rounded="2xl" />
-            {!getDoctorAvatarUrl(doctor.name) && null}
             <div>
               <div className="text-xs opacity-80">صفحة الطبيب</div>
               <div className="text-2xl font-extrabold">{doctor.name}</div>
