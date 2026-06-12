@@ -6,6 +6,7 @@ import mohammedAlshatbi from "@/assets/doctors/mohammed-alshatbi.png.asset.json"
 import mohammedAlbadji from "@/assets/doctors/mohammed-albadji.png.asset.json";
 import husamBajash from "@/assets/doctors/husam-bajash.jpg.asset.json";
 import abdulrahmanAlzawahi from "@/assets/doctors/abdulrahman-alzawahi.jpg.asset.json";
+import { getOverrideUrl } from "@/lib/avatar-store";
 
 /**
  * Normalize an Arabic doctor name for matching:
@@ -38,9 +39,19 @@ const ENTRIES: { keys: string[]; url: string }[] = [
   { keys: ["عبدالرحمن", "الزواحي"], url: abdulrahmanAlzawahi.url },
 ];
 
-/** Return the avatar URL for a doctor name, or null if none matches. */
+/** Subject key used to store an admin-assigned photo for a doctor. */
+export function doctorSubject(name: string | null | undefined): string {
+  return `doctor:${normalizeDoctorName(name || "")}`;
+}
+
+/**
+ * Return the avatar URL for a doctor name. Admin-assigned photos (stored in
+ * avatar_overrides) take priority over the built-in bundled photos.
+ */
 export function getDoctorAvatar(name: string | null | undefined): string | null {
   if (!name) return null;
+  const override = getOverrideUrl(doctorSubject(name));
+  if (override) return override;
   const n = normalizeDoctorName(name);
   if (!n) return null;
   for (const e of ENTRIES) {
@@ -48,3 +59,4 @@ export function getDoctorAvatar(name: string | null | undefined): string | null 
   }
   return null;
 }
+

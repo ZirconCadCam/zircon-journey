@@ -1157,19 +1157,18 @@ function DoctorControls({ c, actorName, doctorName }: {
                 <X className="size-4" />
               </button>
             </div>
-            <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={5}
-              placeholder="اكتب الملاحظات التفصيلية للتعديل…"
-              className="w-full rounded-xl border border-input bg-background p-3 text-sm outline-none focus:border-gold" />
-
-            <div className="mt-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="text-xs font-bold text-foreground">المرفقات (صور / ملفات توضيحية)</div>
+            {/* محرر موحّد: تظهر الملفات المرفوعة داخل محرر ملاحظات التعديل نفسه */}
+            <div className="rounded-xl border border-input bg-background overflow-hidden focus-within:border-gold transition">
+              <div className="flex items-center justify-between gap-2 border-b border-border/60 bg-muted/40 px-2.5 py-1.5">
+                <span className="text-[11px] font-bold text-muted-foreground flex items-center gap-1.5">
+                  <FileText className="size-3.5 text-gold" /> محرر ملاحظات التعديل
+                </span>
                 <button
                   type="button"
                   onClick={() => revFileRef.current?.click()}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-gold/60 bg-gold/5 px-2.5 py-1.5 text-[11px] font-bold hover:bg-gold/10"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-gold/60 bg-gold/5 px-2.5 py-1 text-[11px] font-bold hover:bg-gold/10"
                 >
-                  <FileArchive className="size-3.5" /> إضافة ملف
+                  <FileArchive className="size-3.5" /> إرفاق ملف
                 </button>
                 <input
                   ref={revFileRef}
@@ -1183,8 +1182,9 @@ function DoctorControls({ c, actorName, doctorName }: {
                   }}
                 />
               </div>
+
               {revFiles.length > 0 && (
-                <div className="grid grid-cols-3 gap-2 max-h-56 overflow-auto">
+                <div className="grid grid-cols-3 gap-2 p-2.5 border-b border-border/60 bg-muted/20 max-h-56 overflow-auto">
                   {revFiles.map((f, i) => (
                     <RevAttachmentPreview
                       key={i}
@@ -1194,6 +1194,10 @@ function DoctorControls({ c, actorName, doctorName }: {
                   ))}
                 </div>
               )}
+
+              <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={5}
+                placeholder="اكتب الملاحظات التفصيلية للتعديل… ويمكنك إرفاق الملفات لتظهر داخل المحرر."
+                className="w-full bg-transparent p-3 text-sm outline-none border-0 resize-y" />
             </div>
 
             <div className="mt-3 rounded-xl border border-gold/40 bg-gold/5 p-3 space-y-2.5">

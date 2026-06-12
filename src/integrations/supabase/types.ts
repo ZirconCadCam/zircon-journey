@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      avatar_overrides: {
+        Row: {
+          image_url: string
+          label: string | null
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          image_url: string
+          label?: string | null
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          image_url?: string
+          label?: string | null
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       case_files: {
         Row: {
           case_id: string
@@ -750,6 +771,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      clear_avatar_override: { Args: { p_subject: string }; Returns: undefined }
       get_primary_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -764,6 +786,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      set_avatar_override: {
+        Args: { p_image_url: string; p_label: string; p_subject: string }
+        Returns: undefined
       }
       set_doctor_active: {
         Args: { p_active: boolean; p_slot: number }

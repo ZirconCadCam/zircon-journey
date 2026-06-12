@@ -1,8 +1,11 @@
 import { getDoctorAvatar, normalizeDoctorName } from "@/lib/doctor-avatars";
+import { getOverrideUrl, roleSubject, useAvatarVersion } from "@/lib/avatar-store";
 import { cn } from "@/lib/utils";
 
 interface DoctorAvatarProps {
   name: string | null | undefined;
+  /** When set, resolves a staff role photo (designer/technician) instead of a doctor photo. */
+  roleKey?: "designer" | "technician";
   /** Tailwind size classes e.g. "size-10". Defaults to size-10. */
   className?: string;
   /** Extra classes for the fallback initial circle. */
@@ -12,11 +15,14 @@ interface DoctorAvatarProps {
 }
 
 /**
- * Professional doctor "sticker" avatar shown next to a doctor name.
- * Falls back to the first letter of the name when no photo is mapped.
+ * Professional "sticker" avatar shown next to a doctor (or staff) name.
+ * Admin-assigned photos take priority; falls back to the first letter of the name.
  */
-export function DoctorAvatar({ name, className, fallbackClassName, rounded = "full" }: DoctorAvatarProps) {
-  const url = getDoctorAvatar(name);
+export function DoctorAvatar({ name, roleKey, className, fallbackClassName, rounded = "full" }: DoctorAvatarProps) {
+  // Re-render whenever admin assigns/removes a photo.
+  useAvatarVersion();
+
+  const url = roleKey ? getOverrideUrl(roleSubject(roleKey)) : getDoctorAvatar(name);
   const roundCls = rounded === "full" ? "rounded-full" : `rounded-${rounded}`;
   const initial = normalizeDoctorName(name || "").charAt(0) || "?";
 
@@ -24,7 +30,7 @@ export function DoctorAvatar({ name, className, fallbackClassName, rounded = "fu
     return (
       <img
         src={url}
-        alt={name || "طبيب"}
+        alt={name || "صورة"}
         loading="lazy"
         className={cn(
           "object-cover shrink-0 ring-2 ring-gold/60 shadow-gold bg-muted",

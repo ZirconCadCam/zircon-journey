@@ -12,6 +12,7 @@ import {
   type CacheStats,
   type CenterStatus,
 } from "@/lib/file-manager";
+import { AvatarManagerPanel } from "@/components/avatar-manager-panel";
 
 interface Doctor {
   slot: number;
@@ -68,6 +69,8 @@ export function AdminSettingsPanel() {
         <AddDoctorCard doctors={doctors} onDone={load} />
         <ArchiveDoctorCard doctors={doctors} loading={loading} onDone={load} />
       </div>
+
+      <AvatarManagerPanel />
 
       <GeneralAppSettingsCard />
 

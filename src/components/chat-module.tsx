@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 import { compareByCreatedAt, formatChatTime, formatChatFull, formatDayLabel, isNewDay } from "@/lib/time";
 import { getDoctorAvatar } from "@/lib/doctor-avatars";
+import { getOverrideUrl, roleSubject, useAvatarVersion } from "@/lib/avatar-store";
 
 
 
@@ -801,8 +802,11 @@ function MessageBubble({ m, mine, doctorName, otherParticipants, onLongPress, on
   }
   function cancelPress() { if (pressTimer.current) { window.clearTimeout(pressTimer.current); pressTimer.current = null; } }
 
+  useAvatarVersion();
   const senderName = m.sender === "doctor" ? doctorName : (m.sender_name || "");
-  const avatarUrl = getDoctorAvatar(senderName);
+  const staffUrl = (m.sender === "designer" || m.sender === "technician")
+    ? getOverrideUrl(roleSubject(m.sender)) : null;
+  const avatarUrl = staffUrl || getDoctorAvatar(senderName);
 
   return (
     <div className={`flex items-end gap-2 max-w-[85%] ${mine ? "flex-row-reverse" : "flex-row"}`}>
