@@ -13,6 +13,7 @@ import { deriveStageKey } from "@/lib/case-stages";
 import { fileManagerSupported, openCachedFile } from "@/lib/file-manager";
 import { transferDownload } from "@/lib/transfer-manager";
 import type { CaseFileLocation } from "@/lib/case-folders";
+import { printHtmlDocument } from "@/lib/print-report";
 
 interface Doctor { slot: number; name: string; branch: string | null }
 interface Case {
@@ -151,13 +152,9 @@ function exportTablePDF(title: string, rows: Case[], doctorMap: Map<number, Doct
       <td colspan="3">إجمالي المرضى: ${rows.length}</td>
     </tr></tfoot>
   </table>
-  <script>window.onload=function(){window.print();}</script>
   </body></html>`;
 
-  const w = window.open("", "_blank");
-  if (!w) { toast.error("اسمح بالنوافذ المنبثقة لتصدير PDF"); return; }
-  w.document.write(html);
-  w.document.close();
+  printHtmlDocument(html, title);
 }
 
 function esc(s: string) {

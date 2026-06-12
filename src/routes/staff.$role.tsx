@@ -273,6 +273,12 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
               </button>
             )}
             {role === "admin" && (
+              <button onClick={() => setTab("reports")}
+                className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "reports" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
+                <FileText className="size-4" /> الكشوفات
+              </button>
+            )}
+            {role === "admin" && (
               <button onClick={() => setTab("settings")}
                 className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "settings" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
                 <Settings className="size-4" /> الإعدادات
@@ -301,6 +307,21 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
             <TechnicianReports />
           ) : role === "technician" && tab === "designfiles" ? (
             <TechnicianDesignFiles />
+          ) : role === "admin" && tab === "reports" ? (
+            <div className="space-y-8">
+              <div>
+                <div className="mb-3 text-sm font-extrabold flex items-center gap-2">
+                  <FileText className="size-4 text-gold" /> كشوفات التصميم
+                </div>
+                <DesignerReports />
+              </div>
+              <div>
+                <div className="mb-3 text-sm font-extrabold flex items-center gap-2">
+                  <FileText className="size-4 text-gold" /> كشوفات الفني
+                </div>
+                <TechnicianReports />
+              </div>
+            </div>
           ) : (role === "designer" || role === "technician" || role === "secretary_sanaa" || role === "secretary_ibb" || role === "admin") && tab === "search" ? (
             <CaseSearch actor={role as any} />
           ) : (role === "designer" || role === "technician" || role === "secretary_sanaa" || role === "secretary_ibb" || role === "admin") && tab === "cases" ? (

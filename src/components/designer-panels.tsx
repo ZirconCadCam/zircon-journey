@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/table";
 import { getSignedUrl } from "@/lib/chat";
 import { fileManagerSupported } from "@/lib/file-manager";
+import { printHtmlDocument } from "@/lib/print-report";
 
 interface Doctor { slot: number; name: string; branch: string | null }
 interface Case {
@@ -375,13 +376,9 @@ function exportTablePDF(title: string, rows: Case[], doctorMap: Map<number, Doct
       <td>إجمالي المرضى: ${rows.length}</td>
     </tr></tfoot>
   </table>
-  <script>window.onload=function(){window.print();}</script>
   </body></html>`;
 
-  const w = window.open("", "_blank");
-  if (!w) { toast.error("اسمح بالنوافذ المنبثقة لتصدير PDF"); return; }
-  w.document.write(html);
-  w.document.close();
+  printHtmlDocument(html, title);
 }
 
 export function DesignerReports() {
