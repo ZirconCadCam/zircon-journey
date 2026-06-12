@@ -210,9 +210,12 @@ export function CaseSearch({ actor, restrictSlot }: { actor: Actor; restrictSlot
                     <div className="mt-2 font-extrabold text-lg flex items-center gap-2">
                       <User className="size-4 text-gold" /> {c.patient_name}
                     </div>
-                    <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
-                      <Stethoscope className="size-3" /> {doctor?.name ?? `Slot ${c.doctor_slot}`}
-                      {doctor?.branch && <> • {doctor.branch === "sanaa" ? "صنعاء" : "إب"}</>}
+                    <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
+                      <DoctorAvatar name={doctor?.name} className="size-7" />
+                      <span className="flex items-center gap-1">
+                        {doctor?.name ?? `Slot ${c.doctor_slot}`}
+                        {doctor?.branch && <> • {doctor.branch === "sanaa" ? "صنعاء" : "إب"}</>}
+                      </span>
                     </div>
 
                     {c.shade && <div className="mt-3"><ShadeBadge shade={c.shade} /></div>}
