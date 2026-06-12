@@ -88,9 +88,16 @@ function Shell({ children, right }: { children: React.ReactNode; right?: React.R
 function Gate({ role, onOk }: { role: RoleKey; onOk: () => void }) {
   const [pw, setPw] = useState("");
   const [err, setErr] = useState("");
-  function submit(e: React.FormEvent) {
+  const [checking, setChecking] = useState(false);
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (pw === STAFF_PASSWORDS[role as Exclude<RoleKey, "doctor">]) onOk();
+    setChecking(true);
+    setErr("");
+    const fallback = STAFF_PASSWORDS[role as Exclude<RoleKey, "doctor">];
+    const { data, error } = await supabase.rpc("get_staff_password", { p_role: role });
+    const expected = !error && data ? data : fallback;
+    setChecking(false);
+    if (pw === expected) onOk();
     else setErr("كلمة المرور غير صحيحة");
   }
   return (
