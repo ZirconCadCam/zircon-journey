@@ -306,7 +306,10 @@ function ReportTable({
           ) : rows.map(c => (
             <TableRow key={c.id}>
               <TableCell className="font-bold">{c.patient_name}</TableCell>
-              <TableCell>{doctorMap.get(c.doctor_slot)?.name ?? `Slot ${c.doctor_slot}`}</TableCell>
+              <TableCell className="flex items-center gap-1.5">
+                <DoctorAvatar name={doctorMap.get(c.doctor_slot)?.name} className="size-6" />
+                {doctorMap.get(c.doctor_slot)?.name ?? `Slot ${c.doctor_slot}`}
+              </TableCell>
               <TableCell>{c.case_type || "—"}</TableCell>
               <TableCell>{teethCount(c) || "—"}</TableCell>
               <TableCell>1</TableCell>
