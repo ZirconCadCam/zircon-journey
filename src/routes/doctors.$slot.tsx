@@ -19,6 +19,7 @@ import { CaseChatButton } from "@/components/case-chat-dialog";
 import { Z } from "@/lib/z-index";
 import { ShadeBadge } from "@/components/shade-badge";
 import { CaseSearch } from "@/components/case-search";
+import { RoleNotifications } from "@/components/role-notifications";
 
 /** Compute WhatsApp-style tick state for each visible stage from case flags + timing. */
 function stageTickState(stageKey: string, c: any): TickState {
