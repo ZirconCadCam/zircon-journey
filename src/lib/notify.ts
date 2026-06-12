@@ -206,4 +206,50 @@ export function incomingAlert(opts: { title: string; body: string; ring?: boolea
   void systemNotify(opts.title, opts.body);
 }
 
+/**
+ * A short, pleasant ascending two-tone chime used for SYSTEM moments
+ * (e.g. a case reaching "Ready" / "Completed"). Deliberately distinct from
+ * the insistent landline ring of `playPhoneRing`, so users can tell a status
+ * update apart from an incoming chat message by sound alone.
+ */
+export function playSystemChime(): void {
+  const ctx = getCtx();
+  if (!ctx) return;
+  try {
+    const now = ctx.currentTime;
+    const master = ctx.createGain();
+    master.gain.value = 0.0001;
+    master.connect(ctx.destination);
+
+    // Ascending notes: G5 → C6 → E6 (a bright "ding-ding-ding").
+    const notes = [784, 1047, 1319];
+    notes.forEach((freq, i) => {
+      const t = now + i * 0.16;
+      const osc = ctx.createOscillator();
+      osc.type = "triangle";
+      osc.frequency.value = freq;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.22, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.34);
+      osc.connect(g);
+      g.connect(master);
+      master.gain.setValueAtTime(0.9, t);
+      osc.start(t);
+      osc.stop(t + 0.36);
+    });
+  } catch { /* noop */ }
+}
+
+/**
+ * SYSTEM moment alert (status change such as Ready / Completed). Plays the
+ * distinct chime + posts a device-shade notification. Visual in-app cue
+ * (toast / badge) is handled by the caller and should be styled differently
+ * from chat-message alerts.
+ */
+export function systemMomentAlert(opts: { title: string; body: string; chime?: boolean }) {
+  if (opts.chime !== false) playSystemChime();
+  void systemNotify(opts.title, opts.body);
+}
+
 export { unlocked as audioUnlocked };
