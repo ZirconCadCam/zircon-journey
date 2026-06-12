@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MessageSquare, X, FileArchive, Download, Loader2, User, Phone, Hash, Palette } from "lucide-react";
 import { ChatModule } from "@/components/chat-module";
-import type { RoleKey } from "@/lib/chat";
+import { ROLE_LABEL, type RoleKey } from "@/lib/chat";
 import { Z } from "@/lib/z-index";
 import { supabase } from "@/integrations/supabase/client";
 import { autoCacheFile, saveToCenter } from "@/lib/file-manager";
 import { InAppFileViewer } from "@/components/in-app-file-viewer";
+import { incomingAlert, stopRing } from "@/lib/notify";
 import { toast } from "sonner";
 
 /**
