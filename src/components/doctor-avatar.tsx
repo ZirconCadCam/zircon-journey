@@ -29,7 +29,9 @@ export function DoctorAvatar({ name, roleKey, className, fallbackClassName, roun
   // Re-render whenever admin assigns/removes a photo.
   useAvatarVersion();
 
-  const url = roleKey ? getOverrideUrl(roleSubject(roleKey)) : getDoctorAvatar(name);
+  const url = roleKey
+    ? getOverrideUrl(roleSubject(roleKey)) || ROLE_DEFAULT_PHOTO[roleKey]
+    : getDoctorAvatar(name);
   const roundCls = rounded === "full" ? "rounded-full" : `rounded-${rounded}`;
   const initial = normalizeDoctorName(name || "").charAt(0) || "?";
 
