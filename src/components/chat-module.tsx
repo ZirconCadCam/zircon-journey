@@ -16,6 +16,7 @@ import {
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 import { compareByCreatedAt, formatChatTime, formatChatFull, formatDayLabel, isNewDay } from "@/lib/time";
+import { getDoctorAvatar } from "@/lib/doctor-avatars";
 
 
 
