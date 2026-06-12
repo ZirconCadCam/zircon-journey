@@ -314,7 +314,7 @@ export function DesignerDesignFiles() {
                   </div>
                   <div className="text-[11px] text-muted-foreground truncate">{f.fileName}</div>
                   <div className="text-[11px] text-muted-foreground flex items-center gap-2 mt-0.5">
-                    <span className="flex items-center gap-1"><Stethoscope className="size-3" /> {f.doctorName}</span>
+                    <span className="flex items-center gap-1"><DoctorAvatar name={f.doctorName} className="size-5" /> {f.doctorName}</span>
                     <span className="flex items-center gap-1"><Calendar className="size-3" /> {new Date(f.date).toLocaleDateString("ar-EG")}</span>
                     {f.size && <span>{(f.size / 1024 / 1024).toFixed(1)} MB</span>}
                   </div>
