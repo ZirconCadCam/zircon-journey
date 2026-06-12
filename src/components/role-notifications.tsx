@@ -167,8 +167,12 @@ export function RoleNotifications({
     stopRing();
     setRinging(false);
     setCount(0);
+    setSysCount(0);
     if (perm !== "granted") void enable();
   }
+
+  const totalCount = count + sysCount;
+
 
   return (
     <>
