@@ -8,6 +8,7 @@ import { DesignerArchive, DesignerDesignFiles, DesignerReports } from "@/compone
 import { TechnicianReports, TechnicianDesignFiles } from "@/components/technician-panels";
 import { AdminSettingsPanel } from "@/components/admin-settings-panel";
 import { AdminVoiceListener } from "@/components/admin-voice-listener";
+import { RoleNotifications } from "@/components/role-notifications";
 
 import { ROLE_LABEL, STAFF_PASSWORDS, type RoleKey } from "@/lib/chat";
 import { getStage, deriveStageKey } from "@/lib/case-stages";
