@@ -801,17 +801,29 @@ function MessageBubble({ m, mine, doctorName, otherParticipants, onLongPress, on
   }
   function cancelPress() { if (pressTimer.current) { window.clearTimeout(pressTimer.current); pressTimer.current = null; } }
 
+  const senderName = m.sender === "doctor" ? doctorName : (m.sender_name || "");
+  const avatarUrl = getDoctorAvatar(senderName);
+
   return (
-    <div
-      className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm shadow-sm select-none ${mine ? ROLE_COLOR[m.sender] : "bg-card border border-border"}`}
-      onContextMenu={(e) => { e.preventDefault(); onLongPress(e.clientX, e.clientY); }}
-      onTouchStart={(e) => { const t = e.touches[0]; startPress(t.clientX, t.clientY); }}
-      onTouchEnd={cancelPress} onTouchMove={cancelPress} onTouchCancel={cancelPress}
-      onMouseDown={(e) => startPress(e.clientX, e.clientY)} onMouseUp={cancelPress} onMouseLeave={cancelPress}
-    >
-      <div className={`text-[10px] font-bold mb-0.5 ${mine ? "opacity-80" : "text-gold"}`}>
-        {ROLE_LABEL[m.sender]}{m.sender_name ? ` • ${m.sender_name}` : (m.sender === "doctor" ? ` • ${doctorName}` : "")}
-      </div>
+    <div className={`flex items-end gap-2 max-w-[85%] ${mine ? "flex-row-reverse" : "flex-row"}`}>
+      {avatarUrl && (
+        <img
+          src={avatarUrl}
+          alt={senderName}
+          loading="lazy"
+          className="size-8 rounded-full object-cover ring-2 ring-gold/60 shadow-gold shrink-0"
+        />
+      )}
+      <div
+        className={`rounded-2xl px-4 py-2 text-sm shadow-sm select-none ${mine ? ROLE_COLOR[m.sender] : "bg-card border border-border"}`}
+        onContextMenu={(e) => { e.preventDefault(); onLongPress(e.clientX, e.clientY); }}
+        onTouchStart={(e) => { const t = e.touches[0]; startPress(t.clientX, t.clientY); }}
+        onTouchEnd={cancelPress} onTouchMove={cancelPress} onTouchCancel={cancelPress}
+        onMouseDown={(e) => startPress(e.clientX, e.clientY)} onMouseUp={cancelPress} onMouseLeave={cancelPress}
+      >
+        <div className={`text-[10px] font-bold mb-0.5 ${mine ? "opacity-80" : "text-gold"}`}>
+          {ROLE_LABEL[m.sender]}{m.sender_name ? ` • ${m.sender_name}` : (m.sender === "doctor" ? ` • ${doctorName}` : "")}
+        </div>
       {m.message_type === "audio" ? (
         <AudioBubble path={m.attachment_path!} name={m.attachment_name} mime={m.attachment_mime} />
       ) : m.message_type === "file" ? (
