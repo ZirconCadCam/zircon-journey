@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { DoctorAvatar } from "@/components/doctor-avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
