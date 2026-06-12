@@ -175,6 +175,7 @@ function DesignerControls({ c, actorName, doctorName, target, blockedByPending }
     if (e.target) e.target.value = "";
     if (!f) return;
     if (!RAR_RE.test(f.name)) { toast.error("الملف يجب أن يكون .rar"); return; }
+    if (c.shade && !c.shade_confirmed_designer) { toast.error("الرجاء تأكيد لون السن أولاً قبل إرسال ملف التصميم"); return; }
     if (blocked) { toast.error(`أرسل أولاً ملفات الحالة المعلّقة: ${blockedByPending}`); return; }
     setBusy(true);
     try {
