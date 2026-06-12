@@ -6,6 +6,7 @@ import mohammedAlshatbi from "@/assets/doctors/mohammed-alshatbi.png.asset.json"
 import mohammedAlbadji from "@/assets/doctors/mohammed-albadji.png.asset.json";
 import husamBajash from "@/assets/doctors/husam-bajash.jpg.asset.json";
 import abdulrahmanAlzawahi from "@/assets/doctors/abdulrahman-alzawahi.jpg.asset.json";
+import { getOverrideUrl } from "@/lib/avatar-store";
 
 /**
  * Normalize an Arabic doctor name for matching:
