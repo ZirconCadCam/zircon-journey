@@ -543,7 +543,7 @@ function TechnicianControls({ c, actorName, doctorName, target }: {
         />
       )}
       <div className="flex items-center gap-2 flex-wrap">
-        <button onClick={sendDataToSecretary === sendDataToSecretary ? toggleFabDone : toggleFabDone} disabled={busy}
+        <button onClick={toggleFabDone} disabled={busy}
           className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold transition border
             ${fabDone ? "gradient-gold text-gold-foreground border-gold shadow-gold" : "border-border bg-card hover:border-gold"}`}>
           {busy ? <Loader2 className="size-3.5 animate-spin" /> : fabDone ? <CheckSquare className="size-3.5" /> : <Square className="size-3.5" />}
