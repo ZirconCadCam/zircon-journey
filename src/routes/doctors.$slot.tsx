@@ -198,8 +198,8 @@ function PasswordGate({ doctor, onOk }: { doctor: Doctor; onOk: () => void }) {
     <ShellHeader>
       <main className="container mx-auto px-6 py-16 grid place-items-center">
         <form onSubmit={submit} className="w-full max-w-md rounded-3xl bg-card border border-border p-8 shadow-luxury">
-          <div className="size-16 rounded-full gradient-gold grid place-items-center mx-auto shadow-gold">
-            <Lock className="size-7 text-gold-foreground" />
+          <div className="mx-auto w-fit">
+            <DoctorAvatar name={doctor.name} className="size-20 mx-auto" />
           </div>
           <div className="text-center mt-4">
             <div className="text-xl font-bold">{doctor.name}</div>
