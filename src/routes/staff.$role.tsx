@@ -10,6 +10,7 @@ import { AdminSettingsPanel } from "@/components/admin-settings-panel";
 import { AdminVoiceListener } from "@/components/admin-voice-listener";
 import { RoleNotifications } from "@/components/role-notifications";
 import { NotificationSettings } from "@/components/notification-settings";
+import { DoctorAvatar } from "@/components/doctor-avatar";
 
 import { ROLE_LABEL, STAFF_PASSWORDS, type RoleKey } from "@/lib/chat";
 import { getStage, deriveStageKey } from "@/lib/case-stages";
@@ -208,9 +209,18 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
 
         <div className="rounded-3xl gradient-brown text-primary-foreground p-6 sm:p-8 shadow-luxury flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-4">
-            <div className="size-16 rounded-2xl gradient-gold grid place-items-center shadow-gold">
-              <MessageSquare className="size-7 text-gold-foreground" />
-            </div>
+            {(role === "designer" || role === "technician") ? (
+              <DoctorAvatar
+                name={ROLE_LABEL[role]}
+                roleKey={role}
+                className="size-16"
+                rounded="2xl"
+              />
+            ) : (
+              <div className="size-16 rounded-2xl gradient-gold grid place-items-center shadow-gold">
+                <MessageSquare className="size-7 text-gold-foreground" />
+              </div>
+            )}
             <div>
               <div className="text-xs opacity-80">بوابة المحادثات</div>
               <div className="text-2xl font-extrabold">{ROLE_LABEL[role]}</div>
