@@ -228,9 +228,14 @@ export function RoleNotifications({
         ) : (
           <Bell className="size-6 text-gold" />
         )}
-        {count > 0 && (
+        {totalCount > 0 && (
           <span className="absolute -top-1 -right-1 inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-destructive px-1 text-[11px] font-extrabold text-destructive-foreground shadow">
-            {count > 99 ? "99+" : count}
+            {totalCount > 99 ? "99+" : totalCount}
+          </span>
+        )}
+        {sysCount > 0 && (
+          <span className="absolute -bottom-1 -right-1 inline-flex size-4 items-center justify-center rounded-full bg-emerald-500 text-white shadow" title="تحديثات حالة (Ready / Completed)">
+            <CheckCircle2 className="size-3" />
           </span>
         )}
       </button>
