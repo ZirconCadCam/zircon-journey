@@ -700,16 +700,27 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3 bg-muted/20">
         {visibleMsgs.length === 0 && <div className="text-center text-sm text-muted-foreground py-8">{showArchived ? "لا رسائل مؤرشفة." : "ابدأ المحادثة الآن."}</div>}
-        {visibleMsgs.map(m => {
+        {visibleMsgs.map((m, i) => {
           const mine = m.sender === me;
+          const prev = visibleMsgs[i - 1];
+          const showDay = isNewDay(prev?.created_at, m.created_at);
           return (
-            <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-              <MessageBubble
-                m={m} mine={mine} doctorName={doctorName} otherParticipants={otherParticipants}
-                onLongPress={(x, y) => setMenuFor({ msg: m, x, y })}
-                onResume={() => resumeUpload(m)}
-                onPause={() => pauseUpload(m)}
-              />
+            <div key={m.id}>
+              {showDay && (
+                <div className="flex justify-center my-2">
+                  <span className="rounded-full bg-muted px-3 py-1 text-[10px] font-bold text-muted-foreground shadow-sm">
+                    {formatDayLabel(m.created_at)}
+                  </span>
+                </div>
+              )}
+              <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>
+                <MessageBubble
+                  m={m} mine={mine} doctorName={doctorName} otherParticipants={otherParticipants}
+                  onLongPress={(x, y) => setMenuFor({ msg: m, x, y })}
+                  onResume={() => resumeUpload(m)}
+                  onPause={() => pauseUpload(m)}
+                />
+              </div>
             </div>
           );
         })}
