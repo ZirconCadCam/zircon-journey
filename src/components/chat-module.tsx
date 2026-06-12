@@ -329,8 +329,12 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
         const m = payload.new as ChatMessage;
         setMsgs(prev => {
           const idx = prev.findIndex(x => x.id === m.id);
-          if (idx >= 0) { const next = [...prev]; next[idx] = m; return next; }
-          return [...prev, m];
+          const next = idx >= 0
+            ? prev.map(x => x.id === m.id ? { ...x, ...m } : x)
+            : [...prev, m];
+          // Keep strict chronological order by the server timestamp so every
+          // participant sees the same sequence regardless of arrival order.
+          return next.sort(compareByCreatedAt);
         });
         if (m.sender !== me && !(m.read_by ?? []).includes(me)) {
           supabase.from("chat_messages")
