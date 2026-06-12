@@ -1,6 +1,13 @@
 import { getDoctorAvatar, normalizeDoctorName } from "@/lib/doctor-avatars";
 import { getOverrideUrl, roleSubject, useAvatarVersion } from "@/lib/avatar-store";
 import { cn } from "@/lib/utils";
+import designerPhoto from "@/assets/team/designer.jpg.asset.json";
+import technicianPhoto from "@/assets/team/technician.jpg.asset.json";
+
+const ROLE_DEFAULT_PHOTO: Record<"designer" | "technician", string> = {
+  designer: designerPhoto.url,
+  technician: technicianPhoto.url,
+};
 
 interface DoctorAvatarProps {
   name: string | null | undefined;
