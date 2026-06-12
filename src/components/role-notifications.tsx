@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { Bell, BellRing, BellOff, Phone } from "lucide-react";
+import { Bell, BellRing, BellOff, Phone, CheckCircle2, PartyPopper } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ROLE_LABEL, type RoleKey } from "@/lib/chat";
+import { getStage, deriveStageKey, systemMoment } from "@/lib/case-stages";
 import {
   ensureNotifyPermission,
   incomingAlert,
+  systemMomentAlert,
   notificationPermissionState,
   stopRing,
   unlockNotificationAudio,
