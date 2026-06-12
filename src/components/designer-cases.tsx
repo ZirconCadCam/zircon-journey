@@ -817,9 +817,8 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
               <li key={d.slot}>
                 <button onClick={() => setFilterSlot(d.slot)}
                   className={`w-full text-start p-3 flex items-center gap-2 transition ${on ? "bg-gold/10 border-r-4 border-gold" : "hover:bg-muted/40"}`}>
-                  <div className="size-8 rounded-lg gradient-gold grid place-items-center shrink-0">
-                    <span className="font-extrabold text-gold-foreground text-sm">{d.name.replace(/^د\.\s*/, "").charAt(0)}</span>
-                  </div>
+                  <DoctorAvatar name={d.name} className="size-8" rounded="lg" />
+
                   <div className="min-w-0 flex-1">
                     <div className="font-bold text-xs truncate">{d.name}</div>
                     <div className="text-[10px] text-muted-foreground">{d.branch === "sanaa" ? "صنعاء" : d.branch === "ibb" ? "إب" : ""}</div>
