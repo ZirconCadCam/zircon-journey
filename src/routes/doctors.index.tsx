@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Sparkles, ArrowRight, Stethoscope, Plus, Pencil, Search } from "lucide-react";
 import { BRANCH_LABELS } from "@/hooks/use-auth";
 import { toast } from "sonner";
+import { DoctorAvatar } from "@/components/doctor-avatar";
+import { getDoctorAvatar } from "@/lib/doctor-avatars";
 
 /**
  * The slot workflow authenticates admins via a localStorage flag set on the
