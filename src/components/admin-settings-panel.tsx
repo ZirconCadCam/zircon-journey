@@ -12,6 +12,7 @@ import {
   type CacheStats,
   type CenterStatus,
 } from "@/lib/file-manager";
+import { AvatarManagerPanel } from "@/components/avatar-manager-panel";
 
 interface Doctor {
   slot: number;
