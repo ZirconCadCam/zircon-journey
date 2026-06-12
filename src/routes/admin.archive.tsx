@@ -289,7 +289,8 @@ function Inner({ onLogout }: { onLogout: () => void }) {
                         </span>
                         {c.archived && <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold">مؤرشفة</span>}
                       </div>
-                      <div className="text-[11px] text-muted-foreground mt-1 flex flex-wrap gap-1">
+                      <div className="text-[11px] text-muted-foreground mt-1 flex flex-wrap items-center gap-1">
+                        <DoctorAvatar name={doctor?.name} className="size-6" />
                         <span className="font-bold text-foreground">{doctor?.name ?? `Slot #${c.doctor_slot}`}</span>
                         <span>•</span>
                         {c.participants.map(p => (
