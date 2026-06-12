@@ -532,8 +532,18 @@ function TechnicianControls({ c, actorName, doctorName, target }: {
 
   return (
     <div className="rounded-xl border border-border bg-muted/30 p-3 mt-3 space-y-2">
+      {c.shade && (
+        <CaseShadeConfirm
+          shade={c.shade}
+          caseId={c.id}
+          actor="technician"
+          doctorConfirmed={c.shade_confirmed_doctor}
+          designerConfirmed={c.shade_confirmed_designer}
+          technicianConfirmed={c.shade_confirmed_technician}
+        />
+      )}
       <div className="flex items-center gap-2 flex-wrap">
-        <button onClick={toggleFabDone} disabled={busy}
+        <button onClick={sendDataToSecretary === sendDataToSecretary ? toggleFabDone : toggleFabDone} disabled={busy}
           className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold transition border
             ${fabDone ? "gradient-gold text-gold-foreground border-gold shadow-gold" : "border-border bg-card hover:border-gold"}`}>
           {busy ? <Loader2 className="size-3.5 animate-spin" /> : fabDone ? <CheckSquare className="size-3.5" /> : <Square className="size-3.5" />}
