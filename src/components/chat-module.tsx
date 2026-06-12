@@ -15,6 +15,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
+import { compareByCreatedAt, formatChatTime, formatChatFull, formatDayLabel, isNewDay } from "@/lib/time";
+
+
 
 interface Props {
   doctorSlot: number;
@@ -326,8 +329,16 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
         const m = payload.new as ChatMessage;
         setMsgs(prev => {
           const idx = prev.findIndex(x => x.id === m.id);
-          if (idx >= 0) { const next = [...prev]; next[idx] = m; return next; }
-          return [...prev, m];
+          // Preserve local upload state (_local/_progress/_file) when the
+          // server echo of our own optimistic message arrives.
+          const next = idx >= 0
+            ? prev.map(x => x.id === m.id
+                ? { ...m, _local: x._local, _progress: x._progress, _file: x._file }
+                : x)
+            : [...prev, m];
+          // Keep strict chronological order by the server timestamp so every
+          // participant sees the same sequence regardless of arrival order.
+          return next.slice().sort(compareByCreatedAt);
         });
         if (m.sender !== me && !(m.read_by ?? []).includes(me)) {
           supabase.from("chat_messages")
@@ -640,7 +651,10 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
   }
 
   const otherParticipants = conv.participants.filter(p => p !== me);
-  const visibleMsgs = msgs.filter(m => showArchived ? archivedIds.has(m.id) : !archivedIds.has(m.id));
+  const visibleMsgs = msgs
+    .filter(m => showArchived ? archivedIds.has(m.id) : !archivedIds.has(m.id))
+    .slice()
+    .sort(compareByCreatedAt);
 
   return (
     <div className="rounded-2xl bg-card border border-border flex flex-col h-[640px] shadow-luxury">
@@ -690,16 +704,27 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3 bg-muted/20">
         {visibleMsgs.length === 0 && <div className="text-center text-sm text-muted-foreground py-8">{showArchived ? "لا رسائل مؤرشفة." : "ابدأ المحادثة الآن."}</div>}
-        {visibleMsgs.map(m => {
+        {visibleMsgs.map((m, i) => {
           const mine = m.sender === me;
+          const prev = visibleMsgs[i - 1];
+          const showDay = isNewDay(prev?.created_at, m.created_at);
           return (
-            <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-              <MessageBubble
-                m={m} mine={mine} doctorName={doctorName} otherParticipants={otherParticipants}
-                onLongPress={(x, y) => setMenuFor({ msg: m, x, y })}
-                onResume={() => resumeUpload(m)}
-                onPause={() => pauseUpload(m)}
-              />
+            <div key={m.id}>
+              {showDay && (
+                <div className="flex justify-center my-2">
+                  <span className="rounded-full bg-muted px-3 py-1 text-[10px] font-bold text-muted-foreground shadow-sm">
+                    {formatDayLabel(m.created_at)}
+                  </span>
+                </div>
+              )}
+              <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>
+                <MessageBubble
+                  m={m} mine={mine} doctorName={doctorName} otherParticipants={otherParticipants}
+                  onLongPress={(x, y) => setMenuFor({ msg: m, x, y })}
+                  onResume={() => resumeUpload(m)}
+                  onPause={() => pauseUpload(m)}
+                />
+              </div>
             </div>
           );
         })}
@@ -818,7 +843,7 @@ function MessageBubble({ m, mine, doctorName, otherParticipants, onLongPress, on
         </div>
       )}
       <div className="text-[10px] opacity-70 mt-1 flex items-center gap-1.5 justify-end">
-        <span>{new Date(m.created_at).toLocaleTimeString("ar")}</span>
+        <span title={formatChatFull(m.created_at)}>{formatChatTime(m.created_at)}</span>
         {mine && <MessageStatus msg={m} otherParticipants={otherParticipants} />}
       </div>
     </div>

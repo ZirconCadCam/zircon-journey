@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { Bell, BellRing, BellOff, Phone } from "lucide-react";
+import { Bell, BellRing, BellOff, Phone, CheckCircle2, PartyPopper } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ROLE_LABEL, type RoleKey } from "@/lib/chat";
+import { getStage, deriveStageKey, systemMoment } from "@/lib/case-stages";
 import {
   ensureNotifyPermission,
   incomingAlert,
+  systemMomentAlert,
   notificationPermissionState,
   stopRing,
   unlockNotificationAudio,
@@ -32,11 +34,13 @@ export function RoleNotifications({
   slot?: number | null;
 }) {
   const [count, setCount] = useState(0);
+  const [sysCount, setSysCount] = useState(0);
   const [ringing, setRinging] = useState(false);
   const [perm, setPerm] = useState<"granted" | "denied" | "default" | "unsupported">("default");
   const [showPrompt, setShowPrompt] = useState(false);
   const myConvIds = useRef<Set<string>>(new Set());
   const seen = useRef<Set<string>>(new Set());
+  const seenMoments = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     setPerm(notificationPermissionState());
@@ -60,6 +64,7 @@ export function RoleNotifications({
       myConvIds.current = new Set(mine.map((c) => c.id as string));
     }
 
+    // Chat-message alert: insistent landline ring + phone icon (gold).
     function fireAlert(senderRole: string, content: string) {
       const sender = ROLE_LABEL[senderRole as RoleKey] ?? senderRole;
       const snippet = (content || "بيانات جديدة").replace(/\s+/g, " ").slice(0, 90);
@@ -73,6 +78,29 @@ export function RoleNotifications({
         description: body,
         icon: <Phone className="size-4 text-gold" />,
         duration: 6000,
+      });
+    }
+
+    // SYSTEM moment alert: distinct chime + green/violet status icon — clearly
+    // separated from chat-message alerts (no landline ring).
+    function fireSystemMoment(
+      kind: "ready" | "completed",
+      caseCode: string,
+      momentLabel: string,
+    ) {
+      const title = kind === "completed"
+        ? `✅ اكتملت الحالة — ${caseCode}`
+        : `🟢 تحديث حالة — ${caseCode}`;
+      const body = momentLabel;
+      systemMomentAlert({ title, body });
+      setSysCount((c) => c + 1);
+      toast(title, {
+        description: body,
+        icon: kind === "completed"
+          ? <PartyPopper className="size-4 text-emerald-500" />
+          : <CheckCircle2 className="size-4 text-emerald-500" />,
+        duration: 6000,
+        className: "border-emerald-500/40",
       });
     }
 
@@ -97,6 +125,28 @@ export function RoleNotifications({
         { event: "*", schema: "public", table: "chat_conversations" },
         () => void refreshConvs(),
       )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "slot_cases" },
+        (p: any) => {
+          const nu = p.new;
+          const old = p.old ?? {};
+          if (!nu) return;
+          // Doctor portal: only this doctor's cases.
+          if (slot != null && nu.doctor_slot !== slot) return;
+          try {
+            const oldKey = deriveStageKey(old);
+            const newKey = deriveStageKey(nu);
+            if (oldKey === newKey) return;
+            const moment = systemMoment(newKey);
+            if (!moment) return;
+            const dedupe = `${nu.id ?? nu.case_code}:${newKey}`;
+            if (seenMoments.current.has(dedupe)) return;
+            seenMoments.current.add(dedupe);
+            fireSystemMoment(moment.kind, nu.case_code ?? "—", `${moment.label} • ${getStage(newKey).label}`);
+          } catch { /* noop */ }
+        },
+      )
       .subscribe();
 
     return () => {
@@ -117,8 +167,12 @@ export function RoleNotifications({
     stopRing();
     setRinging(false);
     setCount(0);
+    setSysCount(0);
     if (perm !== "granted") void enable();
   }
+
+  const totalCount = count + sysCount;
+
 
   return (
     <>
@@ -174,9 +228,14 @@ export function RoleNotifications({
         ) : (
           <Bell className="size-6 text-gold" />
         )}
-        {count > 0 && (
+        {totalCount > 0 && (
           <span className="absolute -top-1 -right-1 inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-destructive px-1 text-[11px] font-extrabold text-destructive-foreground shadow">
-            {count > 99 ? "99+" : count}
+            {totalCount > 99 ? "99+" : totalCount}
+          </span>
+        )}
+        {sysCount > 0 && (
+          <span className="absolute -bottom-1 -right-1 inline-flex size-4 items-center justify-center rounded-full bg-emerald-500 text-white shadow" title="تحديثات حالة (Ready / Completed)">
+            <CheckCircle2 className="size-3" />
           </span>
         )}
       </button>

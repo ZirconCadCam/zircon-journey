@@ -8,7 +8,7 @@ import {
   Sparkles, ArrowRight, Lock, Upload, FileText, Download, Archive,
   Trash2, Share2, MessageSquare, Files as FilesIcon, ArchiveRestore, Copy, Check, Search, Plus,
   ClipboardList, MoreHorizontal, Pencil, Pin, PinOff, Send, X, Loader2,
-  Palette, Shield, Building2, FileSpreadsheet,
+  Palette, Shield, Building2, FileSpreadsheet, Bell,
 } from "lucide-react";
 import { toast } from "sonner";
 import { STAGES, getStage, deriveStageKey, notifyRoleAboutCase, localNotify, type CaseStage } from "@/lib/case-stages";
@@ -20,6 +20,7 @@ import { Z } from "@/lib/z-index";
 import { ShadeBadge } from "@/components/shade-badge";
 import { CaseSearch } from "@/components/case-search";
 import { RoleNotifications } from "@/components/role-notifications";
+import { NotificationSettings } from "@/components/notification-settings";
 
 /** Compute WhatsApp-style tick state for each visible stage from case flags + timing. */
 function stageTickState(stageKey: string, c: any): TickState {
@@ -215,7 +216,7 @@ function PasswordGate({ doctor, onOk }: { doctor: Doctor; onOk: () => void }) {
 
 function Portal({ doctor, actor, actorName, onLogout }: { doctor: Doctor; actor: Sender; actorName: string; onLogout: () => void }) {
   const { branch } = useAuth();
-  const [tab, setTab] = useState<"cases" | "files" | "reports" | "search">("cases");
+  const [tab, setTab] = useState<"cases" | "files" | "reports" | "search" | "notify">("cases");
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
@@ -264,11 +265,12 @@ function Portal({ doctor, actor, actorName, onLogout }: { doctor: Doctor; actor:
           </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-4 gap-1 border-b border-border">
+        <div className="mt-6 grid grid-cols-5 gap-1 border-b border-border">
           <TabBtn active={tab==="cases"} onClick={()=>setTab("cases")} icon={<ClipboardList className="size-4" />} label="الحالات" badge={unread} />
           <TabBtn active={tab==="search"} onClick={()=>setTab("search")} icon={<Search className="size-4" />} label="بحث" />
           <TabBtn active={tab==="files"} onClick={()=>setTab("files")} icon={<FilesIcon className="size-4" />} label="الملفات" />
           <TabBtn active={tab==="reports"} onClick={()=>setTab("reports")} icon={<FileSpreadsheet className="size-4" />} label="الكشوفات" />
+          <TabBtn active={tab==="notify"} onClick={()=>setTab("notify")} icon={<Bell className="size-4" />} label="الإشعارات" />
         </div>
 
         <div className="mt-6">
@@ -276,6 +278,7 @@ function Portal({ doctor, actor, actorName, onLogout }: { doctor: Doctor; actor:
           {tab === "search" && <CaseSearch actor={chatRole as any} restrictSlot={doctor.slot} />}
           {tab === "files" && <FilesPanel doctor={doctor} actor={actor} />}
           {tab === "reports" && <DoctorReportsPanel doctor={doctor} />}
+          {tab === "notify" && <NotificationSettings />}
         </div>
 
         <ChatNotificationsListener doctorSlot={doctor.slot} me={chatRole}

@@ -9,10 +9,11 @@ import { TechnicianReports, TechnicianDesignFiles } from "@/components/technicia
 import { AdminSettingsPanel } from "@/components/admin-settings-panel";
 import { AdminVoiceListener } from "@/components/admin-voice-listener";
 import { RoleNotifications } from "@/components/role-notifications";
+import { NotificationSettings } from "@/components/notification-settings";
 
 import { ROLE_LABEL, STAFF_PASSWORDS, type RoleKey } from "@/lib/chat";
 import { getStage, deriveStageKey } from "@/lib/case-stages";
-import { Sparkles, ArrowRight, Lock, Stethoscope, MessageSquare, ClipboardList, Settings, Archive, FileArchive, FileText, Search } from "lucide-react";
+import { Sparkles, ArrowRight, Lock, Stethoscope, MessageSquare, ClipboardList, Settings, Archive, FileArchive, FileText, Search, Bell } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/staff/$role")({
@@ -119,7 +120,7 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
   const [unread, setUnread] = useState<Record<number, number>>({});
   // Default tab: roles with a case list land on "cases"; admin stays on "chat".
   const initialTab: "chat" | "cases" | "settings" = role === "admin" ? "chat" : "cases";
-  const [tab, setTab] = useState<"chat" | "cases" | "settings" | "archive" | "designfiles" | "reports" | "search">(initialTab);
+  const [tab, setTab] = useState<"chat" | "cases" | "settings" | "archive" | "designfiles" | "reports" | "search" | "notify">(initialTab);
 
   useEffect(() => {
     (async () => {
@@ -270,11 +271,18 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
                 <Settings className="size-4" /> الإعدادات
               </button>
             )}
+            <button onClick={() => setTab("notify")}
+              className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "notify" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
+              <Bell className="size-4" /> الإشعارات
+            </button>
           </div>
         )}
 
+
         <div className="mt-6">
-          {tab === "settings" && role === "admin" ? (
+          {tab === "notify" ? (
+            <NotificationSettings />
+          ) : tab === "settings" && role === "admin" ? (
             <AdminSettingsPanel />
           ) : role === "designer" && tab === "archive" ? (
             <DesignerArchive />

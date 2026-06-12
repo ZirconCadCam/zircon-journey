@@ -63,6 +63,26 @@ export function nextStage(key: string | null | undefined): StageInfo | null {
   return STAGES[i + 1];
 }
 
+/** Classification of a stage as a notable "system moment" worth a distinct
+ *  (non chat-message) notification. `ready` = a deliverable handoff is ready;
+ *  `completed` = the case reached a terminal milestone. Returns null for
+ *  stages that don't warrant a system alert. */
+export type SystemMomentKind = "ready" | "completed";
+
+export function systemMoment(stageKey: CaseStage): { kind: SystemMomentKind; label: string } | null {
+  switch (stageKey) {
+    case "design_done":    return { kind: "ready", label: "التصميم جاهز" };
+    case "doctor_review":  return { kind: "ready", label: "جاهز لمراجعة الطبيب" };
+    case "approved":       return { kind: "ready", label: "تم الاعتماد النهائي" };
+    case "permanent_done": return { kind: "ready", label: "التركيب الدائم جاهز" };
+    case "installed":      return { kind: "completed", label: "تم التركيب" };
+    case "final_archived": return { kind: "completed", label: "اكتملت الحالة وأُرشفت" };
+    default: return null;
+  }
+}
+
+
+
 /** Derive the visible stage from boolean flags on a case row.
  *  Note: explicit "in-progress" stages (designer/technician/temp_*) are
  *  replaced by the file-event model — sending a file directly advances
