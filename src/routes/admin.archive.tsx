@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ChatModule } from "@/components/chat-module";
+import { DoctorAvatar } from "@/components/doctor-avatar";
 import {
   ROLE_COLOR, ROLE_LABEL, STAFF_PASSWORDS, summarizeParticipants,
   type ChatConversation, type RoleKey,
