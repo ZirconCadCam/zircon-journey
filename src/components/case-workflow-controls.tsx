@@ -208,6 +208,16 @@ function DesignerControls({ c, actorName, doctorName, target, blockedByPending }
 
   return (
     <div className="rounded-xl border border-border bg-muted/30 p-3 mt-3 space-y-2">
+      {c.shade && (
+        <CaseShadeConfirm
+          shade={c.shade}
+          caseId={c.id}
+          actor="designer"
+          doctorConfirmed={c.shade_confirmed_doctor}
+          designerConfirmed={c.shade_confirmed_designer}
+          technicianConfirmed={c.shade_confirmed_technician}
+        />
+      )}
       <div className="flex items-center gap-2 flex-wrap">
         <label className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold cursor-pointer transition border
           ${rarSent ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-border bg-card hover:border-gold"}`}>
