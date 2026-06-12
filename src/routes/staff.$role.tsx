@@ -280,7 +280,9 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
 
 
         <div className="mt-6">
-          {tab === "settings" && role === "admin" ? (
+          {tab === "notify" ? (
+            <NotificationSettings />
+          ) : tab === "settings" && role === "admin" ? (
             <AdminSettingsPanel />
           ) : role === "designer" && tab === "archive" ? (
             <DesignerArchive />
