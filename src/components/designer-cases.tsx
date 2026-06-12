@@ -108,6 +108,8 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
   const [busyId, setBusyId] = useState<string | null>(null);
   const [view, setView] = useState<"active" | "archive">("active");
   const [zipPreview, setZipPreview] = useState<{ url: string; name: string | null } | null>(null);
+  // Visual progress for the "إرسال إلى تلجرام" action (per-case).
+  const [tgProgress, setTgProgress] = useState<{ id: string; pct: number; label: string; error?: boolean } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -631,6 +633,9 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
   /** Item 3: send the whole archived case (data + zip + rar before/after + chat PDF) to Telegram. */
   async function sendToTelegram(c: Case) {
     setBusyId(c.id);
+    const prog = (pct: number, label: string, error = false) =>
+      setTgProgress({ id: c.id, pct, label, error });
+    prog(5, "تجهيز بيانات الحالة…");
     try {
       const doctor = doctorMap.get(c.doctor_slot);
       const branchAr = doctor?.branch === "sanaa" ? "صنعاء" : doctor?.branch === "ibb" ? "إب" : "—";
@@ -665,6 +670,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
       }
 
       // Gather conversation messages once (files + designer→technician text revision).
+      prog(25, "جلب المحادثات وملفات الحالة…");
       const { data: convs } = await supabase.from("chat_conversations")
         .select("id, participants").eq("doctor_slot", c.doctor_slot);
       const convList = ((convs ?? []) as any[]);
@@ -732,6 +738,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
       }
 
       // Designer → technician text revision (sent as part of the case caption).
+      prog(50, "تجهيز ملفات التصميم…");
       let finalCaption = caption;
       if (designerTextRevision) {
         finalCaption += `\n\n✏️ تعديل المصمم النصي للفني:\n${designerTextRevision}`;
@@ -740,11 +747,13 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
       }
 
       // (c) conversations PDF
+      prog(65, "تجهيز ملف المحادثات (PDF)…");
       const pdfUrl = await buildAndUploadConversationsPdf(c, convIds);
       if (pdfUrl) documents.push({ url: pdfUrl, filename: `${safe(c.patient_name)} - المحادثات.pdf` });
       else urlFailed.push("ملف PDF للمحادثات");
 
 
+      prog(82, `جارٍ الإرسال إلى تلجرام (${documents.length} ملف)…`);
       const { sendCaseToTelegram } = await import("@/lib/telegram.functions");
       const res: any = await sendCaseToTelegram({ data: { caption: finalCaption, documents } });
       const failed = (res?.sent || []).filter((s: any) => !s.ok);
@@ -763,9 +772,13 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
         else if (r.kind === "error") toast.error(r.text, { duration: r.duration });
         else toast.success(r.text, { duration: r.duration });
       }
+      prog(100, failed.length ? `اكتمل الإرسال مع فشل ${failed.length} ملف` : "اكتمل الإرسال بنجاح", failed.length > 0);
+      window.setTimeout(() => setTgProgress((cur) => (cur && cur.id === c.id ? null : cur)), 4000);
     } catch (e: any) {
       console.error(e);
       toast.error(e.message || "تعذر الإرسال إلى تلجرام");
+      prog(100, "تعذّر الإرسال إلى تلجرام", true);
+      window.setTimeout(() => setTgProgress((cur) => (cur && cur.id === c.id ? null : cur)), 5000);
     } finally { setBusyId(null); }
   }
 
@@ -961,14 +974,34 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                         />
                       )}
                       {actor === "admin" && view === "archive" && (
-                        <button
-                          onClick={() => sendToTelegram(c)}
-                          disabled={busy}
-                          className="inline-flex items-center gap-1.5 rounded-lg gradient-gold text-gold-foreground px-3 py-1.5 text-xs font-bold shadow-gold hover:opacity-90 transition disabled:opacity-60"
-                          title="إرسال بيانات الحالة وملفاتها ومحادثاتها إلى جروب تلجرام"
-                        >
-                          {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />} إرسال إلى تلجرام
-                        </button>
+                        <div className="flex flex-col gap-1.5 min-w-[200px]">
+                          <button
+                            onClick={() => sendToTelegram(c)}
+                            disabled={busy}
+                            className="inline-flex items-center justify-center gap-1.5 rounded-lg gradient-gold text-gold-foreground px-3 py-1.5 text-xs font-bold shadow-gold hover:opacity-90 transition disabled:opacity-60"
+                            title="إرسال بيانات الحالة وملفاتها ومحادثاتها إلى جروب تلجرام"
+                          >
+                            {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />} إرسال إلى تلجرام
+                          </button>
+                          {tgProgress?.id === c.id && (
+                            <div className="rounded-lg border border-gold/40 bg-card p-2 shadow-luxury">
+                              <div className="flex items-center justify-between text-[10px] font-bold mb-1">
+                                <span className={tgProgress.error ? "text-destructive" : "text-foreground"}>
+                                  {tgProgress.label}
+                                </span>
+                                <span className="text-gold">{tgProgress.pct}%</span>
+                              </div>
+                              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                                <div
+                                  className={`h-full rounded-full transition-all duration-500 ${
+                                    tgProgress.error ? "bg-destructive" : "gradient-gold"
+                                  }`}
+                                  style={{ width: `${tgProgress.pct}%` }}
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       )}
                       {view === "active" && actor === "technician" ? (
                         <button

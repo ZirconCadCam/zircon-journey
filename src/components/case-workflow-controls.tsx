@@ -9,7 +9,7 @@ import {
 import type { RoleKey } from "@/lib/chat";
 import { ROLE_LABEL, getSignedUrl } from "@/lib/chat";
 import { CaseFileActivityLog } from "@/components/case-file-activity-log";
-import { ShadeConfirm, ShadePicker } from "@/components/shade-confirm";
+import { ShadeConfirm, ShadePicker, CaseShadeConfirm } from "@/components/shade-confirm";
 
 export interface WorkflowCase {
   id: string;
@@ -54,6 +54,9 @@ export interface WorkflowCase {
   tooth_number?: string | null;
   teeth_count?: string | null;
   shade?: string | null;
+  shade_confirmed_doctor?: boolean | null;
+  shade_confirmed_designer?: boolean | null;
+  shade_confirmed_technician?: boolean | null;
   case_type?: string | null;
   notes?: string | null;
   scan_path?: string | null;
@@ -172,6 +175,7 @@ function DesignerControls({ c, actorName, doctorName, target, blockedByPending }
     if (e.target) e.target.value = "";
     if (!f) return;
     if (!RAR_RE.test(f.name)) { toast.error("الملف يجب أن يكون .rar"); return; }
+    if (c.shade && !c.shade_confirmed_designer) { toast.error("الرجاء تأكيد لون السن أولاً قبل إرسال ملف التصميم"); return; }
     if (blocked) { toast.error(`أرسل أولاً ملفات الحالة المعلّقة: ${blockedByPending}`); return; }
     setBusy(true);
     try {
@@ -204,6 +208,16 @@ function DesignerControls({ c, actorName, doctorName, target, blockedByPending }
 
   return (
     <div className="rounded-xl border border-border bg-muted/30 p-3 mt-3 space-y-2">
+      {c.shade && (
+        <CaseShadeConfirm
+          shade={c.shade}
+          caseId={c.id}
+          actor="designer"
+          doctorConfirmed={c.shade_confirmed_doctor}
+          designerConfirmed={c.shade_confirmed_designer}
+          technicianConfirmed={c.shade_confirmed_technician}
+        />
+      )}
       <div className="flex items-center gap-2 flex-wrap">
         <label className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold cursor-pointer transition border
           ${rarSent ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-border bg-card hover:border-gold"}`}>
@@ -474,6 +488,7 @@ function TechnicianControls({ c, actorName, doctorName, target }: {
 
   async function sendDataToSecretary() {
     if (!target) { toast.error("لا يوجد فرع سكرتارية محدد"); return; }
+    if (c.shade && !c.shade_confirmed_technician) { toast.error("الرجاء تأكيد لون السن أولاً قبل إرسال البيانات"); return; }
     setBusy(true);
     const lines = [
       `📋 حالة جاهزة للإرسال`,
@@ -517,6 +532,16 @@ function TechnicianControls({ c, actorName, doctorName, target }: {
 
   return (
     <div className="rounded-xl border border-border bg-muted/30 p-3 mt-3 space-y-2">
+      {c.shade && (
+        <CaseShadeConfirm
+          shade={c.shade}
+          caseId={c.id}
+          actor="technician"
+          doctorConfirmed={c.shade_confirmed_doctor}
+          designerConfirmed={c.shade_confirmed_designer}
+          technicianConfirmed={c.shade_confirmed_technician}
+        />
+      )}
       <div className="flex items-center gap-2 flex-wrap">
         <button onClick={toggleFabDone} disabled={busy}
           className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold transition border
@@ -899,7 +924,8 @@ function DoctorControls({ c, actorName, doctorName }: {
   async function requestRevision() {
     if (notes.trim().length < 3) { toast.error("اكتب ملاحظات التعديل"); return; }
     const nextShade = revShade.trim();
-    if (nextShade && !revShadeConfirmed) { toast.error("الرجاء تأكيد اللون قبل إرسال طلب التعديل"); return; }
+    if (!nextShade) { toast.error("الرجاء اختيار لون السن قبل إرسال طلب التعديل"); return; }
+    if (!revShadeConfirmed) { toast.error("الرجاء تأكيد اللون قبل إرسال طلب التعديل"); return; }
     setBusy(true);
     const trimmed = notes.trim();
     const shadeChanged = (c.shade ?? "").trim().toUpperCase() !== nextShade.toUpperCase();
@@ -1180,15 +1206,17 @@ function DoctorControls({ c, actorName, doctorName }: {
                 onChange={(s) => { setRevShade(s); setRevShadeConfirmed(false); }}
                 collapsible
               />
-              {revShade.trim() && (
-                <div className="pt-1 border-t border-gold/30">
+              <div className="pt-1 border-t border-gold/30">
+                {revShade.trim() ? (
                   <ShadeConfirm
                     shade={revShade}
                     confirmed={revShadeConfirmed}
                     onConfirm={() => setRevShadeConfirmed(true)}
                   />
-                </div>
-              )}
+                ) : (
+                  <div className="text-[11px] font-bold text-destructive">اختر لون السن أولاً (إلزامي).</div>
+                )}
+              </div>
             </div>
 
 
