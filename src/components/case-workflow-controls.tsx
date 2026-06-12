@@ -902,7 +902,8 @@ function DoctorControls({ c, actorName, doctorName }: {
   async function requestRevision() {
     if (notes.trim().length < 3) { toast.error("اكتب ملاحظات التعديل"); return; }
     const nextShade = revShade.trim();
-    if (nextShade && !revShadeConfirmed) { toast.error("الرجاء تأكيد اللون قبل إرسال طلب التعديل"); return; }
+    if (!nextShade) { toast.error("الرجاء اختيار لون السن قبل إرسال طلب التعديل"); return; }
+    if (!revShadeConfirmed) { toast.error("الرجاء تأكيد اللون قبل إرسال طلب التعديل"); return; }
     setBusy(true);
     const trimmed = notes.trim();
     const shadeChanged = (c.shade ?? "").trim().toUpperCase() !== nextShade.toUpperCase();
