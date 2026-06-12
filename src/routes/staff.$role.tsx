@@ -10,6 +10,7 @@ import { AdminSettingsPanel } from "@/components/admin-settings-panel";
 import { AdminVoiceListener } from "@/components/admin-voice-listener";
 import { RoleNotifications } from "@/components/role-notifications";
 import { NotificationSettings } from "@/components/notification-settings";
+import { DoctorAvatar } from "@/components/doctor-avatar";
 
 import { ROLE_LABEL, STAFF_PASSWORDS, type RoleKey } from "@/lib/chat";
 import { getStage, deriveStageKey } from "@/lib/case-stages";
