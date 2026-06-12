@@ -108,6 +108,8 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
   const [busyId, setBusyId] = useState<string | null>(null);
   const [view, setView] = useState<"active" | "archive">("active");
   const [zipPreview, setZipPreview] = useState<{ url: string; name: string | null } | null>(null);
+  // Visual progress for the "إرسال إلى تلجرام" action (per-case).
+  const [tgProgress, setTgProgress] = useState<{ id: string; pct: number; label: string; error?: boolean } | null>(null);
 
   useEffect(() => {
     (async () => {
