@@ -71,6 +71,8 @@ export function AdminSettingsPanel() {
         <ArchiveDoctorCard doctors={doctors} loading={loading} onDone={load} />
       </div>
 
+      <PasswordManagerPanel />
+
       <AvatarManagerPanel />
 
       <GeneralAppSettingsCard />
