@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  Search, Calendar, Building2, Stethoscope, User, Hash, Phone,
+  Search, Calendar, Building2, User, Hash, Phone,
   ClipboardList, ScanLine, Download, X, Loader2, FileText,
 } from "lucide-react";
 import { toast } from "sonner";
