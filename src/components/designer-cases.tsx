@@ -900,7 +900,11 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                         {doctor?.branch && <> • {doctor.branch === "sanaa" ? "صنعاء" : "إب"}</>}
                       </div>
 
-                      {c.shade && (
+                      {/* Standalone confirmation status only for admin (read-only).
+                          For designer/technician the interactive confirm widget is
+                          rendered once inside CaseWorkflowControls below — avoid
+                          showing it twice on the same card at the same time. */}
+                      {c.shade && actor === "admin" && (
                         <div className="mt-3">
                           <CaseShadeConfirm
                             shade={c.shade}
