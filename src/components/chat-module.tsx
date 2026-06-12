@@ -839,7 +839,7 @@ function MessageBubble({ m, mine, doctorName, otherParticipants, onLongPress, on
         </div>
       )}
       <div className="text-[10px] opacity-70 mt-1 flex items-center gap-1.5 justify-end">
-        <span>{new Date(m.created_at).toLocaleTimeString("ar")}</span>
+        <span title={formatChatFull(m.created_at)}>{formatChatTime(m.created_at)}</span>
         {mine && <MessageStatus msg={m} otherParticipants={otherParticipants} />}
       </div>
     </div>
