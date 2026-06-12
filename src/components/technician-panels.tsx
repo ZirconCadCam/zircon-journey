@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { DoctorAvatar } from "@/components/doctor-avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -305,7 +306,10 @@ function ReportTable({
           ) : rows.map(c => (
             <TableRow key={c.id}>
               <TableCell className="font-bold">{c.patient_name}</TableCell>
-              <TableCell>{doctorMap.get(c.doctor_slot)?.name ?? `Slot ${c.doctor_slot}`}</TableCell>
+              <TableCell className="flex items-center gap-1.5">
+                <DoctorAvatar name={doctorMap.get(c.doctor_slot)?.name} className="size-6" />
+                {doctorMap.get(c.doctor_slot)?.name ?? `Slot ${c.doctor_slot}`}
+              </TableCell>
               <TableCell>{c.case_type || "—"}</TableCell>
               <TableCell>{teethCount(c) || "—"}</TableCell>
               <TableCell>1</TableCell>
@@ -502,7 +506,7 @@ export function TechnicianDesignFiles() {
                     <User className="size-4 text-gold" /> {f.patientName}
                   </div>
                   <div className="text-[11px] text-muted-foreground flex items-center gap-3 mt-0.5">
-                    <span className="flex items-center gap-1"><Stethoscope className="size-3" /> {f.doctorName}</span>
+                    <span className="flex items-center gap-1"><DoctorAvatar name={f.doctorName} className="size-5" /> {f.doctorName}</span>
                     <span className="flex items-center gap-1"><Calendar className="size-3" /> {new Date(f.date).toLocaleDateString("ar-EG")}</span>
                     <span>{f.files.length} ملف</span>
                   </div>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { DoctorAvatar } from "@/components/doctor-avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -157,8 +158,9 @@ export function DesignerArchive() {
                     <div className="mt-2 font-extrabold text-lg flex items-center gap-2">
                       <User className="size-4 text-gold" /> {c.patient_name}
                     </div>
-                    <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
-                      <Stethoscope className="size-3" /> {doctor?.name ?? `Slot ${c.doctor_slot}`}
+                    <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5">
+                      <DoctorAvatar name={doctor?.name} className="size-6" />
+                      <span>{doctor?.name ?? `Slot ${c.doctor_slot}`}</span>
                       {doctor?.branch && <> • {branchLabel(doctor.branch)}</>}
                     </div>
                     <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
@@ -312,7 +314,7 @@ export function DesignerDesignFiles() {
                   </div>
                   <div className="text-[11px] text-muted-foreground truncate">{f.fileName}</div>
                   <div className="text-[11px] text-muted-foreground flex items-center gap-2 mt-0.5">
-                    <span className="flex items-center gap-1"><Stethoscope className="size-3" /> {f.doctorName}</span>
+                    <span className="flex items-center gap-1"><DoctorAvatar name={f.doctorName} className="size-5" /> {f.doctorName}</span>
                     <span className="flex items-center gap-1"><Calendar className="size-3" /> {new Date(f.date).toLocaleDateString("ar-EG")}</span>
                     {f.size && <span>{(f.size / 1024 / 1024).toFixed(1)} MB</span>}
                   </div>
@@ -505,7 +507,10 @@ function ReportTable({
           ) : rows.map(c => (
             <TableRow key={c.id}>
               <TableCell className="font-bold">{c.patient_name}</TableCell>
-              <TableCell>{doctorMap.get(c.doctor_slot)?.name ?? `Slot ${c.doctor_slot}`}</TableCell>
+              <TableCell className="flex items-center gap-1.5">
+                <DoctorAvatar name={doctorMap.get(c.doctor_slot)?.name} className="size-6" />
+                {doctorMap.get(c.doctor_slot)?.name ?? `Slot ${c.doctor_slot}`}
+              </TableCell>
               <TableCell>{c.case_type || "—"}</TableCell>
               <TableCell>{teethCount(c) || "—"}</TableCell>
               <TableCell>{new Date(c.created_at).toLocaleDateString("ar-EG")}</TableCell>

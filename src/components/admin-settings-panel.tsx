@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { DoctorAvatar } from "@/components/doctor-avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Settings, UserPlus, Archive, Stethoscope, RefreshCw, Save, HardDrive, Trash2, Loader2, FolderOpen } from "lucide-react";
@@ -449,7 +450,8 @@ function ArchiveDoctorCard({
                 key={d.slot}
                 className="flex items-center justify-between gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs"
               >
-                <span className="truncate">
+                <span className="truncate flex items-center gap-1.5">
+                  <DoctorAvatar name={d.name} className="size-5" />
                   <span className="font-mono text-muted-foreground">#{d.slot}</span>{" "}
                   <span className="font-bold">{d.name}</span>
                 </span>

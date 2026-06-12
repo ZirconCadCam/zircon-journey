@@ -351,9 +351,7 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
                       <li key={d.slot}>
                         <button onClick={()=>setSelected(d)}
                           className={`w-full text-start p-4 flex items-center gap-3 transition ${on?"bg-gold/10 border-r-4 border-gold":"hover:bg-muted/40"}`}>
-                          <div className="size-10 rounded-xl gradient-gold grid place-items-center shadow-gold shrink-0">
-                            <span className="font-extrabold text-gold-foreground">{d.name.replace(/^د\.\s*/, "").charAt(0)}</span>
-                          </div>
+                          <DoctorAvatar name={d.name} className="size-10" rounded="xl" />
                           <div className="min-w-0 flex-1">
                             <div className="font-bold text-sm truncate">{d.name}</div>
                             <div className="text-[11px] text-muted-foreground">{d.branch === "sanaa" ? "فرع صنعاء" : d.branch === "ibb" ? "فرع إب" : ""}</div>
