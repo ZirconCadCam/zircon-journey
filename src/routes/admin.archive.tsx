@@ -167,9 +167,12 @@ function Inner({ onLogout }: { onLogout: () => void }) {
           <button onClick={()=>{ setOpenConv(null); load(); }} className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-xs font-bold hover:border-gold">
             <ArrowRight className="size-4" /> رجوع للأرشيف
           </button>
-          <div className="rounded-2xl gradient-brown text-primary-foreground p-5 shadow-luxury">
-            <div className="text-xs opacity-80">محادثة الطبيب</div>
-            <div className="text-xl font-extrabold mt-1">{doctor?.name ?? `Slot #${openConv.doctor_slot}`}</div>
+          <div className="rounded-2xl gradient-brown text-primary-foreground p-5 shadow-luxury flex items-center gap-3">
+            <DoctorAvatar name={doctor?.name} className="size-12 ring-white/40" />
+            <div>
+              <div className="text-xs opacity-80">محادثة الطبيب</div>
+              <div className="text-xl font-extrabold mt-1">{doctor?.name ?? `Slot #${openConv.doctor_slot}`}</div>
+            </div>
           </div>
           <ChatModule
             doctorSlot={openConv.doctor_slot}
