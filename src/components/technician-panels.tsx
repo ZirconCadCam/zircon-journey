@@ -506,7 +506,7 @@ export function TechnicianDesignFiles() {
                     <User className="size-4 text-gold" /> {f.patientName}
                   </div>
                   <div className="text-[11px] text-muted-foreground flex items-center gap-3 mt-0.5">
-                    <span className="flex items-center gap-1"><Stethoscope className="size-3" /> {f.doctorName}</span>
+                    <span className="flex items-center gap-1"><DoctorAvatar name={f.doctorName} className="size-5" /> {f.doctorName}</span>
                     <span className="flex items-center gap-1"><Calendar className="size-3" /> {new Date(f.date).toLocaleDateString("ar-EG")}</span>
                     <span>{f.files.length} ملف</span>
                   </div>
