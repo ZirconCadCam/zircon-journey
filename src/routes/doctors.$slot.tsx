@@ -21,6 +21,7 @@ import { ShadeBadge } from "@/components/shade-badge";
 import { CaseSearch } from "@/components/case-search";
 import { RoleNotifications } from "@/components/role-notifications";
 import { NotificationSettings } from "@/components/notification-settings";
+import { DoctorAvatar } from "@/components/doctor-avatar";
 
 /** Compute WhatsApp-style tick state for each visible stage from case flags + timing. */
 function stageTickState(stageKey: string, c: any): TickState {
