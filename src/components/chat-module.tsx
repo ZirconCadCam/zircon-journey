@@ -859,6 +859,7 @@ function MessageBubble({ m, mine, doctorName, otherParticipants, onLongPress, on
         <span title={formatChatFull(m.created_at)}>{formatChatTime(m.created_at)}</span>
         {mine && <MessageStatus msg={m} otherParticipants={otherParticipants} />}
       </div>
+      </div>
     </div>
   );
 }
