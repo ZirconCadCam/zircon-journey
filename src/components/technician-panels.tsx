@@ -13,6 +13,7 @@ import { deriveStageKey } from "@/lib/case-stages";
 import { fileManagerSupported, openCachedFile } from "@/lib/file-manager";
 import { transferDownload } from "@/lib/transfer-manager";
 import type { CaseFileLocation } from "@/lib/case-folders";
+import { printHtmlDocument } from "@/lib/print-report";
 
 interface Doctor { slot: number; name: string; branch: string | null }
 interface Case {

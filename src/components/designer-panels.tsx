@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/table";
 import { getSignedUrl } from "@/lib/chat";
 import { fileManagerSupported } from "@/lib/file-manager";
+import { printHtmlDocument } from "@/lib/print-report";
 
 interface Doctor { slot: number; name: string; branch: string | null }
 interface Case {
