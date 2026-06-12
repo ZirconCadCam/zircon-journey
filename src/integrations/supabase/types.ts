@@ -742,6 +742,24 @@ export type Database = {
         }
         Relationships: []
       }
+      staff_secrets: {
+        Row: {
+          password: string
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          password: string
+          role: string
+          updated_at?: string
+        }
+        Update: {
+          password?: string
+          role?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           branch: Database["public"]["Enums"]["branch"] | null
@@ -776,6 +794,7 @@ export type Database = {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      get_staff_password: { Args: { p_role: string }; Returns: string }
       get_user_branch: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["branch"]
@@ -787,6 +806,23 @@ export type Database = {
         }
         Returns: boolean
       }
+      list_doctor_secrets: {
+        Args: never
+        Returns: {
+          active: boolean
+          name: string
+          password: string
+          slot: number
+        }[]
+      }
+      list_staff_secrets: {
+        Args: never
+        Returns: {
+          password: string
+          role: string
+          updated_at: string
+        }[]
+      }
       set_avatar_override: {
         Args: { p_image_url: string; p_label: string; p_subject: string }
         Returns: undefined
@@ -797,6 +833,10 @@ export type Database = {
       }
       set_doctor_secret: {
         Args: { p_password: string; p_slot: number }
+        Returns: undefined
+      }
+      set_staff_secret: {
+        Args: { p_password: string; p_role: string }
         Returns: undefined
       }
       upsert_doctor: {

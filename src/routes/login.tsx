@@ -38,8 +38,15 @@ function LoginPage() {
     if (!password) return;
     setLoading(true);
     try {
+      // Resolve current staff passwords (admin-managed in DB, fallback to defaults)
+      const { data: secrets } = await supabase.rpc("list_staff_secrets");
+      const pwMap: Record<string, string> = { ...STAFF_PASSWORDS };
+      for (const r of (secrets ?? []) as { role: string; password: string }[]) {
+        if (r.password) pwMap[r.role] = r.password;
+      }
+
       // 1) Admin master password — full access everywhere
-      if (password === STAFF_PASSWORDS.admin) {
+      if (password === pwMap.admin) {
         localStorage.setItem(ADMIN_ALL_KEY, "1");
         localStorage.setItem("zircon_staff_admin", "1");
         toast.success(`مرحبًا — ${ROLE_LABEL.admin}`);
@@ -48,7 +55,7 @@ function LoginPage() {
       }
 
       // 2) Staff passwords
-      const staffMatch = (Object.entries(STAFF_PASSWORDS) as [Exclude<RoleKey, "doctor">, string][])
+      const staffMatch = (Object.entries(pwMap) as [Exclude<RoleKey, "doctor">, string][])
         .find(([, p]) => p === password);
       if (staffMatch) {
         const role = staffMatch[0];
