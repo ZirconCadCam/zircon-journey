@@ -1,6 +1,13 @@
 import { getDoctorAvatar, normalizeDoctorName } from "@/lib/doctor-avatars";
 import { getOverrideUrl, roleSubject, useAvatarVersion } from "@/lib/avatar-store";
 import { cn } from "@/lib/utils";
+import designerPhoto from "@/assets/team/designer.jpg.asset.json";
+import technicianPhoto from "@/assets/team/technician.jpg.asset.json";
+
+const ROLE_DEFAULT_PHOTO: Record<"designer" | "technician", string> = {
+  designer: designerPhoto.url,
+  technician: technicianPhoto.url,
+};
 
 interface DoctorAvatarProps {
   name: string | null | undefined;
@@ -22,7 +29,9 @@ export function DoctorAvatar({ name, roleKey, className, fallbackClassName, roun
   // Re-render whenever admin assigns/removes a photo.
   useAvatarVersion();
 
-  const url = roleKey ? getOverrideUrl(roleSubject(roleKey)) : getDoctorAvatar(name);
+  const url = roleKey
+    ? getOverrideUrl(roleSubject(roleKey)) || ROLE_DEFAULT_PHOTO[roleKey]
+    : getDoctorAvatar(name);
   const roundCls = rounded === "full" ? "rounded-full" : `rounded-${rounded}`;
   const initial = normalizeDoctorName(name || "").charAt(0) || "?";
 
