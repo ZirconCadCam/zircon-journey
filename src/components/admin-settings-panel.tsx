@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { DoctorAvatar } from "@/components/doctor-avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Settings, UserPlus, Archive, Stethoscope, RefreshCw, Save, HardDrive, Trash2, Loader2, FolderOpen } from "lucide-react";
