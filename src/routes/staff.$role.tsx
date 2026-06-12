@@ -120,7 +120,7 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
   const [unread, setUnread] = useState<Record<number, number>>({});
   // Default tab: roles with a case list land on "cases"; admin stays on "chat".
   const initialTab: "chat" | "cases" | "settings" = role === "admin" ? "chat" : "cases";
-  const [tab, setTab] = useState<"chat" | "cases" | "settings" | "archive" | "designfiles" | "reports" | "search">(initialTab);
+  const [tab, setTab] = useState<"chat" | "cases" | "settings" | "archive" | "designfiles" | "reports" | "search" | "notify">(initialTab);
 
   useEffect(() => {
     (async () => {
