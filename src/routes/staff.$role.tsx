@@ -307,6 +307,21 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
             <TechnicianReports />
           ) : role === "technician" && tab === "designfiles" ? (
             <TechnicianDesignFiles />
+          ) : role === "admin" && tab === "reports" ? (
+            <div className="space-y-8">
+              <div>
+                <div className="mb-3 text-sm font-extrabold flex items-center gap-2">
+                  <FileText className="size-4 text-gold" /> كشوفات التصميم
+                </div>
+                <DesignerReports />
+              </div>
+              <div>
+                <div className="mb-3 text-sm font-extrabold flex items-center gap-2">
+                  <FileText className="size-4 text-gold" /> كشوفات الفني
+                </div>
+                <TechnicianReports />
+              </div>
+            </div>
           ) : (role === "designer" || role === "technician" || role === "secretary_sanaa" || role === "secretary_ibb" || role === "admin") && tab === "search" ? (
             <CaseSearch actor={role as any} />
           ) : (role === "designer" || role === "technician" || role === "secretary_sanaa" || role === "secretary_ibb" || role === "admin") && tab === "cases" ? (
