@@ -738,6 +738,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
       }
 
       // Designer → technician text revision (sent as part of the case caption).
+      prog(50, "تجهيز ملفات التصميم…");
       let finalCaption = caption;
       if (designerTextRevision) {
         finalCaption += `\n\n✏️ تعديل المصمم النصي للفني:\n${designerTextRevision}`;
@@ -746,11 +747,13 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
       }
 
       // (c) conversations PDF
+      prog(65, "تجهيز ملف المحادثات (PDF)…");
       const pdfUrl = await buildAndUploadConversationsPdf(c, convIds);
       if (pdfUrl) documents.push({ url: pdfUrl, filename: `${safe(c.patient_name)} - المحادثات.pdf` });
       else urlFailed.push("ملف PDF للمحادثات");
 
 
+      prog(82, `جارٍ الإرسال إلى تلجرام (${documents.length} ملف)…`);
       const { sendCaseToTelegram } = await import("@/lib/telegram.functions");
       const res: any = await sendCaseToTelegram({ data: { caption: finalCaption, documents } });
       const failed = (res?.sent || []).filter((s: any) => !s.ok);
@@ -769,9 +772,13 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
         else if (r.kind === "error") toast.error(r.text, { duration: r.duration });
         else toast.success(r.text, { duration: r.duration });
       }
+      prog(100, failed.length ? `اكتمل الإرسال مع فشل ${failed.length} ملف` : "اكتمل الإرسال بنجاح", failed.length > 0);
+      window.setTimeout(() => setTgProgress((cur) => (cur && cur.id === c.id ? null : cur)), 4000);
     } catch (e: any) {
       console.error(e);
       toast.error(e.message || "تعذر الإرسال إلى تلجرام");
+      prog(100, "تعذّر الإرسال إلى تلجرام", true);
+      window.setTimeout(() => setTgProgress((cur) => (cur && cur.id === c.id ? null : cur)), 5000);
     } finally { setBusyId(null); }
   }
 
