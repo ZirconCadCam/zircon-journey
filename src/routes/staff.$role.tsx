@@ -271,8 +271,13 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
                 <Settings className="size-4" /> الإعدادات
               </button>
             )}
+            <button onClick={() => setTab("notify")}
+              className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "notify" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
+              <Bell className="size-4" /> الإشعارات
+            </button>
           </div>
         )}
+
 
         <div className="mt-6">
           {tab === "settings" && role === "admin" ? (
