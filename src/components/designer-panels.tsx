@@ -158,8 +158,9 @@ export function DesignerArchive() {
                     <div className="mt-2 font-extrabold text-lg flex items-center gap-2">
                       <User className="size-4 text-gold" /> {c.patient_name}
                     </div>
-                    <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
-                      <Stethoscope className="size-3" /> {doctor?.name ?? `Slot ${c.doctor_slot}`}
+                    <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5">
+                      <DoctorAvatar name={doctor?.name} className="size-6" />
+                      <span>{doctor?.name ?? `Slot ${c.doctor_slot}`}</span>
                       {doctor?.branch && <> • {branchLabel(doctor.branch)}</>}
                     </div>
                     <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
