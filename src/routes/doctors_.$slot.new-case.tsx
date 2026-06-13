@@ -56,6 +56,48 @@ function NewSlotCase() {
   const uploadCanceled = useRef(false);
   const [uploadPaused, setUploadPaused] = useState(false);
   const [shadeConfirmed, setShadeConfirmed] = useState(false);
+  const [extracting, setExtracting] = useState(false);
+
+  // Read the uploaded scan ZIP and auto-fill any patient / case fields we can
+  // confidently extract from the embedded order/manifest. Fields that can't be
+  // found are skipped, and the doctor is told exactly what was filled.
+  async function autoFillFromScan(file: File) {
+    setExtracting(true);
+    const tid = toast.loading("جارٍ استخراج بيانات المريض من ملف المسح...");
+    try {
+      const { extractScanData } = await import("@/lib/scan-extract");
+      const data = await extractScanData(file);
+
+      const filled: string[] = [];
+      const missing: string[] = [];
+
+      setForm((f) => {
+        const next = { ...f };
+        if (data.patient_name) { next.patient_name = data.patient_name; filled.push("الاسم"); }
+        else missing.push("الاسم");
+        if (data.patient_phone) { next.patient_phone = data.patient_phone; filled.push("رقم الهاتف"); }
+        else missing.push("رقم الهاتف");
+        if (data.tooth_number) { next.tooth_number = data.tooth_number; filled.push("أرقام الأسنان"); }
+        else missing.push("أرقام الأسنان");
+        if (data.teeth_count) { next.teeth_count = data.teeth_count; filled.push("عدد الأسنان"); }
+        else missing.push("عدد الأسنان");
+        return next;
+      });
+
+      toast.dismiss(tid);
+      if (filled.length > 0) {
+        toast.success(`تم تعبئة تلقائياً: ${filled.join("، ")}`);
+      }
+      if (missing.length > 0) {
+        toast.warning(`تعذّر استخراج: ${missing.join("، ")} — الرجاء إدخالها يدوياً`);
+      }
+    } catch {
+      toast.dismiss(tid);
+      toast.error("تعذّر قراءة بيانات المريض من ملف المسح");
+    } finally {
+      setExtracting(false);
+    }
+  }
 
   // Signature of the case data currently in the form (incl. chosen scan).
   // Used to fade the save button once an identical case is already saved.
