@@ -56,6 +56,8 @@ function NewSlotCase() {
   const uploadCanceled = useRef(false);
   const [uploadPaused, setUploadPaused] = useState(false);
   const [shadeConfirmed, setShadeConfirmed] = useState(false);
+  const [extracting, setExtracting] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
 
   // Signature of the case data currently in the form (incl. chosen scan).
   // Used to fade the save button once an identical case is already saved.
@@ -91,6 +93,47 @@ function NewSlotCase() {
       setAuthChecked(true);
     })();
   }, [slot, nav]);
+
+  /**
+   * Accept a chosen/dropped scan file, then read the ZIP and auto-fill the
+   * form with any patient/case metadata embedded inside it. Fields that can't
+   * be found are left untouched and reported via a toast.
+   */
+  async function handleScanFile(f: File) {
+    if (!/\.zip$/i.test(f.name)) { toast.error("الرجاء اختيار ملف بصيغة .zip فقط"); return; }
+    setScan(f);
+    setSavedOnce(false);
+    setSavedSig(null);
+    setExtracting(true);
+    const tid = toast.loading("جارِ قراءة ملف المسح واستخراج البيانات…");
+    try {
+      const { extractScanMetadata } = await import("@/lib/scan-extract");
+      const { data, found, missing } = await extractScanMetadata(f);
+      if (found.length > 0) {
+        setForm((prev) => ({
+          ...prev,
+          patient_name: data.patient_name ?? prev.patient_name,
+          patient_phone: data.patient_phone ?? prev.patient_phone,
+          patient_age: data.patient_age ?? prev.patient_age,
+          patient_gender: data.patient_gender ?? prev.patient_gender,
+          tooth_number: data.tooth_number ?? prev.tooth_number,
+          teeth_count: data.teeth_count ?? prev.teeth_count,
+          shade: data.shade ?? prev.shade,
+        }));
+        if (data.shade) setShadeConfirmed(false);
+        toast.success(`تم استخراج وتعبئة: ${found.join("، ")}`, { id: tid });
+        if (missing.length > 0) {
+          toast.info(`تعذّر العثور على: ${missing.join("، ")} — الرجاء إدخالها يدوياً`);
+        }
+      } else {
+        toast.warning("لم يتم العثور على بيانات قابلة للاستخراج في ملف المسح — الرجاء تعبئة النموذج يدوياً", { id: tid });
+      }
+    } catch {
+      toast.error("تعذّرت قراءة ملف المسح — الرجاء تعبئة النموذج يدوياً", { id: tid });
+    } finally {
+      setExtracting(false);
+    }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -415,17 +458,26 @@ function NewSlotCase() {
             </p>
 
             {!scan ? (
-              <label className="block cursor-pointer rounded-xl border-2 border-dashed border-border hover:border-gold transition p-6 text-center">
+              <label
+                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragOver(false);
+                  const f = e.dataTransfer.files?.[0];
+                  if (f) handleScanFile(f);
+                }}
+                className={`block cursor-pointer rounded-xl border-2 border-dashed transition p-6 text-center ${
+                  dragOver ? "border-gold bg-gold/10" : "border-border hover:border-gold"
+                }`}>
                 <Upload className="size-7 mx-auto mb-2 text-muted-foreground" />
                 <div className="text-sm font-bold">اختر ملف المسح (.zip)</div>
-                <div className="text-[11px] text-muted-foreground mt-1">أو اسحبه هنا</div>
+                <div className="text-[11px] text-muted-foreground mt-1">أو اسحبه هنا — وسنملأ النموذج تلقائياً</div>
                 <input ref={fileInput} type="file" className="hidden"
                   accept=".zip,application/zip,application/x-zip-compressed"
                   onChange={e => {
                     const f = e.target.files?.[0];
-                    if (!f) return;
-                    if (!/\.zip$/i.test(f.name)) { toast.error("الرجاء اختيار ملف بصيغة .zip فقط"); return; }
-                    setScan(f);
+                    if (f) handleScanFile(f);
                   }} />
               </label>
             ) : (
@@ -454,6 +506,11 @@ function NewSlotCase() {
                   <div className="text-sm font-bold truncate">{scan.name}</div>
                   <div className="text-[11px] text-muted-foreground flex items-center gap-2">
                     <span>{(scan.size/1024/1024).toFixed(2)} MB</span>
+                    {extracting && (
+                      <span className="text-gold font-bold inline-flex items-center gap-1">
+                        <Loader2 className="size-3 animate-spin" /> جارِ استخراج البيانات…
+                      </span>
+                    )}
                     {submitting && (
                       <span className="text-gold font-bold">
                         • {scanProgress}% {uploadPaused ? "متوقف مؤقتاً" : "جارِ الرفع…"}
