@@ -537,6 +537,7 @@ function NewSlotCase() {
                   </button>
                 )}
               </div>
+              </>
             )}
 
             <button type="submit" disabled={submitting || alreadySaved}
