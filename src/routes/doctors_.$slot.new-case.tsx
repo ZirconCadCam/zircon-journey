@@ -506,6 +506,11 @@ function NewSlotCase() {
                   <div className="text-sm font-bold truncate">{scan.name}</div>
                   <div className="text-[11px] text-muted-foreground flex items-center gap-2">
                     <span>{(scan.size/1024/1024).toFixed(2)} MB</span>
+                    {extracting && (
+                      <span className="text-gold font-bold inline-flex items-center gap-1">
+                        <Loader2 className="size-3 animate-spin" /> جارِ استخراج البيانات…
+                      </span>
+                    )}
                     {submitting && (
                       <span className="text-gold font-bold">
                         • {scanProgress}% {uploadPaused ? "متوقف مؤقتاً" : "جارِ الرفع…"}
