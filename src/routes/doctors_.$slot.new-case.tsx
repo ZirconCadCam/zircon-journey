@@ -426,6 +426,7 @@ function NewSlotCase() {
                     if (!f) return;
                     if (!/\.zip$/i.test(f.name)) { toast.error("الرجاء اختيار ملف بصيغة .zip فقط"); return; }
                     setScan(f);
+                    void autoFillFromScan(f);
                   }} />
               </label>
             ) : (
