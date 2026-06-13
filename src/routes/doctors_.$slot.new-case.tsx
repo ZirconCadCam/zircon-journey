@@ -94,6 +94,47 @@ function NewSlotCase() {
     })();
   }, [slot, nav]);
 
+  /**
+   * Accept a chosen/dropped scan file, then read the ZIP and auto-fill the
+   * form with any patient/case metadata embedded inside it. Fields that can't
+   * be found are left untouched and reported via a toast.
+   */
+  async function handleScanFile(f: File) {
+    if (!/\.zip$/i.test(f.name)) { toast.error("الرجاء اختيار ملف بصيغة .zip فقط"); return; }
+    setScan(f);
+    setSavedOnce(false);
+    setSavedSig(null);
+    setExtracting(true);
+    const tid = toast.loading("جارِ قراءة ملف المسح واستخراج البيانات…");
+    try {
+      const { extractScanMetadata } = await import("@/lib/scan-extract");
+      const { data, found, missing } = await extractScanMetadata(f);
+      if (found.length > 0) {
+        setForm((prev) => ({
+          ...prev,
+          patient_name: data.patient_name ?? prev.patient_name,
+          patient_phone: data.patient_phone ?? prev.patient_phone,
+          patient_age: data.patient_age ?? prev.patient_age,
+          patient_gender: data.patient_gender ?? prev.patient_gender,
+          tooth_number: data.tooth_number ?? prev.tooth_number,
+          teeth_count: data.teeth_count ?? prev.teeth_count,
+          shade: data.shade ?? prev.shade,
+        }));
+        if (data.shade) setShadeConfirmed(false);
+        toast.success(`تم استخراج وتعبئة: ${found.join("، ")}`, { id: tid });
+        if (missing.length > 0) {
+          toast.info(`تعذّر العثور على: ${missing.join("، ")} — الرجاء إدخالها يدوياً`);
+        }
+      } else {
+        toast.warning("لم يتم العثور على بيانات قابلة للاستخراج في ملف المسح — الرجاء تعبئة النموذج يدوياً", { id: tid });
+      }
+    } catch {
+      toast.error("تعذّرت قراءة ملف المسح — الرجاء تعبئة النموذج يدوياً", { id: tid });
+    } finally {
+      setExtracting(false);
+    }
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     // Prevent re-saving the exact same case data that was already saved/sent.
