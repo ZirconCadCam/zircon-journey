@@ -472,6 +472,13 @@ function NewSlotCase() {
                   }} />
               </label>
             ) : (
+              <>
+              {extracting && (
+                <div className="flex items-center gap-2 rounded-lg border border-gold/40 bg-gold/10 px-3 py-2 text-xs font-bold text-gold">
+                  <Loader2 className="size-3.5 animate-spin" />
+                  جارٍ استخراج بيانات المريض من الملف...
+                </div>
+              )}
               <div className="rounded-xl border border-border p-3 bg-muted/30 flex items-stretch gap-3">
                 {/* Vertical progress bar (fills bottom→top while uploading) */}
                 {submitting && (
