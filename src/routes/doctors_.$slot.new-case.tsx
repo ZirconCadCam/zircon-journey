@@ -458,17 +458,26 @@ function NewSlotCase() {
             </p>
 
             {!scan ? (
-              <label className="block cursor-pointer rounded-xl border-2 border-dashed border-border hover:border-gold transition p-6 text-center">
+              <label
+                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragOver(false);
+                  const f = e.dataTransfer.files?.[0];
+                  if (f) handleScanFile(f);
+                }}
+                className={`block cursor-pointer rounded-xl border-2 border-dashed transition p-6 text-center ${
+                  dragOver ? "border-gold bg-gold/10" : "border-border hover:border-gold"
+                }`}>
                 <Upload className="size-7 mx-auto mb-2 text-muted-foreground" />
                 <div className="text-sm font-bold">اختر ملف المسح (.zip)</div>
-                <div className="text-[11px] text-muted-foreground mt-1">أو اسحبه هنا</div>
+                <div className="text-[11px] text-muted-foreground mt-1">أو اسحبه هنا — وسنملأ النموذج تلقائياً</div>
                 <input ref={fileInput} type="file" className="hidden"
                   accept=".zip,application/zip,application/x-zip-compressed"
                   onChange={e => {
                     const f = e.target.files?.[0];
-                    if (!f) return;
-                    if (!/\.zip$/i.test(f.name)) { toast.error("الرجاء اختيار ملف بصيغة .zip فقط"); return; }
-                    setScan(f);
+                    if (f) handleScanFile(f);
                   }} />
               </label>
             ) : (
