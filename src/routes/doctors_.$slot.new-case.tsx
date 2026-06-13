@@ -56,6 +56,8 @@ function NewSlotCase() {
   const uploadCanceled = useRef(false);
   const [uploadPaused, setUploadPaused] = useState(false);
   const [shadeConfirmed, setShadeConfirmed] = useState(false);
+  const [extracting, setExtracting] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
 
   // Signature of the case data currently in the form (incl. chosen scan).
   // Used to fade the save button once an identical case is already saved.
