@@ -80,6 +80,7 @@ interface Case {
   revision_design_file_path?: string | null;
   revision_design_file_name?: string | null;
   revision_design_done?: boolean | null;
+  tech_exec_notes?: string | null;
   shade_confirmed_doctor?: boolean | null;
   shade_confirmed_designer?: boolean | null;
   shade_confirmed_technician?: boolean | null;
