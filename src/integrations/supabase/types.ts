@@ -597,6 +597,7 @@ export type Database = {
           shipped_to_doctor: boolean
           status: string
           tech_data_sent_to_secretary: boolean
+          tech_exec_notes: string | null
           teeth_count: string | null
           temporary_delivered: boolean
           tooth_number: string | null
@@ -666,6 +667,7 @@ export type Database = {
           shipped_to_doctor?: boolean
           status?: string
           tech_data_sent_to_secretary?: boolean
+          tech_exec_notes?: string | null
           teeth_count?: string | null
           temporary_delivered?: boolean
           tooth_number?: string | null
@@ -735,6 +737,7 @@ export type Database = {
           shipped_to_doctor?: boolean
           status?: string
           tech_data_sent_to_secretary?: boolean
+          tech_exec_notes?: string | null
           teeth_count?: string | null
           temporary_delivered?: boolean
           tooth_number?: string | null

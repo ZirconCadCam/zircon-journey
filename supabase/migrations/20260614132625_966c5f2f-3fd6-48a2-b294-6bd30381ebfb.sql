@@ -1,0 +1,1 @@
+ALTER TABLE public.slot_cases ADD COLUMN IF NOT EXISTS tech_exec_notes text;

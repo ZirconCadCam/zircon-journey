@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { CaseChatButton } from "@/components/case-chat-dialog";
 import { ZipViewerDialog } from "@/components/zip-viewer-dialog";
+import { TechRevisionPanel } from "@/components/tech-revision-panel";
 
 /** Inject hex overrides for our oklch CSS variables into html2canvas's cloned doc. */
 const H2C_ONCLONE = (doc: Document) => {
@@ -80,6 +81,7 @@ interface Case {
   revision_design_file_path?: string | null;
   revision_design_file_name?: string | null;
   revision_design_done?: boolean | null;
+  tech_exec_notes?: string | null;
   shade_confirmed_doctor?: boolean | null;
   shade_confirmed_designer?: boolean | null;
   shade_confirmed_technician?: boolean | null;
@@ -985,6 +987,18 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                           </div>
                           <div className="whitespace-pre-wrap text-foreground/90">{textRevisions[c.case_code]}</div>
                         </div>
+                      )}
+
+                      {actor === "technician" && (
+                        <TechRevisionPanel
+                          caseId={c.id}
+                          caseCode={c.case_code}
+                          textRevision={textRevisions[c.case_code]}
+                          revisionFilePath={c.revision_design_file_path}
+                          revisionFileName={c.revision_design_file_name}
+                          execNotes={c.tech_exec_notes}
+                          hasRevision={!!(c.revision_design_file_path || c.revision_design_done || textRevisions[c.case_code])}
+                        />
                       )}
 
 
