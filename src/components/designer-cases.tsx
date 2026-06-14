@@ -111,6 +111,9 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
   const [zipPreview, setZipPreview] = useState<{ url: string; name: string | null } | null>(null);
   // Visual progress for the "إرسال إلى تلجرام" action (per-case).
   const [tgProgress, setTgProgress] = useState<{ id: string; pct: number; label: string; error?: boolean } | null>(null);
+  // Designer → technician text revisions, keyed by case_code (shown in the case card).
+  const [textRevisions, setTextRevisions] = useState<Record<string, string>>({});
+
 
   useEffect(() => {
     (async () => {
@@ -228,6 +231,49 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     }
     seenIds.current = currentIds;
   }, [visibleForActor, loading, actor, doctorMap]);
+
+  /* ------------------------------------------------------------------
+   * Load designer → technician text revisions for the visible cases so the
+   * technician can read them directly inside the case data (no chat needed).
+   * ------------------------------------------------------------------ */
+  useEffect(() => {
+    if (loading) return;
+    if (actor !== "technician" && actor !== "admin") return;
+    const codes = visibleForActor.map(c => c.case_code);
+    if (codes.length === 0) return;
+    let active = true;
+    (async () => {
+      // Conversations that involve both designer and technician.
+      const { data: convs } = await supabase.from("chat_conversations")
+        .select("id, participants");
+      const convIds = ((convs ?? []) as any[])
+        .filter(cv => Array.isArray(cv.participants)
+          && cv.participants.includes("designer") && cv.participants.includes("technician"))
+        .map(cv => cv.id);
+      if (convIds.length === 0) return;
+      const { data: msgs } = await supabase.from("chat_messages")
+        .select("content, sender, conversation_id, message_type, created_at")
+        .eq("message_type", "text")
+        .eq("sender", "designer")
+        .in("conversation_id", convIds)
+        .order("created_at", { ascending: true })
+        .limit(800);
+      const map: Record<string, string> = {};
+      for (const m of (msgs ?? []) as any[]) {
+        const content = (m.content || "").trim();
+        if (!content) continue;
+        const isRev = /تعديل|revision/i.test(content);
+        if (!isRev) continue;
+        for (const code of codes) {
+          if (content.includes(code)) map[code] = content;
+        }
+      }
+      if (active) setTextRevisions(map);
+    })();
+    return () => { active = false; };
+  }, [visibleForActor, loading, actor]);
+
+
 
 
   async function downloadScan(c: Case) {
@@ -931,6 +977,16 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                           {c.notes}
                         </div>
                       )}
+
+                      {(actor === "technician" || actor === "admin") && textRevisions[c.case_code] && (
+                        <div className="mt-3 text-xs bg-amber-500/10 border border-amber-500/40 rounded-lg p-2.5">
+                          <div className="font-bold text-amber-700 dark:text-amber-400 mb-1 flex items-center gap-1.5">
+                            <RefreshCw className="size-3.5" /> تعديل المصمم النصي
+                          </div>
+                          <div className="whitespace-pre-wrap text-foreground/90">{textRevisions[c.case_code]}</div>
+                        </div>
+                      )}
+
 
                       {c.scan_path && (
                         <div className="mt-3 space-y-2">
