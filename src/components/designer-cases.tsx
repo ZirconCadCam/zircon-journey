@@ -989,6 +989,18 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                         </div>
                       )}
 
+                      {actor === "technician" && (
+                        <TechRevisionPanel
+                          caseId={c.id}
+                          caseCode={c.case_code}
+                          textRevision={textRevisions[c.case_code]}
+                          revisionFilePath={c.revision_design_file_path}
+                          revisionFileName={c.revision_design_file_name}
+                          execNotes={c.tech_exec_notes}
+                          hasRevision={!!(c.revision_design_file_path || c.revision_design_done || textRevisions[c.case_code])}
+                        />
+                      )}
+
 
                       {c.scan_path && (
                         <div className="mt-3 space-y-2">
