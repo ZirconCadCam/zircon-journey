@@ -229,7 +229,6 @@ export function CaseShadeConfirm({
 }) {
   const [saving, setSaving] = useState(false);
   const docOk = !!doctorConfirmed;
-  const desOk = !!designerConfirmed;
   const techOk = !!technicianConfirmed;
 
   if (!shade) return null;
