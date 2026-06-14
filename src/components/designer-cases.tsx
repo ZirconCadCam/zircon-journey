@@ -111,6 +111,9 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
   const [zipPreview, setZipPreview] = useState<{ url: string; name: string | null } | null>(null);
   // Visual progress for the "إرسال إلى تلجرام" action (per-case).
   const [tgProgress, setTgProgress] = useState<{ id: string; pct: number; label: string; error?: boolean } | null>(null);
+  // Designer → technician text revisions, keyed by case_code (shown in the case card).
+  const [textRevisions, setTextRevisions] = useState<Record<string, string>>({});
+
 
   useEffect(() => {
     (async () => {
