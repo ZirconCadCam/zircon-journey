@@ -67,7 +67,7 @@ export function TechRevisionPanel({
   async function saveNotes() {
     setSaving(true);
     const { error } = await supabase.from("slot_cases")
-      .update({ tech_exec_notes: notes.trim() || null }).eq("id", caseId);
+      .update({ tech_exec_notes: notes.trim() || null } as never).eq("id", caseId);
     setSaving(false);
     if (error) { toast.error("تعذر حفظ الملاحظات"); return; }
     toast.success("تم حفظ الملاحظات التنفيذية");
