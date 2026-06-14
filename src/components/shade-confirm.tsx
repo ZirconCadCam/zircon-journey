@@ -259,13 +259,6 @@ export function CaseShadeConfirm({
         {actor === "doctor" && (
           <ConfirmButton confirmed={docOk} onClick={() => confirm("doctor")} />
         )}
-        {actor === "designer" && (
-          <ConfirmButton
-            confirmed={desOk}
-            disabled={!docOk}
-            onClick={() => confirm("designer")}
-          />
-        )}
         {actor === "technician" && (
           <ConfirmButton
             confirmed={techOk}
@@ -275,14 +268,16 @@ export function CaseShadeConfirm({
         )}
       </div>
 
-      {/* Confirmation chain status (visible to everyone) */}
+      {/* Confirmation chain status (visible to everyone).
+          Color choice/confirmation is the doctor's responsibility; the
+          technician confirms the doctor's chosen shade. The designer is not
+          involved in shade confirmation. */}
       <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-bold">
         <StatusChip label={ROLE_AR.doctor} ok={docOk} />
-        <StatusChip label={ROLE_AR.designer} ok={desOk} pending={!docOk} />
         <StatusChip label={ROLE_AR.technician} ok={techOk} pending={!docOk} />
       </div>
 
-      {interactive && (actor === "designer" || actor === "technician") && !docOk && (
+      {interactive && actor === "technician" && !docOk && (
         <div className="text-[10px] text-amber-700 font-bold">
           لا يمكن تأكيد اللون قبل أن يؤكده الطبيب.
         </div>
