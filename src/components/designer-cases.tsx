@@ -232,6 +232,49 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     seenIds.current = currentIds;
   }, [visibleForActor, loading, actor, doctorMap]);
 
+  /* ------------------------------------------------------------------
+   * Load designer → technician text revisions for the visible cases so the
+   * technician can read them directly inside the case data (no chat needed).
+   * ------------------------------------------------------------------ */
+  useEffect(() => {
+    if (loading) return;
+    if (actor !== "technician" && actor !== "admin") return;
+    const codes = visibleForActor.map(c => c.case_code);
+    if (codes.length === 0) return;
+    let active = true;
+    (async () => {
+      // Conversations that involve both designer and technician.
+      const { data: convs } = await supabase.from("chat_conversations")
+        .select("id, participants");
+      const convIds = ((convs ?? []) as any[])
+        .filter(cv => Array.isArray(cv.participants)
+          && cv.participants.includes("designer") && cv.participants.includes("technician"))
+        .map(cv => cv.id);
+      if (convIds.length === 0) return;
+      const { data: msgs } = await supabase.from("chat_messages")
+        .select("content, sender, conversation_id, message_type, created_at")
+        .eq("message_type", "text")
+        .eq("sender", "designer")
+        .in("conversation_id", convIds)
+        .order("created_at", { ascending: true })
+        .limit(800);
+      const map: Record<string, string> = {};
+      for (const m of (msgs ?? []) as any[]) {
+        const content = (m.content || "").trim();
+        if (!content) continue;
+        const isRev = /تعديل|revision/i.test(content);
+        if (!isRev) continue;
+        for (const code of codes) {
+          if (content.includes(code)) map[code] = content;
+        }
+      }
+      if (active) setTextRevisions(map);
+    })();
+    return () => { active = false; };
+  }, [visibleForActor, loading, actor]);
+
+
+
 
   async function downloadScan(c: Case) {
     setBusyId(c.id);
