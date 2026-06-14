@@ -978,6 +978,16 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                         </div>
                       )}
 
+                      {(actor === "technician" || actor === "admin") && textRevisions[c.case_code] && (
+                        <div className="mt-3 text-xs bg-amber-500/10 border border-amber-500/40 rounded-lg p-2.5">
+                          <div className="font-bold text-amber-700 dark:text-amber-400 mb-1 flex items-center gap-1.5">
+                            <RefreshCw className="size-3.5" /> تعديل المصمم النصي
+                          </div>
+                          <div className="whitespace-pre-wrap text-foreground/90">{textRevisions[c.case_code]}</div>
+                        </div>
+                      )}
+
+
                       {c.scan_path && (
                         <div className="mt-3 space-y-2">
                           <button
