@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { CaseChatButton } from "@/components/case-chat-dialog";
 import { ZipViewerDialog } from "@/components/zip-viewer-dialog";
+import { TechRevisionPanel } from "@/components/tech-revision-panel";
 
 /** Inject hex overrides for our oklch CSS variables into html2canvas's cloned doc. */
 const H2C_ONCLONE = (doc: Document) => {
