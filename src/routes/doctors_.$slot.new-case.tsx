@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowRight, Sparkles, Upload, FileText, X, Loader2, ScanLine, Plus, Pause, Play } from "lucide-react";
+import { ArrowRight, Sparkles, Upload, FileText, X, Loader2, ScanLine, Plus, Pause, Play, ImagePlus } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { ToothQuadrantPicker } from "@/components/tooth-quadrant-picker";
@@ -58,10 +58,14 @@ function NewSlotCase() {
   const [shadeConfirmed, setShadeConfirmed] = useState(false);
   const [extracting, setExtracting] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  // Images attached inside the "ملاحظات إضافية" editor (clinical photos, refs…)
+  const [noteImages, setNoteImages] = useState<{ url: string; name: string }[]>([]);
+  const [noteImgUploading, setNoteImgUploading] = useState(false);
+  const noteImgInput = useRef<HTMLInputElement>(null);
 
   // Signature of the case data currently in the form (incl. chosen scan).
   // Used to fade the save button once an identical case is already saved.
-  const currentSig = JSON.stringify(form) + "|" + (scan ? `${scan.name}:${scan.size}` : "");
+  const currentSig = JSON.stringify(form) + "|" + (scan ? `${scan.name}:${scan.size}` : "") + "|" + noteImages.map(i => i.url).join(",");
   const alreadySaved = savedOnce && savedSig === currentSig;
 
   function resetForNewCase() {
@@ -71,6 +75,8 @@ function NewSlotCase() {
     });
     setScan(null);
     setScanProgress(0);
+    setNoteImages([]);
+    if (noteImgInput.current) noteImgInput.current.value = "";
     setErrors({});
     setSavedOnce(false);
     setSavedSig(null);
@@ -132,6 +138,37 @@ function NewSlotCase() {
       toast.error("تعذّرت قراءة ملف المسح — الرجاء تعبئة النموذج يدوياً", { id: tid });
     } finally {
       setExtracting(false);
+    }
+  }
+
+  /** Upload one or more images attached inside the notes editor. */
+  async function handleNoteImages(files: FileList | File[]) {
+    const list = Array.from(files).filter((f) => /^image\//.test(f.type) || /\.(png|jpe?g|gif|webp|heic|bmp)$/i.test(f.name));
+    if (list.length === 0) { toast.error("الرجاء اختيار ملف صورة صالح"); return; }
+    setNoteImgUploading(true);
+    const tid = toast.loading("جارِ رفع الصورة…");
+    try {
+      const uploaded: { url: string; name: string }[] = [];
+      for (const f of list) {
+        const ext = (f.name.match(/\.([a-zA-Z0-9]+)$/)?.[1] || "jpg").toLowerCase();
+        const rand = Math.random().toString(36).slice(2, 8);
+        const path = `${slot}/note-images/${Date.now()}-${rand}.${ext}`;
+        const { error } = await supabase.storage.from("doctor-files").upload(path, f, {
+          contentType: f.type || "image/jpeg", upsert: false,
+        });
+        if (error) throw error;
+        const { data: pub } = supabase.storage.from("doctor-files").getPublicUrl(path);
+        uploaded.push({ url: pub.publicUrl, name: f.name });
+      }
+      setNoteImages((prev) => [...prev, ...uploaded]);
+      setSavedOnce(false);
+      setSavedSig(null);
+      toast.success(`تم رفع ${uploaded.length} صورة`, { id: tid });
+    } catch {
+      toast.error("تعذّر رفع الصورة — حاول مرة أخرى", { id: tid });
+    } finally {
+      setNoteImgUploading(false);
+      if (noteImgInput.current) noteImgInput.current.value = "";
     }
   }
 
@@ -263,6 +300,7 @@ function NewSlotCase() {
         shade_confirmed_doctor: shadeConfirmed,
         case_type: form.case_type || null,
         notes: form.notes.trim() || null,
+        notes_images: noteImages,
         scan_path, scan_name, scan_size, scan_mime,
         idempotency_key,
         // After saving and notifying the designer, the case is automatically
@@ -444,6 +482,36 @@ function NewSlotCase() {
                 <textarea rows={4} className="zinput resize-none" value={form.notes}
                   onChange={e=>setForm({...form,notes:e.target.value})}
                   placeholder="أي ملاحظات سريرية، تعليمات للمختبر، أو متطلبات خاصة..." />
+
+                {/* Image attachment tool inside the notes editor */}
+                <div className="mt-2 flex items-center gap-2 flex-wrap">
+                  <button type="button" onClick={() => noteImgInput.current?.click()}
+                    disabled={noteImgUploading}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold hover:border-gold transition disabled:opacity-60">
+                    {noteImgUploading
+                      ? <><Loader2 className="size-3.5 animate-spin" /> جارِ الرفع…</>
+                      : <><ImagePlus className="size-3.5 text-gold" /> إضافة صورة للملاحظات</>}
+                  </button>
+                  <span className="text-[11px] text-muted-foreground">تظهر للمصمم ضمن بيانات الحالة</span>
+                  <input ref={noteImgInput} type="file" accept="image/*" multiple className="hidden"
+                    onChange={(e) => { if (e.target.files?.length) handleNoteImages(e.target.files); }} />
+                </div>
+
+                {noteImages.length > 0 && (
+                  <div className="mt-3 grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {noteImages.map((img, i) => (
+                      <div key={img.url} className="relative group rounded-lg overflow-hidden border border-border">
+                        <img src={img.url} alt={img.name} className="w-full h-20 object-cover" />
+                        <button type="button"
+                          onClick={() => setNoteImages((prev) => prev.filter((_, idx) => idx !== i))}
+                          className="absolute top-1 left-1 rounded-md bg-background/80 p-1 opacity-0 group-hover:opacity-100 transition hover:bg-destructive hover:text-destructive-foreground"
+                          aria-label="إزالة الصورة">
+                          <X className="size-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </Field>
             </div>
           </section>

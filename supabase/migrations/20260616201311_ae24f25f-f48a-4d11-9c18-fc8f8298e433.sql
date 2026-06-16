@@ -1,0 +1,1 @@
+ALTER TABLE public.slot_cases ADD COLUMN IF NOT EXISTS notes_images jsonb NOT NULL DEFAULT '[]'::jsonb;

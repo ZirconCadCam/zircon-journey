@@ -56,6 +56,7 @@ interface Case {
   shade: string | null;
   case_type: string | null;
   notes: string | null;
+  notes_images?: { url: string; name: string }[] | null;
   status: string;
   created_at: string;
   scan_path: string | null;
@@ -977,6 +978,20 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                       {c.notes && (
                         <div className="mt-3 text-xs bg-muted/40 rounded-lg p-2.5 whitespace-pre-wrap">
                           {c.notes}
+                        </div>
+                      )}
+
+                      {Array.isArray(c.notes_images) && c.notes_images.length > 0 && (
+                        <div className="mt-3">
+                          <div className="text-[11px] font-bold text-muted-foreground mb-1.5">صور الملاحظات</div>
+                          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                            {c.notes_images.map((img) => (
+                              <a key={img.url} href={img.url} target="_blank" rel="noreferrer"
+                                className="block rounded-lg overflow-hidden border border-border hover:border-gold transition">
+                                <img src={img.url} alt={img.name} className="w-full h-20 object-cover" loading="lazy" />
+                              </a>
+                            ))}
+                          </div>
                         </div>
                       )}
 
