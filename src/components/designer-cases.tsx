@@ -981,6 +981,20 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                         </div>
                       )}
 
+                      {Array.isArray(c.notes_images) && c.notes_images.length > 0 && (
+                        <div className="mt-3">
+                          <div className="text-[11px] font-bold text-muted-foreground mb-1.5">صور الملاحظات</div>
+                          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                            {c.notes_images.map((img) => (
+                              <a key={img.url} href={img.url} target="_blank" rel="noreferrer"
+                                className="block rounded-lg overflow-hidden border border-border hover:border-gold transition">
+                                <img src={img.url} alt={img.name} className="w-full h-20 object-cover" loading="lazy" />
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       {(actor === "technician" || actor === "admin") && textRevisions[c.case_code] && (
                         <div className="mt-3 text-xs bg-amber-500/10 border border-amber-500/40 rounded-lg p-2.5">
                           <div className="font-bold text-amber-700 dark:text-amber-400 mb-1 flex items-center gap-1.5">
