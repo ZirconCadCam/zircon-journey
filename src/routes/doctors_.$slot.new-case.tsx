@@ -65,7 +65,7 @@ function NewSlotCase() {
 
   // Signature of the case data currently in the form (incl. chosen scan).
   // Used to fade the save button once an identical case is already saved.
-  const currentSig = JSON.stringify(form) + "|" + (scan ? `${scan.name}:${scan.size}` : "");
+  const currentSig = JSON.stringify(form) + "|" + (scan ? `${scan.name}:${scan.size}` : "") + "|" + noteImages.map(i => i.url).join(",");
   const alreadySaved = savedOnce && savedSig === currentSig;
 
   function resetForNewCase() {
