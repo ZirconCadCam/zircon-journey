@@ -300,6 +300,7 @@ function NewSlotCase() {
         shade_confirmed_doctor: shadeConfirmed,
         case_type: form.case_type || null,
         notes: form.notes.trim() || null,
+        notes_images: noteImages,
         scan_path, scan_name, scan_size, scan_mime,
         idempotency_key,
         // After saving and notifying the designer, the case is automatically
