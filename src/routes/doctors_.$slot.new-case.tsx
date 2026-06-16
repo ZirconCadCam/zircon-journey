@@ -75,6 +75,8 @@ function NewSlotCase() {
     });
     setScan(null);
     setScanProgress(0);
+    setNoteImages([]);
+    if (noteImgInput.current) noteImgInput.current.value = "";
     setErrors({});
     setSavedOnce(false);
     setSavedSig(null);
