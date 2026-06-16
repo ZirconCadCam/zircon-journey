@@ -58,6 +58,10 @@ function NewSlotCase() {
   const [shadeConfirmed, setShadeConfirmed] = useState(false);
   const [extracting, setExtracting] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  // Images attached inside the "ملاحظات إضافية" editor (clinical photos, refs…)
+  const [noteImages, setNoteImages] = useState<{ url: string; name: string }[]>([]);
+  const [noteImgUploading, setNoteImgUploading] = useState(false);
+  const noteImgInput = useRef<HTMLInputElement>(null);
 
   // Signature of the case data currently in the form (incl. chosen scan).
   // Used to fade the save button once an identical case is already saved.
