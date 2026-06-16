@@ -56,6 +56,7 @@ interface Case {
   shade: string | null;
   case_type: string | null;
   notes: string | null;
+  notes_images?: { url: string; name: string }[] | null;
   status: string;
   created_at: string;
   scan_path: string | null;
