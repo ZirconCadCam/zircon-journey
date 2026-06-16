@@ -482,6 +482,36 @@ function NewSlotCase() {
                 <textarea rows={4} className="zinput resize-none" value={form.notes}
                   onChange={e=>setForm({...form,notes:e.target.value})}
                   placeholder="أي ملاحظات سريرية، تعليمات للمختبر، أو متطلبات خاصة..." />
+
+                {/* Image attachment tool inside the notes editor */}
+                <div className="mt-2 flex items-center gap-2 flex-wrap">
+                  <button type="button" onClick={() => noteImgInput.current?.click()}
+                    disabled={noteImgUploading}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold hover:border-gold transition disabled:opacity-60">
+                    {noteImgUploading
+                      ? <><Loader2 className="size-3.5 animate-spin" /> جارِ الرفع…</>
+                      : <><ImagePlus className="size-3.5 text-gold" /> إضافة صورة للملاحظات</>}
+                  </button>
+                  <span className="text-[11px] text-muted-foreground">تظهر للمصمم ضمن بيانات الحالة</span>
+                  <input ref={noteImgInput} type="file" accept="image/*" multiple className="hidden"
+                    onChange={(e) => { if (e.target.files?.length) handleNoteImages(e.target.files); }} />
+                </div>
+
+                {noteImages.length > 0 && (
+                  <div className="mt-3 grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {noteImages.map((img, i) => (
+                      <div key={img.url} className="relative group rounded-lg overflow-hidden border border-border">
+                        <img src={img.url} alt={img.name} className="w-full h-20 object-cover" />
+                        <button type="button"
+                          onClick={() => setNoteImages((prev) => prev.filter((_, idx) => idx !== i))}
+                          className="absolute top-1 left-1 rounded-md bg-background/80 p-1 opacity-0 group-hover:opacity-100 transition hover:bg-destructive hover:text-destructive-foreground"
+                          aria-label="إزالة الصورة">
+                          <X className="size-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </Field>
             </div>
           </section>
