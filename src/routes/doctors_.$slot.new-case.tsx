@@ -171,6 +171,8 @@ function NewSlotCase() {
       if (noteImgInput.current) noteImgInput.current.value = "";
     }
   }
+
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     // Prevent re-saving the exact same case data that was already saved/sent.
     if (alreadySaved) {
