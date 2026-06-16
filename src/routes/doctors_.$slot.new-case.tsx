@@ -141,7 +141,36 @@ function NewSlotCase() {
     }
   }
 
-  async function submit(e: React.FormEvent) {
+  /** Upload one or more images attached inside the notes editor. */
+  async function handleNoteImages(files: FileList | File[]) {
+    const list = Array.from(files).filter((f) => /^image\//.test(f.type) || /\.(png|jpe?g|gif|webp|heic|bmp)$/i.test(f.name));
+    if (list.length === 0) { toast.error("الرجاء اختيار ملف صورة صالح"); return; }
+    setNoteImgUploading(true);
+    const tid = toast.loading("جارِ رفع الصورة…");
+    try {
+      const uploaded: { url: string; name: string }[] = [];
+      for (const f of list) {
+        const ext = (f.name.match(/\.([a-zA-Z0-9]+)$/)?.[1] || "jpg").toLowerCase();
+        const rand = Math.random().toString(36).slice(2, 8);
+        const path = `${slot}/note-images/${Date.now()}-${rand}.${ext}`;
+        const { error } = await supabase.storage.from("doctor-files").upload(path, f, {
+          contentType: f.type || "image/jpeg", upsert: false,
+        });
+        if (error) throw error;
+        const { data: pub } = supabase.storage.from("doctor-files").getPublicUrl(path);
+        uploaded.push({ url: pub.publicUrl, name: f.name });
+      }
+      setNoteImages((prev) => [...prev, ...uploaded]);
+      setSavedOnce(false);
+      setSavedSig(null);
+      toast.success(`تم رفع ${uploaded.length} صورة`, { id: tid });
+    } catch {
+      toast.error("تعذّر رفع الصورة — حاول مرة أخرى", { id: tid });
+    } finally {
+      setNoteImgUploading(false);
+      if (noteImgInput.current) noteImgInput.current.value = "";
+    }
+  }
     e.preventDefault();
     // Prevent re-saving the exact same case data that was already saved/sent.
     if (alreadySaved) {
