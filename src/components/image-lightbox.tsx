@@ -98,6 +98,14 @@ export function ImageLightbox({
           </button>
           <button
             type="button"
+            onClick={handleDownload}
+            className="rounded-lg p-2 hover:bg-white/15 transition"
+            title="تحميل"
+          >
+            <Download className="size-5" />
+          </button>
+          <button
+            type="button"
             onClick={onClose}
             className="rounded-lg p-2 hover:bg-white/15 transition"
             title="إغلاق"
