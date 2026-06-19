@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download } from "lucide-react";
 
 export type LightboxImage = { url: string; name?: string };
 
@@ -19,6 +19,23 @@ export function ImageLightbox({
 
   const total = images.length;
   const current = images[index];
+
+  const handleDownload = useCallback(async () => {
+    try {
+      const res = await fetch(current.url, { mode: "cors" });
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = current.name || "صورة";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      window.open(current.url, "_blank");
+    }
+  }, [current]);
 
   const go = useCallback(
     (dir: number) => {
@@ -78,6 +95,14 @@ export function ImageLightbox({
             title="تكبير"
           >
             <ZoomIn className="size-5" />
+          </button>
+          <button
+            type="button"
+            onClick={handleDownload}
+            className="rounded-lg p-2 hover:bg-white/15 transition"
+            title="تحميل"
+          >
+            <Download className="size-5" />
           </button>
           <button
             type="button"
