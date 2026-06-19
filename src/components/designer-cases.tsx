@@ -5,7 +5,7 @@ import {
   Stethoscope, FileText, Download, Share2, Loader2,
   ScanLine, User, Phone, Hash, ClipboardList, Calendar,
   Archive, MoreVertical, FileArchive, Pin, PinOff, Trash2, ClipboardCheck, Eye,
-  RefreshCw, Send,
+  RefreshCw, Send, ZoomIn,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
@@ -13,6 +13,7 @@ import {
 import { CaseChatButton } from "@/components/case-chat-dialog";
 import { ZipViewerDialog } from "@/components/zip-viewer-dialog";
 import { TechRevisionPanel } from "@/components/tech-revision-panel";
+import { ImageLightbox } from "@/components/image-lightbox";
 
 /** Inject hex overrides for our oklch CSS variables into html2canvas's cloned doc. */
 const H2C_ONCLONE = (doc: Document) => {
@@ -116,6 +117,8 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
   const [tgProgress, setTgProgress] = useState<{ id: string; pct: number; label: string; error?: boolean } | null>(null);
   // Designer → technician text revisions, keyed by case_code (shown in the case card).
   const [textRevisions, setTextRevisions] = useState<Record<string, string>>({});
+  // Lightbox state for notes images: which case + which image index is open.
+  const [lightbox, setLightbox] = useState<{ images: { url: string; name: string }[]; index: number } | null>(null);
 
 
   useEffect(() => {
@@ -985,11 +988,19 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                         <div className="mt-3">
                           <div className="text-[11px] font-bold text-muted-foreground mb-1.5">صور الملاحظات</div>
                           <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                            {c.notes_images.map((img) => (
-                              <a key={img.url} href={img.url} target="_blank" rel="noreferrer"
-                                className="block rounded-lg overflow-hidden border border-border hover:border-gold transition">
+                            {c.notes_images.map((img, idx) => (
+                              <button
+                                key={img.url}
+                                type="button"
+                                onClick={() => setLightbox({ images: c.notes_images as { url: string; name: string }[], index: idx })}
+                                className="group relative block rounded-lg overflow-hidden border border-border hover:border-gold transition cursor-zoom-in"
+                                title="انقر للتكبير"
+                              >
                                 <img src={img.url} alt={img.name} className="w-full h-20 object-cover" loading="lazy" />
-                              </a>
+                                <span className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition">
+                                  <ZoomIn className="size-5 text-white opacity-0 group-hover:opacity-100 transition" />
+                                </span>
+                              </button>
                             ))}
                           </div>
                         </div>
@@ -1205,6 +1216,15 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
         fileName={zipPreview?.name ?? null}
         onOpenChange={(v) => { if (!v) setZipPreview(null); }}
       />
+
+      {lightbox && (
+        <ImageLightbox
+          images={lightbox.images}
+          index={lightbox.index}
+          onClose={() => setLightbox(null)}
+          onIndexChange={(i) => setLightbox((lb) => (lb ? { ...lb, index: i } : lb))}
+        />
+      )}
     </div>
   );
 }
