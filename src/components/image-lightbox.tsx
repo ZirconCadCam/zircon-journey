@@ -20,6 +20,23 @@ export function ImageLightbox({
   const total = images.length;
   const current = images[index];
 
+  const handleDownload = useCallback(async () => {
+    try {
+      const res = await fetch(current.url, { mode: "cors" });
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = current.name || "صورة";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      window.open(current.url, "_blank");
+    }
+  }, [current]);
+
   const go = useCallback(
     (dir: number) => {
       setZoom(1);
