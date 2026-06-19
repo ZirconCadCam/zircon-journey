@@ -1216,6 +1216,15 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
         fileName={zipPreview?.name ?? null}
         onOpenChange={(v) => { if (!v) setZipPreview(null); }}
       />
+
+      {lightbox && (
+        <ImageLightbox
+          images={lightbox.images}
+          index={lightbox.index}
+          onClose={() => setLightbox(null)}
+          onIndexChange={(i) => setLightbox((lb) => (lb ? { ...lb, index: i } : lb))}
+        />
+      )}
     </div>
   );
 }
