@@ -988,11 +988,19 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                         <div className="mt-3">
                           <div className="text-[11px] font-bold text-muted-foreground mb-1.5">صور الملاحظات</div>
                           <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                            {c.notes_images.map((img) => (
-                              <a key={img.url} href={img.url} target="_blank" rel="noreferrer"
-                                className="block rounded-lg overflow-hidden border border-border hover:border-gold transition">
+                            {c.notes_images.map((img, idx) => (
+                              <button
+                                key={img.url}
+                                type="button"
+                                onClick={() => setLightbox({ images: c.notes_images as { url: string; name: string }[], index: idx })}
+                                className="group relative block rounded-lg overflow-hidden border border-border hover:border-gold transition cursor-zoom-in"
+                                title="انقر للتكبير"
+                              >
                                 <img src={img.url} alt={img.name} className="w-full h-20 object-cover" loading="lazy" />
-                              </a>
+                                <span className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition">
+                                  <ZoomIn className="size-5 text-white opacity-0 group-hover:opacity-100 transition" />
+                                </span>
+                              </button>
                             ))}
                           </div>
                         </div>
