@@ -117,6 +117,8 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
   const [tgProgress, setTgProgress] = useState<{ id: string; pct: number; label: string; error?: boolean } | null>(null);
   // Designer → technician text revisions, keyed by case_code (shown in the case card).
   const [textRevisions, setTextRevisions] = useState<Record<string, string>>({});
+  // Lightbox state for notes images: which case + which image index is open.
+  const [lightbox, setLightbox] = useState<{ images: { url: string; name: string }[]; index: number } | null>(null);
 
 
   useEffect(() => {
