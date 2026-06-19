@@ -22,16 +22,26 @@ export function ImageLightbox({
 
   const handleDownload = useCallback(async () => {
     try {
-      const res = await fetch(current.url, { mode: "cors" });
+      const res = await fetch(current.url, { mode: "cors", cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = current.name || "صورة";
+      let filename = current.name || "صورة";
+      const hasExt = /\.[a-zA-Z0-9]{1,6}$/i.test(filename);
+      if (!hasExt) {
+        const mimeExt = blob.type?.split("/")[1];
+        if (mimeExt && mimeExt !== "octet-stream") filename += `.${mimeExt}`;
+        else filename += ".jpg";
+      }
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 100);
     } catch {
       window.open(current.url, "_blank");
     }
