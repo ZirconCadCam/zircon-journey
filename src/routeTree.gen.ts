@@ -23,6 +23,7 @@ import { Route as ApiTtsRouteImport } from './routes/api/tts'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminArchiveRouteImport } from './routes/admin.archive'
 import { Route as DoctorsSlotNewCaseRouteImport } from './routes/doctors_.$slot.new-case'
+import { Route as ApiPublicPushDispatchRouteImport } from './routes/api/public/push-dispatch'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -94,6 +95,11 @@ const DoctorsSlotNewCaseRoute = DoctorsSlotNewCaseRouteImport.update({
   path: '/doctors/$slot/new-case',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicPushDispatchRoute = ApiPublicPushDispatchRouteImport.update({
+  id: '/api/public/push-dispatch',
+  path: '/api/public/push-dispatch',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -109,6 +115,7 @@ export interface FileRoutesByFullPath {
   '/staff/$role': typeof StaffRoleRoute
   '/doctors/': typeof DoctorsIndexRoute
   '/help/': typeof HelpIndexRoute
+  '/api/public/push-dispatch': typeof ApiPublicPushDispatchRoute
   '/doctors/$slot/new-case': typeof DoctorsSlotNewCaseRoute
 }
 export interface FileRoutesByTo {
@@ -125,6 +132,7 @@ export interface FileRoutesByTo {
   '/staff/$role': typeof StaffRoleRoute
   '/doctors': typeof DoctorsIndexRoute
   '/help': typeof HelpIndexRoute
+  '/api/public/push-dispatch': typeof ApiPublicPushDispatchRoute
   '/doctors/$slot/new-case': typeof DoctorsSlotNewCaseRoute
 }
 export interface FileRoutesById {
@@ -142,6 +150,7 @@ export interface FileRoutesById {
   '/staff/$role': typeof StaffRoleRoute
   '/doctors/': typeof DoctorsIndexRoute
   '/help/': typeof HelpIndexRoute
+  '/api/public/push-dispatch': typeof ApiPublicPushDispatchRoute
   '/doctors_/$slot/new-case': typeof DoctorsSlotNewCaseRoute
 }
 export interface FileRouteTypes {
@@ -160,6 +169,7 @@ export interface FileRouteTypes {
     | '/staff/$role'
     | '/doctors/'
     | '/help/'
+    | '/api/public/push-dispatch'
     | '/doctors/$slot/new-case'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -176,6 +186,7 @@ export interface FileRouteTypes {
     | '/staff/$role'
     | '/doctors'
     | '/help'
+    | '/api/public/push-dispatch'
     | '/doctors/$slot/new-case'
   id:
     | '__root__'
@@ -192,6 +203,7 @@ export interface FileRouteTypes {
     | '/staff/$role'
     | '/doctors/'
     | '/help/'
+    | '/api/public/push-dispatch'
     | '/doctors_/$slot/new-case'
   fileRoutesById: FileRoutesById
 }
@@ -209,6 +221,7 @@ export interface RootRouteChildren {
   StaffRoleRoute: typeof StaffRoleRoute
   DoctorsIndexRoute: typeof DoctorsIndexRoute
   HelpIndexRoute: typeof HelpIndexRoute
+  ApiPublicPushDispatchRoute: typeof ApiPublicPushDispatchRoute
   DoctorsSlotNewCaseRoute: typeof DoctorsSlotNewCaseRoute
 }
 
@@ -312,6 +325,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DoctorsSlotNewCaseRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/push-dispatch': {
+      id: '/api/public/push-dispatch'
+      path: '/api/public/push-dispatch'
+      fullPath: '/api/public/push-dispatch'
+      preLoaderRoute: typeof ApiPublicPushDispatchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -329,6 +349,7 @@ const rootRouteChildren: RootRouteChildren = {
   StaffRoleRoute: StaffRoleRoute,
   DoctorsIndexRoute: DoctorsIndexRoute,
   HelpIndexRoute: HelpIndexRoute,
+  ApiPublicPushDispatchRoute: ApiPublicPushDispatchRoute,
   DoctorsSlotNewCaseRoute: DoctorsSlotNewCaseRoute,
 }
 export const routeTree = rootRouteImport
