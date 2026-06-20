@@ -532,6 +532,69 @@ export type Database = {
         }
         Relationships: []
       }
+      push_config: {
+        Row: {
+          admin_contact: string
+          dispatch_secret: string
+          endpoint_url: string
+          id: boolean
+          vapid_private: string
+          vapid_public: string
+        }
+        Insert: {
+          admin_contact?: string
+          dispatch_secret: string
+          endpoint_url: string
+          id?: boolean
+          vapid_private: string
+          vapid_public: string
+        }
+        Update: {
+          admin_contact?: string
+          dispatch_secret?: string
+          endpoint_url?: string
+          id?: boolean
+          vapid_private?: string
+          vapid_public?: string
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          doctor_slot: number | null
+          endpoint: string
+          id: string
+          p256dh: string
+          role: string
+          updated_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          doctor_slot?: number | null
+          endpoint: string
+          id?: string
+          p256dh: string
+          role: string
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          doctor_slot?: number | null
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          role?: string
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       slot_cases: {
         Row: {
           archived: boolean
@@ -828,6 +891,29 @@ export type Database = {
           role: string
           updated_at: string
         }[]
+      }
+      prune_push_subscription: {
+        Args: { p_id: string; p_secret: string }
+        Returns: undefined
+      }
+      remove_push_subscription: {
+        Args: { p_endpoint: string }
+        Returns: undefined
+      }
+      resolve_push_targets: {
+        Args: { p_conversation: string; p_secret: string; p_sender: string }
+        Returns: Json
+      }
+      save_push_subscription: {
+        Args: {
+          p_auth: string
+          p_endpoint: string
+          p_p256dh: string
+          p_role: string
+          p_slot: number
+          p_user_agent: string
+        }
+        Returns: undefined
       }
       set_avatar_override: {
         Args: { p_image_url: string; p_label: string; p_subject: string }
