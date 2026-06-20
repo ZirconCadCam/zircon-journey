@@ -204,7 +204,11 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
     }>
       <main className="container mx-auto px-4 sm:px-6 py-6">
         {role === "admin" && <AdminVoiceListener />}
-        {(role === "designer" || role === "technician") && <RoleNotifications role={role} />}
+        {(role === "designer" ||
+          role === "technician" ||
+          role === "secretary_sanaa" ||
+          role === "secretary_ibb" ||
+          role === "admin") && <RoleNotifications role={role} />}
 
 
         <div className="rounded-3xl gradient-brown text-primary-foreground p-6 sm:p-8 shadow-luxury flex items-center justify-between flex-wrap gap-4">

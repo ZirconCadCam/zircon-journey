@@ -12,6 +12,7 @@ import {
   stopRing,
   unlockNotificationAudio,
 } from "@/lib/notify";
+import { enablePushForRole } from "@/lib/push";
 
 /**
  * Professional, interactive notification center for a role portal.
@@ -45,7 +46,12 @@ export function RoleNotifications({
   useEffect(() => {
     setPerm(notificationPermissionState());
     setShowPrompt(notificationPermissionState() === "default");
-  }, []);
+    // If permission was already granted before, (re)register this device for
+    // Web Push so closed-app notifications keep working.
+    if (notificationPermissionState() === "granted") {
+      void enablePushForRole(role, slot);
+    }
+  }, [role, slot]);
 
   useEffect(() => {
     let active = true;
@@ -160,7 +166,14 @@ export function RoleNotifications({
     const ok = await ensureNotifyPermission();
     setPerm(ok ? "granted" : notificationPermissionState());
     setShowPrompt(false);
-    if (ok) toast.success("تم تفعيل الإشعارات الصوتية والمرئية لهذه الصفحة");
+    if (ok) {
+      const pushed = await enablePushForRole(role, slot);
+      toast.success(
+        pushed
+          ? "تم تفعيل الإشعارات الصوتية حتى عند إغلاق التطبيق"
+          : "تم تفعيل الإشعارات الصوتية والمرئية لهذه الصفحة",
+      );
+    }
   }
 
   function onBellClick() {
