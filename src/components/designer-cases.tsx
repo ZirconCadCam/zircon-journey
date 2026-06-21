@@ -546,6 +546,12 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     const docName = safe((doctor?.name ?? `Slot ${c.doctor_slot}`).replace(/^د\.?\s*/, ""));
     const baseName = `${safe(c.patient_name)} - د.${docName} - ${date}`;
     const fileName = `${baseName}.zip`;
+    try {
+      // If we already downloaded this zip before, re-open it straight from the
+      // device file manager — no re-download.
+      const opened = await openCachedFile(fileName, locFor(c, "downloaded"), "application/zip", c.case_code);
+      if (opened) { toast.success("تم فتح الملف من جهازك"); setBusyId(null); return; }
+    } catch { /* fall through to a fresh download */ }
     const { registerDownloadTask, fetchBlobWithProgress } = await import("@/lib/transfer-manager");
     const task = registerDownloadTask(fileName);
     try {
@@ -564,8 +570,9 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
       task.update(96);
       const r = await saveToCenter(outBlob, fileName, c.case_code, locFor(c, "downloaded"));
       const blobUrl = URL.createObjectURL(outBlob);
-      task.done({ blobUrl, savedPath: r.path, fallback: r.fallback, mime: "application/zip" });
-      toast.success(r.fallback ? "تم تنزيل الملف" : `تم الحفظ في ${r.path}`);
+      // persistent: the "open" icon stays until the designer actually opens the file.
+      task.done({ blobUrl, savedPath: r.path, fallback: r.fallback, mime: "application/zip", nativeUri: r.uri, persistent: true });
+      toast.success(r.fallback ? "تم تنزيل الملف — اضغط لفتحه" : `تم الحفظ في ${r.path} — اضغط لفتحه`);
     } catch (e: any) {
       console.error(e);
       task.fail();
