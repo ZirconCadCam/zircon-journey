@@ -1158,14 +1158,25 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                           <FileArchive className="size-3.5 text-gold" /> تنزيل RAR
                         </button>
                       ) : view === "active" && c.scan_path && (
-                        <button
-                          onClick={() => downloadScanZip(c)}
-                          disabled={busy}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold hover:border-gold transition disabled:opacity-60"
-                          title="تنزيل ملف الحالة بصيغة ZIP"
-                        >
-                          <FileArchive className="size-3.5 text-gold" /> تنزيل ZIP
-                        </button>
+                        downloadedZips[c.id] ? (
+                          <button
+                            onClick={() => openSavedZip(c)}
+                            disabled={busy}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-gold bg-gold/10 px-3 py-1.5 text-xs font-bold text-gold hover:gradient-gold hover:text-gold-foreground transition disabled:opacity-60"
+                            title="فتح ملف ZIP المحفوظ من مدير ملفات الجهاز"
+                          >
+                            <FolderOpen className="size-3.5" /> فتح ZIP
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => downloadScanZip(c)}
+                            disabled={busy}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold hover:border-gold transition disabled:opacity-60"
+                            title="تنزيل ملف الحالة بصيغة ZIP"
+                          >
+                            <FileArchive className="size-3.5 text-gold" /> تنزيل ZIP
+                          </button>
+                        )
                       )}
                       {/* In-app ZIP preview — available to designer + admin before final archive */}
                       {(actor === "designer" || actor === "admin") && view === "active" && c.scan_path && !c.final_archived && (
