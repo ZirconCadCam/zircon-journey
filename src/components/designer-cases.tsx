@@ -5,7 +5,7 @@ import {
   Stethoscope, FileText, Download, Share2, Loader2,
   ScanLine, User, Phone, Hash, ClipboardList, Calendar,
   Archive, MoreVertical, FileArchive, Pin, PinOff, Trash2, ClipboardCheck, Eye,
-  RefreshCw, Send, ZoomIn,
+  RefreshCw, Send, ZoomIn, FolderOpen,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
@@ -41,6 +41,7 @@ const H2C_ONCLONE = (doc: Document) => {
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { saveToCenter, downloadUrlToCenter, fileManagerSupported, CENTER_FOLDER_NAME, openCachedFile } from "@/lib/file-manager";
+import { loadZipDownloads, markZipDownloaded, clearZipDownloaded } from "@/lib/zip-download-state";
 import { CaseShadeConfirm } from "@/components/shade-confirm";
 
 interface Doctor { slot: number; name: string; branch: string | null; active: boolean }
@@ -119,6 +120,13 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
   const [textRevisions, setTextRevisions] = useState<Record<string, string>>({});
   // Lightbox state for notes images: which case + which image index is open.
   const [lightbox, setLightbox] = useState<{ images: { url: string; name: string }[]; index: number } | null>(null);
+  // Per-device persisted state: which case ZIPs were already downloaded and are
+  // ready to re-open from the file manager. Survives refresh + logout/login.
+  const [downloadedZips, setDownloadedZips] = useState<Record<string, { fileName: string; mime?: string | null }>>({});
+
+  useEffect(() => {
+    setDownloadedZips(loadZipDownloads(actor));
+  }, [actor]);
 
 
   useEffect(() => {
@@ -550,7 +558,11 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
       // If we already downloaded this zip before, re-open it straight from the
       // device file manager — no re-download.
       const opened = await openCachedFile(fileName, locFor(c, "downloaded"), "application/zip", c.case_code);
-      if (opened) { toast.success("تم فتح الملف من جهازك"); setBusyId(null); return; }
+      if (opened) {
+        markZipDownloaded(actor, c.id, { fileName, mime: "application/zip" });
+        setDownloadedZips(prev => ({ ...prev, [c.id]: { fileName, mime: "application/zip" } }));
+        toast.success("تم فتح الملف من جهازك"); setBusyId(null); return;
+      }
     } catch { /* fall through to a fresh download */ }
     const { registerDownloadTask, fetchBlobWithProgress } = await import("@/lib/transfer-manager");
     const task = registerDownloadTask(fileName);
@@ -572,11 +584,34 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
       const blobUrl = URL.createObjectURL(outBlob);
       // persistent: the "open" icon stays until the designer actually opens the file.
       task.done({ blobUrl, savedPath: r.path, fallback: r.fallback, mime: "application/zip", nativeUri: r.uri, persistent: true });
+      // Persist the "downloaded → ready to open" state for this case on this device.
+      markZipDownloaded(actor, c.id, { fileName, mime: "application/zip", nativeUri: r.uri });
+      setDownloadedZips(prev => ({ ...prev, [c.id]: { fileName, mime: "application/zip" } }));
       toast.success(r.fallback ? "تم تنزيل الملف — اضغط لفتحه" : `تم الحفظ في ${r.path} — اضغط لفتحه`);
     } catch (e: any) {
       console.error(e);
       task.fail();
       toast.error(e.message || "تعذر تنزيل الملف");
+    } finally { setBusyId(null); }
+  }
+
+  /** Re-open a previously-downloaded ZIP straight from the device file manager.
+   * If the saved copy is gone, fall back to a fresh download. */
+  async function openSavedZip(c: Case) {
+    const saved = downloadedZips[c.id];
+    if (!saved) { await downloadScanZip(c); return; }
+    setBusyId(c.id);
+    try {
+      const opened = await openCachedFile(saved.fileName, locFor(c, "downloaded"), saved.mime || "application/zip", c.case_code);
+      if (opened) { toast.success("تم فتح الملف من جهازك"); return; }
+      // Saved copy no longer present on this device — clear and re-download.
+      clearZipDownloaded(actor, c.id);
+      setDownloadedZips(prev => { const n = { ...prev }; delete n[c.id]; return n; });
+      setBusyId(null);
+      await downloadScanZip(c);
+    } catch {
+      setBusyId(null);
+      await downloadScanZip(c);
     } finally { setBusyId(null); }
   }
 
@@ -1123,14 +1158,25 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                           <FileArchive className="size-3.5 text-gold" /> تنزيل RAR
                         </button>
                       ) : view === "active" && c.scan_path && (
-                        <button
-                          onClick={() => downloadScanZip(c)}
-                          disabled={busy}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold hover:border-gold transition disabled:opacity-60"
-                          title="تنزيل ملف الحالة بصيغة ZIP"
-                        >
-                          <FileArchive className="size-3.5 text-gold" /> تنزيل ZIP
-                        </button>
+                        downloadedZips[c.id] ? (
+                          <button
+                            onClick={() => openSavedZip(c)}
+                            disabled={busy}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-gold bg-gold/10 px-3 py-1.5 text-xs font-bold text-gold hover:gradient-gold hover:text-gold-foreground transition disabled:opacity-60"
+                            title="فتح ملف ZIP المحفوظ من مدير ملفات الجهاز"
+                          >
+                            <FolderOpen className="size-3.5" /> فتح ZIP
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => downloadScanZip(c)}
+                            disabled={busy}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold hover:border-gold transition disabled:opacity-60"
+                            title="تنزيل ملف الحالة بصيغة ZIP"
+                          >
+                            <FileArchive className="size-3.5 text-gold" /> تنزيل ZIP
+                          </button>
+                        )
                       )}
                       {/* In-app ZIP preview — available to designer + admin before final archive */}
                       {(actor === "designer" || actor === "admin") && view === "active" && c.scan_path && !c.final_archived && (
