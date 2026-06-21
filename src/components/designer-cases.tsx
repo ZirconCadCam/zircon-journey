@@ -120,6 +120,13 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
   const [textRevisions, setTextRevisions] = useState<Record<string, string>>({});
   // Lightbox state for notes images: which case + which image index is open.
   const [lightbox, setLightbox] = useState<{ images: { url: string; name: string }[]; index: number } | null>(null);
+  // Per-device persisted state: which case ZIPs were already downloaded and are
+  // ready to re-open from the file manager. Survives refresh + logout/login.
+  const [downloadedZips, setDownloadedZips] = useState<Record<string, { fileName: string; mime?: string | null }>>({});
+
+  useEffect(() => {
+    setDownloadedZips(loadZipDownloads(actor));
+  }, [actor]);
 
 
   useEffect(() => {
