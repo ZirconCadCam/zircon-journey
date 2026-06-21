@@ -5,7 +5,7 @@ import {
   Stethoscope, FileText, Download, Share2, Loader2,
   ScanLine, User, Phone, Hash, ClipboardList, Calendar,
   Archive, MoreVertical, FileArchive, Pin, PinOff, Trash2, ClipboardCheck, Eye,
-  RefreshCw, Send, ZoomIn,
+  RefreshCw, Send, ZoomIn, FolderOpen,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
