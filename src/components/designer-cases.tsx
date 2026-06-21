@@ -595,6 +595,26 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     } finally { setBusyId(null); }
   }
 
+  /** Re-open a previously-downloaded ZIP straight from the device file manager.
+   * If the saved copy is gone, fall back to a fresh download. */
+  async function openSavedZip(c: Case) {
+    const saved = downloadedZips[c.id];
+    if (!saved) { await downloadScanZip(c); return; }
+    setBusyId(c.id);
+    try {
+      const opened = await openCachedFile(saved.fileName, locFor(c, "downloaded"), saved.mime || "application/zip", c.case_code);
+      if (opened) { toast.success("تم فتح الملف من جهازك"); return; }
+      // Saved copy no longer present on this device — clear and re-download.
+      clearZipDownloaded(actor, c.id);
+      setDownloadedZips(prev => { const n = { ...prev }; delete n[c.id]; return n; });
+      setBusyId(null);
+      await downloadScanZip(c);
+    } catch {
+      setBusyId(null);
+      await downloadScanZip(c);
+    } finally { setBusyId(null); }
+  }
+
   /** Technician: download the latest .rar from the designer for this case
    * into the device file manager, with the floating progress "tube". */
   async function downloadDesignRar(c: Case) {
