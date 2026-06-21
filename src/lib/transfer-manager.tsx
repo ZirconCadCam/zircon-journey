@@ -349,19 +349,20 @@ function TransferDonePopup({ p }: { p: CompletedPopup }) {
   const [viewerOpen, setViewerOpen] = useState(false);
   const viewUrl = p.sourceUrl ?? p.blobUrl ?? null;
   const canView = !isUpload && !!viewUrl;
-  // auto-dismiss after 5 seconds of no action — paused while the viewer is open
+  // auto-dismiss after 5 seconds of no action — paused while the viewer is open,
+  // and disabled entirely for "persistent" popups (they stay until the file is opened).
   useEffect(() => {
-    if (viewerOpen) return;
+    if (viewerOpen || p.persistent) return;
     const t = setTimeout(() => dismissPopup(p.id), 5000);
     return () => clearTimeout(t);
-  }, [p.id, viewerOpen]);
+  }, [p.id, viewerOpen, p.persistent]);
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-emerald-500/40 bg-card/95 backdrop-blur p-3 shadow-luxury animate-in slide-in-from-bottom-2">
       <div className="size-9 shrink-0 grid place-items-center rounded-xl bg-emerald-500/15 text-emerald-600">
         {isUpload ? <UploadIcon className="size-5" /> : <CheckCircle2 className="size-5" />}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="text-[11px] font-bold text-emerald-600">{isUpload ? "اكتمل الرفع" : "اكتمل التنزيل — يمكنك عرض الملف"}</div>
+        <div className="text-[11px] font-bold text-emerald-600">{isUpload ? "اكتمل الرفع" : p.persistent ? "جاهز للفتح — اضغط لفتح الملف" : "اكتمل التنزيل — يمكنك عرض الملف"}</div>
         <div className="truncate text-xs font-bold">{p.filename}</div>
         {p.savedPath && !p.fallback && <div className="truncate text-[10px] text-muted-foreground">{p.savedPath}</div>}
       </div>
