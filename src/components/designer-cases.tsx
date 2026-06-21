@@ -558,7 +558,11 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
       // If we already downloaded this zip before, re-open it straight from the
       // device file manager — no re-download.
       const opened = await openCachedFile(fileName, locFor(c, "downloaded"), "application/zip", c.case_code);
-      if (opened) { toast.success("تم فتح الملف من جهازك"); setBusyId(null); return; }
+      if (opened) {
+        markZipDownloaded(actor, c.id, { fileName, mime: "application/zip" });
+        setDownloadedZips(prev => ({ ...prev, [c.id]: { fileName, mime: "application/zip" } }));
+        toast.success("تم فتح الملف من جهازك"); setBusyId(null); return;
+      }
     } catch { /* fall through to a fresh download */ }
     const { registerDownloadTask, fetchBlobWithProgress } = await import("@/lib/transfer-manager");
     const task = registerDownloadTask(fileName);
