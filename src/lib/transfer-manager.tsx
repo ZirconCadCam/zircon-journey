@@ -47,6 +47,8 @@ export interface CompletedPopup {
   sourceUrl?: string;
   /** Native file uri (Android) — opened with the device's viewer on "عرض". */
   nativeUri?: string;
+  /** When true the popup stays until the user actually opens the file (no 5s auto-dismiss). */
+  persistent?: boolean;
 }
 
 /* ----------------------------- tiny store ----------------------------- */
