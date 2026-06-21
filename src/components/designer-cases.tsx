@@ -41,6 +41,7 @@ const H2C_ONCLONE = (doc: Document) => {
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { saveToCenter, downloadUrlToCenter, fileManagerSupported, CENTER_FOLDER_NAME, openCachedFile } from "@/lib/file-manager";
+import { loadZipDownloads, markZipDownloaded, clearZipDownloaded } from "@/lib/zip-download-state";
 import { CaseShadeConfirm } from "@/components/shade-confirm";
 
 interface Doctor { slot: number; name: string; branch: string | null; active: boolean }
