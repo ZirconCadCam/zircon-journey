@@ -584,6 +584,9 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
       const blobUrl = URL.createObjectURL(outBlob);
       // persistent: the "open" icon stays until the designer actually opens the file.
       task.done({ blobUrl, savedPath: r.path, fallback: r.fallback, mime: "application/zip", nativeUri: r.uri, persistent: true });
+      // Persist the "downloaded → ready to open" state for this case on this device.
+      markZipDownloaded(actor, c.id, { fileName, mime: "application/zip", nativeUri: r.uri });
+      setDownloadedZips(prev => ({ ...prev, [c.id]: { fileName, mime: "application/zip" } }));
       toast.success(r.fallback ? "تم تنزيل الملف — اضغط لفتحه" : `تم الحفظ في ${r.path} — اضغط لفتحه`);
     } catch (e: any) {
       console.error(e);
