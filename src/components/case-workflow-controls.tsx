@@ -1139,7 +1139,7 @@ function DoctorControls({ c, actorName, doctorName }: {
 
       {revOpen && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-card border border-border p-5 shadow-luxury">
+          <div className="w-full max-w-md max-h-[90dvh] overflow-y-auto overscroll-contain rounded-2xl bg-card border border-border p-5 shadow-luxury">
             <div className="flex items-center justify-between mb-3">
               <div className="font-bold">ملاحظات التعديل المطلوب</div>
               <button onClick={() => setRevOpen(false)} className="rounded-lg p-1 hover:bg-muted">
