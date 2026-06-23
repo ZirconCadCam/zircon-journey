@@ -166,9 +166,44 @@ function DesignerControls({ c, actorName, doctorName, target, blockedByPending }
   c: WorkflowCase; actorName: string; doctorName: string; target: RoleKey; blockedByPending: string | null;
 }) {
   const [busy, setBusy] = useState(false);
+  const [busyHtml, setBusyHtml] = useState(false);
   const rarRef = useRef<HTMLInputElement>(null);
+  const htmlRef = useRef<HTMLInputElement>(null);
   const rarSent = !!c.design_file_sent;
+  const htmlSent = !!c.design_html_sent;
   const blocked = !rarSent && !!blockedByPending;
+
+  async function sendHtml(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (e.target) e.target.value = "";
+    if (!f) return;
+    if (!HTML_RE.test(f.name)) { toast.error("الملف يجب أن يكون .html"); return; }
+    setBusyHtml(true);
+    try {
+      const up = await uploadAttachment(f, c, "design-html");
+      if (!up) return;
+      const convId = await ensureConv(c, "designer", target, doctorName);
+      if (!convId) { toast.error("تعذر إنشاء المحادثة"); return; }
+      await supabase.from("chat_messages").insert({
+        conversation_id: convId,
+        sender: "designer",
+        sender_name: actorName,
+        content: `🌐 ملف التصميم (HTML) — الحالة ${c.case_code} (${c.patient_name})`,
+        message_type: "file",
+        attachment_path: up.url,
+        attachment_name: f.name,
+        attachment_mime: f.type || "text/html",
+        attachment_size: f.size,
+      });
+      await supabase.from("slot_cases").update({
+        design_html_sent: true,
+        design_html_path: up.url,
+        design_html_name: f.name,
+      }).eq("id", c.id);
+      toast.success("✅ تم رفع ملف HTML ضمن تفاصيل الحالة");
+    } catch (err: any) { toast.error(err.message || "فشل رفع ملف HTML"); }
+    finally { setBusyHtml(false); }
+  }
 
   async function sendRar(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
@@ -212,8 +247,19 @@ function DesignerControls({ c, actorName, doctorName, target, blockedByPending }
           ${rarSent ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-border bg-card hover:border-gold"}`}>
           {busy ? <Loader2 className="size-3.5 animate-spin" /> : <FileArchive className="size-3.5" />}
           {rarSent ? "تم إرسال ملف التصميم" : "إرسال ملف التصميم (.rar)"}
-          <input ref={rarRef} type="file" accept=".rar" className="hidden"
+          <input ref={rarRef} type="file"
+            accept=".rar,.RAR,application/vnd.rar,application/x-rar-compressed,application/octet-stream"
+            className="hidden"
             onChange={sendRar} disabled={busy || rarSent} />
+        </label>
+        <label className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold cursor-pointer transition border
+          ${htmlSent ? "border-sky-500 bg-sky-50 text-sky-700" : "border-border bg-card hover:border-gold"}`}>
+          {busyHtml ? <Loader2 className="size-3.5 animate-spin" /> : <FileCode className="size-3.5" />}
+          {htmlSent ? "تم رفع ملف HTML" : "رفع ملف التصميم (.html)"}
+          <input ref={htmlRef} type="file"
+            accept=".html,.htm,text/html,application/octet-stream"
+            className="hidden"
+            onChange={sendHtml} disabled={busyHtml} />
         </label>
         {rarSent && !c.design_received_by_tech && (
           <span className="text-[11px] text-amber-700 font-bold">بانتظار فتح الفني للحالة…</span>
@@ -383,7 +429,8 @@ function DesignerRevisionSection({ c, actorName, doctorName }: {
           ${done ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-border bg-card hover:border-gold"}`}>
           {busy ? <Loader2 className="size-3.5 animate-spin" /> : <FileArchive className="size-3.5" />}
           {done ? "تم إرسال التعديل" : "رفع ملف التعديل (.rar)"}
-          <input ref={fileRef} type="file" accept=".rar" className="hidden"
+          <input ref={fileRef} type="file"
+            accept=".rar,.RAR,application/vnd.rar,application/x-rar-compressed,application/octet-stream" className="hidden"
             onChange={uploadRevision} disabled={busy || done} />
         </label>
         {!done && (
