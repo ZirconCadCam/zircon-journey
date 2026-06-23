@@ -166,9 +166,44 @@ function DesignerControls({ c, actorName, doctorName, target, blockedByPending }
   c: WorkflowCase; actorName: string; doctorName: string; target: RoleKey; blockedByPending: string | null;
 }) {
   const [busy, setBusy] = useState(false);
+  const [busyHtml, setBusyHtml] = useState(false);
   const rarRef = useRef<HTMLInputElement>(null);
+  const htmlRef = useRef<HTMLInputElement>(null);
   const rarSent = !!c.design_file_sent;
+  const htmlSent = !!c.design_html_sent;
   const blocked = !rarSent && !!blockedByPending;
+
+  async function sendHtml(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (e.target) e.target.value = "";
+    if (!f) return;
+    if (!HTML_RE.test(f.name)) { toast.error("الملف يجب أن يكون .html"); return; }
+    setBusyHtml(true);
+    try {
+      const up = await uploadAttachment(f, c, "design-html");
+      if (!up) return;
+      const convId = await ensureConv(c, "designer", target, doctorName);
+      if (!convId) { toast.error("تعذر إنشاء المحادثة"); return; }
+      await supabase.from("chat_messages").insert({
+        conversation_id: convId,
+        sender: "designer",
+        sender_name: actorName,
+        content: `🌐 ملف التصميم (HTML) — الحالة ${c.case_code} (${c.patient_name})`,
+        message_type: "file",
+        attachment_path: up.url,
+        attachment_name: f.name,
+        attachment_mime: f.type || "text/html",
+        attachment_size: f.size,
+      });
+      await supabase.from("slot_cases").update({
+        design_html_sent: true,
+        design_html_path: up.url,
+        design_html_name: f.name,
+      }).eq("id", c.id);
+      toast.success("✅ تم رفع ملف HTML ضمن تفاصيل الحالة");
+    } catch (err: any) { toast.error(err.message || "فشل رفع ملف HTML"); }
+    finally { setBusyHtml(false); }
+  }
 
   async function sendRar(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
