@@ -429,7 +429,8 @@ function DesignerRevisionSection({ c, actorName, doctorName }: {
           ${done ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-border bg-card hover:border-gold"}`}>
           {busy ? <Loader2 className="size-3.5 animate-spin" /> : <FileArchive className="size-3.5" />}
           {done ? "تم إرسال التعديل" : "رفع ملف التعديل (.rar)"}
-          <input ref={fileRef} type="file" accept=".rar" className="hidden"
+          <input ref={fileRef} type="file"
+            accept=".rar,.RAR,application/vnd.rar,application/x-rar-compressed,application/octet-stream" className="hidden"
             onChange={uploadRevision} disabled={busy || done} />
         </label>
         {!done && (
