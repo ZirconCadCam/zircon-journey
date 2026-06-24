@@ -829,6 +829,24 @@ export type Database = {
         }
         Relationships: []
       }
+      staff_sessions: {
+        Row: {
+          device_id: string
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          device_id: string
+          role: string
+          updated_at?: string
+        }
+        Update: {
+          device_id?: string
+          role?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           branch: Database["public"]["Enums"]["branch"] | null
@@ -858,7 +876,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_staff_session: {
+        Args: { p_device: string; p_role: string }
+        Returns: boolean
+      }
+      claim_staff_session: {
+        Args: { p_device: string; p_role: string }
+        Returns: undefined
+      }
       clear_avatar_override: { Args: { p_subject: string }; Returns: undefined }
+      clear_staff_session: {
+        Args: { p_device: string; p_role: string }
+        Returns: undefined
+      }
       get_primary_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
