@@ -123,11 +123,28 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
   // Per-device persisted state: which case ZIPs were already downloaded and are
   // ready to re-open from the file manager. Survives refresh + logout/login.
   const [downloadedZips, setDownloadedZips] = useState<Record<string, { fileName: string; mime?: string | null }>>({});
+  // Manual refresh button state.
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     setDownloadedZips(loadZipDownloads(actor));
   }, [actor]);
 
+  /** Re-fetch the case list. Shared by realtime, polling, focus and the button. */
+  const refreshCases = useCallback(async () => {
+    const { data: cs } = await supabase.from("slot_cases").select("*").order("created_at", { ascending: false });
+    setCases((cs ?? []) as Case[]);
+  }, []);
+
+  const manualRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refreshCases();
+      toast.success("تم تحديث الحالات");
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshCases]);
 
   useEffect(() => {
     (async () => {
@@ -140,14 +157,26 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
       setLoading(false);
     })();
 
+    // Live updates via realtime.
     const ch = supabase.channel("designer-cases-stream")
-      .on("postgres_changes", { event: "*", schema: "public", table: "slot_cases" }, async () => {
-        const { data: cs } = await supabase.from("slot_cases").select("*").order("created_at", { ascending: false });
-        setCases((cs ?? []) as Case[]);
-      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "slot_cases" }, () => { refreshCases(); })
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, []);
+
+    // Safety-net auto refresh every 20s (covers any missed realtime events,
+    // important for the designer working on a desktop browser).
+    const interval = window.setInterval(() => { refreshCases(); }, 20000);
+    // Refresh immediately when the tab/window regains focus.
+    const onFocus = () => { if (document.visibilityState === "visible") refreshCases(); };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+
+    return () => {
+      supabase.removeChannel(ch);
+      window.clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+  }, [refreshCases]);
 
   const filtered = useMemo(() => {
     if (filterSlot === "all") return cases;
