@@ -111,6 +111,30 @@ async function ensureConv(c: WorkflowCase, sender: RoleKey, target: RoleKey, doc
   return created.id;
 }
 
+/** Ensure a case-scoped doctor↔designer conversation exists (title starts with
+ *  `[case_code]`) so files/messages appear automatically in the doctor's
+ *  per-case chat. Returns the conversation id. */
+async function ensureCaseConvForDoctor(c: WorkflowCase): Promise<string | null> {
+  const prefix = `[${c.case_code}]`;
+  const { data: existing } = await supabase.from("chat_conversations")
+    .select("id,participants,title").eq("doctor_slot", c.doctor_slot);
+  const conv = (existing ?? []).find((x: any) =>
+    Array.isArray(x.participants)
+    && x.participants.includes("doctor") && x.participants.includes("designer")
+    && typeof x.title === "string" && x.title.startsWith(prefix)
+  ) as { id: string } | undefined;
+  if (conv) return conv.id;
+  const { data: created, error } = await supabase.from("chat_conversations")
+    .insert({
+      doctor_slot: c.doctor_slot,
+      participants: ["doctor", "designer"],
+      title: `${prefix} ${c.patient_name}`,
+      created_by: "designer",
+    }).select("id").single();
+  if (error || !created) return null;
+  return created.id;
+}
+
 /** Resolve the matching branch secretary role for a case's doctor, so we never
  *  notify (and thus re-create conversations with) the wrong-branch secretary. */
 async function branchSecretaryRole(slot: number): Promise<RoleKey | null> {
@@ -195,12 +219,28 @@ function DesignerControls({ c, actorName, doctorName, target, blockedByPending }
         attachment_mime: f.type || "text/html",
         attachment_size: f.size,
       });
+      // Also publish the HTML file into the doctor's per-case chat so it shows
+      // up automatically on the doctor's page conversation for this case.
+      const docConvId = await ensureCaseConvForDoctor(c);
+      if (docConvId) {
+        await supabase.from("chat_messages").insert({
+          conversation_id: docConvId,
+          sender: "designer",
+          sender_name: actorName,
+          content: `🌐 ملف التصميم (HTML) — الحالة ${c.case_code} (${c.patient_name})`,
+          message_type: "file",
+          attachment_path: up.url,
+          attachment_name: f.name,
+          attachment_mime: f.type || "text/html",
+          attachment_size: f.size,
+        });
+      }
       await supabase.from("slot_cases").update({
         design_html_sent: true,
         design_html_path: up.url,
         design_html_name: f.name,
       }).eq("id", c.id);
-      toast.success("✅ تم رفع ملف HTML ضمن تفاصيل الحالة");
+      toast.success("✅ تم رفع ملف HTML وإظهاره في محادثة الطبيب");
     } catch (err: any) { toast.error(err.message || "فشل رفع ملف HTML"); }
     finally { setBusyHtml(false); }
   }
