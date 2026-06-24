@@ -23,6 +23,21 @@ export const Route = createFileRoute("/staff/$role")({
 
 const VALID: RoleKey[] = ["designer", "technician", "secretary_sanaa", "secretary_ibb", "admin"];
 
+// Roles whose login is bound to a single device (logging in elsewhere signs the
+// previous device out). The designer works from a single PC, so we remember the
+// session and enforce single-device access.
+const SINGLE_DEVICE_ROLES: RoleKey[] = ["designer"];
+
+/** Stable per-browser device identifier (persisted across refresh/login). */
+function getDeviceId(): string {
+  let id = localStorage.getItem("zircon_device_id");
+  if (!id) {
+    id = (crypto as any)?.randomUUID?.() ?? `dev-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    localStorage.setItem("zircon_device_id", id);
+  }
+  return id;
+}
+
 interface Doctor { slot: number; name: string; branch: string | null; active: boolean }
 
 function StaffPortal() {
@@ -34,8 +49,53 @@ function StaffPortal() {
     if (!VALID.includes(role)) return;
     if (typeof window === "undefined") return;
     if (localStorage.getItem("zircon_admin_all") === "1") { setAuthed(true); return; }
-    if (localStorage.getItem(`zircon_staff_${role}`) === "1") setAuthed(true);
+    if (localStorage.getItem(`zircon_staff_${role}`) !== "1") return;
+
+    // For single-device roles, verify this device still owns the session.
+    if (SINGLE_DEVICE_ROLES.includes(role)) {
+      let cancelled = false;
+      (async () => {
+        const { data, error } = await supabase.rpc("check_staff_session", {
+          p_role: role, p_device: getDeviceId(),
+        });
+        if (cancelled) return;
+        if (!error && data === true) {
+          setAuthed(true);
+        } else {
+          // Another device took over the session — require the password again.
+          localStorage.removeItem(`zircon_staff_${role}`);
+          setAuthed(false);
+          toast("تم تسجيل الدخول من جهاز آخر. يرجى إدخال كلمة المرور مجددًا.");
+        }
+      })();
+      return () => { cancelled = true; };
+    }
+
+    setAuthed(true);
   }, [role]);
+
+  // Watch for cross-device takeover while logged in on a single-device role.
+  useEffect(() => {
+    if (!authed) return;
+    if (!SINGLE_DEVICE_ROLES.includes(role)) return;
+    let cancelled = false;
+    const verify = async () => {
+      const { data, error } = await supabase.rpc("check_staff_session", {
+        p_role: role, p_device: getDeviceId(),
+      });
+      if (cancelled) return;
+      if (!error && data === false) {
+        localStorage.removeItem(`zircon_staff_${role}`);
+        setAuthed(false);
+        toast("تم تسجيل الدخول من جهاز آخر. تم تسجيل خروجك من هذا الجهاز.");
+      }
+    };
+    const ch = supabase.channel(`staff-session-${role}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "staff_sessions" }, verify)
+      .subscribe();
+    const interval = window.setInterval(verify, 30000);
+    return () => { cancelled = true; supabase.removeChannel(ch); window.clearInterval(interval); };
+  }, [authed, role]);
 
   if (!VALID.includes(role)) {
     return (
