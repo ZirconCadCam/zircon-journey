@@ -111,6 +111,30 @@ async function ensureConv(c: WorkflowCase, sender: RoleKey, target: RoleKey, doc
   return created.id;
 }
 
+/** Ensure a case-scoped doctor↔designer conversation exists (title starts with
+ *  `[case_code]`) so files/messages appear automatically in the doctor's
+ *  per-case chat. Returns the conversation id. */
+async function ensureCaseConvForDoctor(c: WorkflowCase): Promise<string | null> {
+  const prefix = `[${c.case_code}]`;
+  const { data: existing } = await supabase.from("chat_conversations")
+    .select("id,participants,title").eq("doctor_slot", c.doctor_slot);
+  const conv = (existing ?? []).find((x: any) =>
+    Array.isArray(x.participants)
+    && x.participants.includes("doctor") && x.participants.includes("designer")
+    && typeof x.title === "string" && x.title.startsWith(prefix)
+  ) as { id: string } | undefined;
+  if (conv) return conv.id;
+  const { data: created, error } = await supabase.from("chat_conversations")
+    .insert({
+      doctor_slot: c.doctor_slot,
+      participants: ["doctor", "designer"],
+      title: `${prefix} ${c.patient_name}`,
+      created_by: "designer",
+    }).select("id").single();
+  if (error || !created) return null;
+  return created.id;
+}
+
 /** Resolve the matching branch secretary role for a case's doctor, so we never
  *  notify (and thus re-create conversations with) the wrong-branch secretary. */
 async function branchSecretaryRole(slot: number): Promise<RoleKey | null> {
