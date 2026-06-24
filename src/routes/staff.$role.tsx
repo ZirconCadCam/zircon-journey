@@ -33,9 +33,9 @@ function getDeviceId(): string {
   let id = localStorage.getItem("zircon_device_id");
   if (!id) {
     id = (crypto as any)?.randomUUID?.() ?? `dev-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    localStorage.setItem("zircon_device_id", id);
+    localStorage.setItem("zircon_device_id", id as string);
   }
-  return id;
+  return id as string;
 }
 
 interface Doctor { slot: number; name: string; branch: string | null; active: boolean }
