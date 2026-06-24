@@ -219,12 +219,28 @@ function DesignerControls({ c, actorName, doctorName, target, blockedByPending }
         attachment_mime: f.type || "text/html",
         attachment_size: f.size,
       });
+      // Also publish the HTML file into the doctor's per-case chat so it shows
+      // up automatically on the doctor's page conversation for this case.
+      const docConvId = await ensureCaseConvForDoctor(c);
+      if (docConvId) {
+        await supabase.from("chat_messages").insert({
+          conversation_id: docConvId,
+          sender: "designer",
+          sender_name: actorName,
+          content: `🌐 ملف التصميم (HTML) — الحالة ${c.case_code} (${c.patient_name})`,
+          message_type: "file",
+          attachment_path: up.url,
+          attachment_name: f.name,
+          attachment_mime: f.type || "text/html",
+          attachment_size: f.size,
+        });
+      }
       await supabase.from("slot_cases").update({
         design_html_sent: true,
         design_html_path: up.url,
         design_html_name: f.name,
       }).eq("id", c.id);
-      toast.success("✅ تم رفع ملف HTML ضمن تفاصيل الحالة");
+      toast.success("✅ تم رفع ملف HTML وإظهاره في محادثة الطبيب");
     } catch (err: any) { toast.error(err.message || "فشل رفع ملف HTML"); }
     finally { setBusyHtml(false); }
   }
