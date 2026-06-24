@@ -108,13 +108,20 @@ function StaffPortal() {
     );
   }
 
-  if (!authed) return <Gate role={role} onOk={() => {
+  if (!authed) return <Gate role={role} onOk={async () => {
     localStorage.setItem(`zircon_staff_${role}`, "1");
+    // Bind this login to the current device for single-device roles (designer).
+    if (SINGLE_DEVICE_ROLES.includes(role)) {
+      await supabase.rpc("claim_staff_session", { p_role: role, p_device: getDeviceId() });
+    }
     setAuthed(true);
   }} />;
 
-  return <Inner role={role} onLogout={() => {
+  return <Inner role={role} onLogout={async () => {
     localStorage.removeItem(`zircon_staff_${role}`);
+    if (SINGLE_DEVICE_ROLES.includes(role)) {
+      await supabase.rpc("clear_staff_session", { p_role: role, p_device: getDeviceId() });
+    }
     nav({ to: "/" });
   }} />;
 }
