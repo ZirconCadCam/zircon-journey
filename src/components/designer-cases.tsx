@@ -963,6 +963,12 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
             {filterSlot !== "all" && doctorMap.get(filterSlot) && <> — {doctorMap.get(filterSlot)!.name}</>}
           </div>
           <div className="flex items-center gap-2">
+            <button onClick={manualRefresh} disabled={refreshing}
+              title="تحديث القائمة"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold hover:border-gold transition disabled:opacity-60">
+              <RefreshCw className={`size-3.5 ${refreshing ? "animate-spin" : "text-gold"}`} />
+              {refreshing ? "جارٍ التحديث…" : "تحديث"}
+            </button>
             {(actor === "technician" || actor === "admin") && (
               <div className="inline-flex rounded-xl border border-border bg-card p-1 shadow-luxury">
                 <button onClick={() => setView("active")}
