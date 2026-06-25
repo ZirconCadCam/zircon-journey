@@ -241,13 +241,13 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
 
   async function downloadOne(att: CaseAttachment) {
     setBusy(att.url);
-    setProgress(p => ({ ...p, [att.url]: 0 }));
+    setProgress(p => ({ ...p, [att.url]: { pct: 0, loaded: 0, total: 0, phase: "download" } }));
     try {
       const res = await fetch(att.url);
       if (!res.ok) throw new Error("HTTP " + res.status);
       const total = Number(res.headers.get("content-length")) || 0;
       let blob: Blob;
-      if (res.body && total > 0) {
+      if (res.body && res.body.getReader) {
         const reader = res.body.getReader();
         const chunks: BlobPart[] = [];
         let received = 0;
@@ -257,15 +257,24 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
           if (value) {
             chunks.push(value);
             received += value.length;
-            setProgress(p => ({ ...p, [att.url]: Math.round((received / total) * 100) }));
+            setProgress(p => ({
+              ...p,
+              [att.url]: {
+                pct: total > 0 ? Math.round((received / total) * 100) : 0,
+                loaded: received,
+                total,
+                phase: "download",
+              },
+            }));
           }
         }
         blob = new Blob(chunks);
       } else {
         blob = await res.blob();
       }
-      setProgress(p => ({ ...p, [att.url]: 100 }));
+      setProgress(p => ({ ...p, [att.url]: { pct: 100, loaded: blob.size, total: blob.size, phase: "save" } }));
       const r = await saveToCenter(blob, att.name, caseCode);
+      setProgress(p => ({ ...p, [att.url]: { pct: 100, loaded: blob.size, total: blob.size, phase: "done" } }));
       toast.success(r.fallback ? "تم تنزيل الملف" : `تم الحفظ في ${r.path}`);
     } catch (e: any) {
       toast.error(e?.message || "تعذر تنزيل الملف");
@@ -273,7 +282,7 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
       setBusy(null);
       setTimeout(() => setProgress(p => {
         const n = { ...p }; delete n[att.url]; return n;
-      }), 1200);
+      }), 1600);
     }
   }
 
