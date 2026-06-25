@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { MessageSquare, X, FileArchive, Download, Loader2, User, Phone, Hash, Palette } from "lucide-react";
+import { MessageSquare, X, FileArchive, FileCode, Download, Loader2, User, Phone, Hash, Palette } from "lucide-react";
 import { ChatModule } from "@/components/chat-module";
 import { ROLE_LABEL, type RoleKey } from "@/lib/chat";
 import { Z } from "@/lib/z-index";
@@ -141,7 +141,7 @@ export function CaseChatButton(props: {
 interface CaseAttachment {
   url: string;
   name: string;
-  source: "doctor-zip" | "designer-rar" | "designer-revision-rar" | "chat";
+  source: "doctor-zip" | "designer-rar" | "designer-revision-rar" | "designer-html" | "chat";
   created_at?: string | null;
 }
 
@@ -158,7 +158,7 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
     let cancelled = false;
     (async () => {
       const { data: row } = await supabase.from("slot_cases").select(
-        "id, case_code, patient_name, patient_phone, patient_age, patient_gender, tooth_number, shade, case_type, notes, scan_path, scan_name, revision_design_file_path, revision_design_file_name, doctor_decision, final_archived, created_at"
+        "id, case_code, patient_name, patient_phone, patient_age, patient_gender, tooth_number, shade, case_type, notes, scan_path, scan_name, revision_design_file_path, revision_design_file_name, design_html_sent, design_html_path, design_html_name, doctor_decision, final_archived, created_at"
       ).eq("doctor_slot", doctorSlot).eq("case_code", caseCode).maybeSingle();
       if (cancelled) return;
       setC(row);
@@ -172,6 +172,11 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
         url: row.revision_design_file_path,
         name: row.revision_design_file_name || `${caseCode}-revision.rar`,
         source: "designer-revision-rar",
+      });
+      if (row?.design_html_sent && row?.design_html_path) list.push({
+        url: row.design_html_path,
+        name: row.design_html_name || `${caseCode}.html`,
+        source: "designer-html",
       });
 
       // Pull any .rar/.zip attachments referencing this case from chat messages.
@@ -281,7 +286,7 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
 
       <div>
         <div className="text-[11px] font-bold mb-1.5 text-muted-foreground">
-          ملفات الحالة (ZIP / RAR)
+          ملفات الحالة (ZIP / RAR / HTML)
         </div>
         {files.length === 0 ? (
           <div className="text-[11px] text-muted-foreground py-2">لا توجد ملفات مرسلة بعد.</div>
@@ -289,6 +294,7 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
           <ul className="divide-y divide-border rounded-lg border border-border overflow-hidden bg-background/60">
             {files.map(f => {
               const isRar = /\.rar$/i.test(f.name);
+              const isHtml = /\.html?$/i.test(f.name);
               return (
                 <li key={f.url} className="flex flex-col gap-1.5 p-2">
                   <div className="flex items-center justify-between gap-2">
@@ -297,7 +303,9 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
                       className="flex items-center gap-2 min-w-0 text-start hover:text-gold transition"
                       title="حفظ في مدير ملفات الجهاز ثم فتحه"
                     >
-                      <FileArchive className={`size-4 shrink-0 ${isRar ? "text-amber-700" : "text-gold"}`} />
+                      {isHtml
+                        ? <FileCode className="size-4 shrink-0 text-sky-600" />
+                        : <FileArchive className={`size-4 shrink-0 ${isRar ? "text-amber-700" : "text-gold"}`} />}
                       <span className="text-xs font-bold truncate">{f.name}</span>
                       <span className="text-[10px] rounded-full bg-muted px-1.5 py-0.5 font-bold shrink-0">
                         {sourceLabel(f.source)}
@@ -359,6 +367,7 @@ function sourceLabel(s: CaseAttachment["source"]): string {
     case "doctor-zip": return "من الطبيب";
     case "designer-rar": return "من المصمم";
     case "designer-revision-rar": return "تعديل المصمم";
+    case "designer-html": return "تصميم HTML";
     default: return "مرفق";
   }
 }
