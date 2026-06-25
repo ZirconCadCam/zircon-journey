@@ -294,6 +294,7 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
           <ul className="divide-y divide-border rounded-lg border border-border overflow-hidden bg-background/60">
             {files.map(f => {
               const isRar = /\.rar$/i.test(f.name);
+              const isHtml = /\.html?$/i.test(f.name);
               return (
                 <li key={f.url} className="flex flex-col gap-1.5 p-2">
                   <div className="flex items-center justify-between gap-2">
@@ -302,7 +303,9 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
                       className="flex items-center gap-2 min-w-0 text-start hover:text-gold transition"
                       title="حفظ في مدير ملفات الجهاز ثم فتحه"
                     >
-                      <FileArchive className={`size-4 shrink-0 ${isRar ? "text-amber-700" : "text-gold"}`} />
+                      {isHtml
+                        ? <FileCode className="size-4 shrink-0 text-sky-600" />
+                        : <FileArchive className={`size-4 shrink-0 ${isRar ? "text-amber-700" : "text-gold"}`} />}
                       <span className="text-xs font-bold truncate">{f.name}</span>
                       <span className="text-[10px] rounded-full bg-muted px-1.5 py-0.5 font-bold shrink-0">
                         {sourceLabel(f.source)}
