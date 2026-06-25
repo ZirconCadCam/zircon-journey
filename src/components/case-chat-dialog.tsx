@@ -286,7 +286,7 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
 
       <div>
         <div className="text-[11px] font-bold mb-1.5 text-muted-foreground">
-          ملفات الحالة (ZIP / RAR)
+          ملفات الحالة (ZIP / RAR / HTML)
         </div>
         {files.length === 0 ? (
           <div className="text-[11px] text-muted-foreground py-2">لا توجد ملفات مرسلة بعد.</div>
