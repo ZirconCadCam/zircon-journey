@@ -158,7 +158,7 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
     let cancelled = false;
     (async () => {
       const { data: row } = await supabase.from("slot_cases").select(
-        "id, case_code, patient_name, patient_phone, patient_age, patient_gender, tooth_number, shade, case_type, notes, scan_path, scan_name, revision_design_file_path, revision_design_file_name, doctor_decision, final_archived, created_at"
+        "id, case_code, patient_name, patient_phone, patient_age, patient_gender, tooth_number, shade, case_type, notes, scan_path, scan_name, revision_design_file_path, revision_design_file_name, design_html_sent, design_html_path, design_html_name, doctor_decision, final_archived, created_at"
       ).eq("doctor_slot", doctorSlot).eq("case_code", caseCode).maybeSingle();
       if (cancelled) return;
       setC(row);
@@ -172,6 +172,11 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
         url: row.revision_design_file_path,
         name: row.revision_design_file_name || `${caseCode}-revision.rar`,
         source: "designer-revision-rar",
+      });
+      if (row?.design_html_sent && row?.design_html_path) list.push({
+        url: row.design_html_path,
+        name: row.design_html_name || `${caseCode}.html`,
+        source: "designer-html",
       });
 
       // Pull any .rar/.zip attachments referencing this case from chat messages.
