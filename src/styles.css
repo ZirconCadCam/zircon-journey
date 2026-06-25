@@ -136,3 +136,8 @@
 @utility shadow-gold {
   box-shadow: var(--shadow-gold);
 }
+
+@keyframes indeterminate-slide {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(420%); }
+}

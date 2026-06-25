@@ -145,13 +145,36 @@ interface CaseAttachment {
   created_at?: string | null;
 }
 
+type DlPhase = "download" | "save" | "done";
+interface DlState {
+  pct: number;
+  loaded: number;
+  total: number;
+  phase: DlPhase;
+}
+
+function fmtBytes(n: number): string {
+  if (!n || n <= 0) return "0 B";
+  const u = ["B", "KB", "MB", "GB"];
+  const i = Math.min(u.length - 1, Math.floor(Math.log(n) / Math.log(1024)));
+  return `${(n / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${u[i]}`;
+}
+
+function phaseLabel(p: DlPhase): string {
+  switch (p) {
+    case "download": return "جارٍ التنزيل…";
+    case "save": return "جارٍ الحفظ…";
+    case "done": return "اكتمل التنزيل";
+  }
+}
+
 function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
   doctorSlot: number; doctorName: string; caseCode: string;
 }) {
   const [c, setC] = useState<any>(null);
   const [files, setFiles] = useState<CaseAttachment[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
-  const [progress, setProgress] = useState<Record<string, number>>({});
+  const [progress, setProgress] = useState<Record<string, DlState>>({});
   const [viewer, setViewer] = useState<CaseAttachment | null>(null);
 
   useEffect(() => {
@@ -218,13 +241,13 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
 
   async function downloadOne(att: CaseAttachment) {
     setBusy(att.url);
-    setProgress(p => ({ ...p, [att.url]: 0 }));
+    setProgress(p => ({ ...p, [att.url]: { pct: 0, loaded: 0, total: 0, phase: "download" } }));
     try {
       const res = await fetch(att.url);
       if (!res.ok) throw new Error("HTTP " + res.status);
       const total = Number(res.headers.get("content-length")) || 0;
       let blob: Blob;
-      if (res.body && total > 0) {
+      if (res.body && res.body.getReader) {
         const reader = res.body.getReader();
         const chunks: BlobPart[] = [];
         let received = 0;
@@ -234,15 +257,24 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
           if (value) {
             chunks.push(value);
             received += value.length;
-            setProgress(p => ({ ...p, [att.url]: Math.round((received / total) * 100) }));
+            setProgress(p => ({
+              ...p,
+              [att.url]: {
+                pct: total > 0 ? Math.round((received / total) * 100) : 0,
+                loaded: received,
+                total,
+                phase: "download",
+              },
+            }));
           }
         }
         blob = new Blob(chunks);
       } else {
         blob = await res.blob();
       }
-      setProgress(p => ({ ...p, [att.url]: 100 }));
+      setProgress(p => ({ ...p, [att.url]: { pct: 100, loaded: blob.size, total: blob.size, phase: "save" } }));
       const r = await saveToCenter(blob, att.name, caseCode);
+      setProgress(p => ({ ...p, [att.url]: { pct: 100, loaded: blob.size, total: blob.size, phase: "done" } }));
       toast.success(r.fallback ? "تم تنزيل الملف" : `تم الحفظ في ${r.path}`);
     } catch (e: any) {
       toast.error(e?.message || "تعذر تنزيل الملف");
@@ -250,7 +282,7 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
       setBusy(null);
       setTimeout(() => setProgress(p => {
         const n = { ...p }; delete n[att.url]; return n;
-      }), 1200);
+      }), 1600);
     }
   }
 
@@ -317,19 +349,42 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
                       {busy === f.url ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
                     </button>
                   </div>
-                  {progress[f.url] != null && (
-                    <div className="flex items-center gap-2">
-                      <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
-                        <div
-                          className="h-full rounded-full gradient-gold transition-all duration-200"
-                          style={{ width: `${progress[f.url]}%` }}
-                        />
+                  {progress[f.url] != null && (() => {
+                    const st = progress[f.url];
+                    const indeterminate = st.phase === "download" && st.total <= 0;
+                    const done = st.phase === "done";
+                    return (
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
+                            {indeterminate ? (
+                              <div className="h-full w-1/3 rounded-full gradient-gold animate-[indeterminate-slide_1.1s_ease-in-out_infinite]" />
+                            ) : (
+                              <div
+                                className={`h-full rounded-full transition-all duration-200 ${done ? "bg-emerald-500" : "gradient-gold"}`}
+                                style={{ width: `${st.pct}%` }}
+                              />
+                            )}
+                          </div>
+                          {!indeterminate && (
+                            <span className="text-[10px] font-bold text-muted-foreground tabular-nums shrink-0">
+                              {st.pct}%
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between text-[10px]">
+                          <span className={`font-bold ${done ? "text-emerald-600" : "text-gold"}`}>
+                            {phaseLabel(st.phase)}
+                          </span>
+                          {st.loaded > 0 && (
+                            <span className="text-muted-foreground tabular-nums">
+                              {fmtBytes(st.loaded)}{st.total > 0 ? ` / ${fmtBytes(st.total)}` : ""}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <span className="text-[10px] font-bold text-muted-foreground tabular-nums shrink-0">
-                        {progress[f.url]}%
-                      </span>
-                    </div>
-                  )}
+                    );
+                  })()}
                 </li>
               );
             })}
