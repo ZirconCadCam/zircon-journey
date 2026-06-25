@@ -141,7 +141,7 @@ export function CaseChatButton(props: {
 interface CaseAttachment {
   url: string;
   name: string;
-  source: "doctor-zip" | "designer-rar" | "designer-revision-rar" | "chat";
+  source: "doctor-zip" | "designer-rar" | "designer-revision-rar" | "designer-html" | "chat";
   created_at?: string | null;
 }
 
