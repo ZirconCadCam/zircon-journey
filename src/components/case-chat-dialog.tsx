@@ -367,6 +367,7 @@ function sourceLabel(s: CaseAttachment["source"]): string {
     case "doctor-zip": return "من الطبيب";
     case "designer-rar": return "من المصمم";
     case "designer-revision-rar": return "تعديل المصمم";
+    case "designer-html": return "تصميم HTML";
     default: return "مرفق";
   }
 }
