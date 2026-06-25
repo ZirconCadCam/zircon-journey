@@ -145,6 +145,29 @@ interface CaseAttachment {
   created_at?: string | null;
 }
 
+type DlPhase = "download" | "save" | "done";
+interface DlState {
+  pct: number;
+  loaded: number;
+  total: number;
+  phase: DlPhase;
+}
+
+function fmtBytes(n: number): string {
+  if (!n || n <= 0) return "0 B";
+  const u = ["B", "KB", "MB", "GB"];
+  const i = Math.min(u.length - 1, Math.floor(Math.log(n) / Math.log(1024)));
+  return `${(n / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${u[i]}`;
+}
+
+function phaseLabel(p: DlPhase): string {
+  switch (p) {
+    case "download": return "جارٍ التنزيل…";
+    case "save": return "جارٍ الحفظ…";
+    case "done": return "اكتمل التنزيل";
+  }
+}
+
 function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
   doctorSlot: number; doctorName: string; caseCode: string;
 }) {
