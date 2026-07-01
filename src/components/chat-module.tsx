@@ -11,8 +11,9 @@ import { InAppFileViewer } from "@/components/in-app-file-viewer";
 import {
   Send, Paperclip, Mic, Square, X, MessageSquare, Plus, Archive, ArchiveRestore,
   Search, FileText, Download, ChevronRight, Trash2, Check, CheckCheck, Clock, AlertCircle,
-  Copy, Reply, Share2, Save, FolderOpen, Pause, Play, RotateCw, Pencil, ExternalLink,
+  Copy, Reply, Share2, Save, FolderOpen, Pause, Play, RotateCw, Pencil, ExternalLink, Loader2,
 } from "lucide-react";
+import { ImageLightbox } from "@/components/image-lightbox";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 import { compareByCreatedAt, formatChatTime, formatChatFull, formatDayLabel, isNewDay } from "@/lib/time";
@@ -923,15 +924,33 @@ function MessageStatus({ msg, otherParticipants }: { msg: LocalMsg; otherPartici
   return <span title="تم التسليم"><Check className="size-3.5 opacity-90" /></span>;
 }
 
+const IMG_RE = /\.(png|jpe?g|gif|webp|bmp|heic|heif|svg)$/i;
+function isImageMsg(msg: LocalMsg): boolean {
+  return (msg.attachment_mime?.startsWith("image/") ?? false) || IMG_RE.test(msg.attachment_name || "");
+}
+
 function FileBubble({ msg, mine }: { msg: LocalMsg; mine: boolean }) {
   const [busy, setBusy] = useState(false);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerUrl, setViewerUrl] = useState<string | null>(null);
+  const [imgUrl, setImgUrl] = useState<string | null>(null);
+  const [lightbox, setLightbox] = useState(false);
+  const isImage = isImageMsg(msg);
   async function resolveUrl(): Promise<string | null> {
     if (!msg.attachment_path) return null;
     if (/^https?:\/\//i.test(msg.attachment_path)) return msg.attachment_path;
-    return await getSignedUrl(msg.attachment_path, 600);
+    return await getSignedUrl(msg.attachment_path, 60 * 60);
   }
+
+  // Resolve a preview URL for images so they render inline (open) in the chat.
+  useEffect(() => {
+    if (!isImage) return;
+    if (msg._file) { const u = URL.createObjectURL(msg._file); setImgUrl(u); return () => URL.revokeObjectURL(u); }
+    let cancelled = false;
+    (async () => { const u = await resolveUrl(); if (!cancelled) setImgUrl(u); })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [msg.attachment_path, msg._file, isImage]);
   async function forceDownload(url: string, name: string) {
     try {
       const res = await fetch(url);
@@ -975,6 +994,41 @@ function FileBubble({ msg, mine }: { msg: LocalMsg; mine: boolean }) {
       ? `${(msg.attachment_size/1024/1024).toFixed(1)} MB`
       : `${(msg.attachment_size/1024).toFixed(1)} KB`
     : "";
+  if (isImage) {
+    return (
+      <>
+        <div className="mt-1 space-y-1.5">
+          <button type="button" onClick={() => imgUrl && setLightbox(true)}
+            className="block rounded-lg overflow-hidden border border-border/60 bg-black/5">
+            {imgUrl ? (
+              <img src={imgUrl} alt={msg.attachment_name || "صورة"} loading="lazy"
+                className="max-h-64 w-auto max-w-full object-contain" />
+            ) : (
+              <div className="h-40 w-56 grid place-items-center text-muted-foreground">
+                <Loader2Icon />
+              </div>
+            )}
+          </button>
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] opacity-70 truncate">{msg.attachment_name}{sizeLabel ? ` — ${sizeLabel}` : ""}</span>
+            <button onClick={download} disabled={busy || !!msg._local}
+              className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold shrink-0 disabled:opacity-50 ${mine ? "bg-white/20 hover:bg-white/30" : "gradient-gold text-gold-foreground"}`}
+              title="تحميل الصورة">
+              <Download className="size-3.5" /> تحميل
+            </button>
+          </div>
+        </div>
+        {lightbox && imgUrl && (
+          <ImageLightbox
+            images={[{ url: imgUrl, name: msg.attachment_name || "صورة" }]}
+            index={0}
+            onClose={() => setLightbox(false)}
+            onIndexChange={() => {}}
+          />
+        )}
+      </>
+    );
+  }
   return (
     <>
     <div className={`mt-1 flex items-center gap-2 rounded-lg border px-3 py-2 ${mine ? "border-white/30 bg-white/10" : "border-border bg-muted/40"}`}>
@@ -1005,6 +1059,10 @@ function FileBubble({ msg, mine }: { msg: LocalMsg; mine: boolean }) {
     />
     </>
   );
+}
+
+function Loader2Icon() {
+  return <Loader2 className="size-5 animate-spin" />;
 }
 
 

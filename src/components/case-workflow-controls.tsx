@@ -4,12 +4,14 @@ import { toast } from "sonner";
 import {
   CheckSquare, Square, Loader2, AlertCircle,
   FileArchive, FileCode, ChevronDown, ChevronUp, Check, Send, Truck,
-  ThumbsUp, Pencil, X, Archive, Download, Type, FileText,
+  ThumbsUp, Pencil, X, Archive, Download, Type, FileText, Image as ImageIcon, Highlighter,
 } from "lucide-react";
 import type { RoleKey } from "@/lib/chat";
 import { ROLE_LABEL, getSignedUrl } from "@/lib/chat";
 import { CaseFileActivityLog } from "@/components/case-file-activity-log";
 import { ShadeConfirm, ShadePicker, CaseShadeConfirm } from "@/components/shade-confirm";
+import { ImageAnnotator } from "@/components/image-annotator";
+import { ImageLightbox } from "@/components/image-lightbox";
 
 export interface WorkflowCase {
   id: string;
@@ -130,6 +132,33 @@ async function ensureCaseConvForDoctor(c: WorkflowCase): Promise<string | null> 
       participants: ["doctor", "designer"],
       title: `${prefix} ${c.patient_name}`,
       created_by: "designer",
+    }).select("id").single();
+  if (error || !created) return null;
+  return created.id;
+}
+
+/** Ensure a case-scoped conversation that includes the doctor, designer AND
+ *  technician (title starts with `[case_code]`), so notes/images the doctor
+ *  posts appear inside the per-case chat on the doctor, designer and
+ *  technician pages simultaneously. Returns the conversation id. */
+async function ensureCaseConvAll(c: WorkflowCase): Promise<string | null> {
+  const prefix = `[${c.case_code}]`;
+  const { data: existing } = await supabase.from("chat_conversations")
+    .select("id,participants,title").eq("doctor_slot", c.doctor_slot);
+  const conv = (existing ?? []).find((x: any) =>
+    Array.isArray(x.participants)
+    && x.participants.includes("doctor")
+    && x.participants.includes("designer")
+    && x.participants.includes("technician")
+    && typeof x.title === "string" && x.title.startsWith(prefix)
+  ) as { id: string } | undefined;
+  if (conv) return conv.id;
+  const { data: created, error } = await supabase.from("chat_conversations")
+    .insert({
+      doctor_slot: c.doctor_slot,
+      participants: ["doctor", "designer", "technician"],
+      title: `${prefix} ${c.patient_name}`,
+      created_by: "doctor",
     }).select("id").single();
   if (error || !created) return null;
   return created.id;
@@ -1155,6 +1184,14 @@ function DoctorControls({ c, actorName, doctorName }: {
         </div>
       )}
 
+      {/* Persistent notes channel: always open until the case is finally
+          archived, so the doctor can keep sending notes/images (with drawings
+          and measurements) to the designer and technician in parallel. */}
+      {!archived && (
+        <DoctorNotesComposer c={c} actorName={actorName} doctorName={doctorName} />
+      )}
+
+
       {reviewReady && !decision && !confirmApprove && (
         <div className="space-y-2">
           <div className="text-xs font-bold text-foreground">قرار الطبيب بعد المراجعة:</div>
@@ -1387,5 +1424,204 @@ function RevAttachmentPreview({ file, onRemove }: { file: File; onRemove: () => 
     </div>
   );
 }
+
+// ============== DOCTOR: persistent notes / annotated-image channel ==============
+/** Always-available editor letting the doctor send text notes and images
+ *  (with drawings, arrows and point-to-point measurements) to the designer and
+ *  technician at any time until the case is finally archived. Everything is
+ *  posted into the case-scoped conversation, so it shows up inside the per-case
+ *  chat on the doctor, designer and technician pages. */
+function DoctorNotesComposer({ c, actorName, doctorName }: {
+  c: WorkflowCase; actorName: string; doctorName: string;
+}) {
+  const [notes, setNotes] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [annotateIdx, setAnnotateIdx] = useState<number | null>(null);
+  const [lightbox, setLightbox] = useState<{ url: string; name: string }[] | null>(null);
+  const [lightboxIdx, setLightboxIdx] = useState(0);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const imgRef = useRef<HTMLInputElement>(null);
+
+  function addFiles(list: File[]) {
+    if (list.length) setFiles(prev => [...prev, ...list]);
+  }
+
+  async function send() {
+    if (notes.trim().length < 1 && files.length === 0) {
+      toast.error("اكتب ملاحظة أو أرفق صورة/ملف أولاً");
+      return;
+    }
+    setBusy(true);
+    try {
+      const convId = await ensureCaseConvAll(c);
+      if (!convId) { toast.error("تعذر فتح محادثة الحالة"); return; }
+      if (notes.trim().length >= 1) {
+        await supabase.from("chat_messages").insert({
+          conversation_id: convId, sender: "doctor", sender_name: actorName,
+          content: `📝 ملاحظة الطبيب — الحالة ${c.case_code}\n${notes.trim()}`,
+          message_type: "text",
+        });
+      }
+      for (const f of files) {
+        const up = await uploadAttachment(f, c, "doctor-notes");
+        if (!up) continue;
+        const isImage = f.type.startsWith("image/");
+        await supabase.from("chat_messages").insert({
+          conversation_id: convId, sender: "doctor", sender_name: actorName,
+          content: `${isImage ? "🖼️ صورة" : "📎 ملف"} من الطبيب — الحالة ${c.case_code}`,
+          message_type: "file",
+          attachment_path: up.url,
+          attachment_name: f.name,
+          attachment_mime: f.type || null,
+          attachment_size: f.size,
+        });
+      }
+      toast.success("✅ تم إرسال الملاحظات للمصمم والفني");
+      setNotes(""); setFiles([]);
+    } catch (err: any) {
+      toast.error(err?.message || "تعذر الإرسال");
+    } finally { setBusy(false); }
+  }
+
+  return (
+    <div className="rounded-xl border border-gold/40 bg-gradient-to-br from-card to-muted/20 p-3 space-y-2 shadow-sm">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[12px] font-bold text-foreground flex items-center gap-1.5">
+          <FileText className="size-3.5 text-gold" /> ملاحظات وتواصل الحالة (للمصمم والفني)
+        </span>
+      </div>
+
+      <div className="rounded-xl border border-input bg-background overflow-hidden focus-within:border-gold transition">
+        <div className="flex items-center gap-2 flex-wrap border-b border-border/60 bg-muted/40 px-2 py-1.5">
+          <button type="button" onClick={() => imgRef.current?.click()}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-gold/60 bg-gold/5 px-2.5 py-1 text-[11px] font-bold hover:bg-gold/10">
+            <ImageIcon className="size-3.5" /> إضافة صورة
+          </button>
+          <button type="button" onClick={() => fileRef.current?.click()}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-border px-2.5 py-1 text-[11px] font-bold hover:border-gold">
+            <FileArchive className="size-3.5" /> إرفاق ملف
+          </button>
+          <span className="text-[10px] text-muted-foreground">اضغط على الصورة ثم «رسم وقياس» للشرح.</span>
+          <input ref={imgRef} type="file" accept="image/*" multiple className="hidden"
+            onChange={(e) => { const l = Array.from(e.target.files ?? []); if (e.target) e.target.value = ""; addFiles(l); }} />
+          <input ref={fileRef} type="file" multiple className="hidden"
+            onChange={(e) => { const l = Array.from(e.target.files ?? []); if (e.target) e.target.value = ""; addFiles(l); }} />
+        </div>
+
+        {files.length > 0 && (
+          <div className="grid grid-cols-3 gap-2 p-2 border-b border-border/60 bg-muted/20 max-h-64 overflow-auto">
+            {files.map((f, i) => (
+              <NoteAttachmentTile
+                key={i}
+                file={f}
+                onRemove={() => setFiles(prev => prev.filter((_, j) => j !== i))}
+                onAnnotate={f.type.startsWith("image/") ? () => setAnnotateIdx(i) : undefined}
+                onOpen={f.type.startsWith("image/")
+                  ? (url) => { setLightbox([{ url, name: f.name }]); setLightboxIdx(0); }
+                  : undefined}
+              />
+            ))}
+          </div>
+        )}
+
+        <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3}
+          placeholder="اكتب ملاحظاتك للمصمم والفني… يمكنك إرفاق صور والرسم عليها لشرح المطلوب."
+          className="w-full bg-transparent p-2.5 text-sm outline-none border-0 resize-y" />
+      </div>
+
+      <div className="flex justify-end">
+        <button type="button" onClick={send} disabled={busy}
+          className="inline-flex items-center gap-1.5 rounded-lg gradient-brown px-4 py-2 text-xs font-bold shadow-luxury disabled:opacity-50">
+          {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
+          إرسال للمصمم والفني
+        </button>
+      </div>
+
+      {annotateIdx != null && files[annotateIdx] && (
+        <AnnotatorHost
+          file={files[annotateIdx]}
+          onCancel={() => setAnnotateIdx(null)}
+          onSave={(blob, name) => {
+            const newFile = new File([blob], name, { type: "image/png" });
+            setFiles(prev => prev.map((f, j) => j === annotateIdx ? newFile : f));
+            setAnnotateIdx(null);
+            toast.success("تم حفظ الشرح على الصورة");
+          }}
+        />
+      )}
+
+      {lightbox && (
+        <ImageLightbox
+          images={lightbox}
+          index={lightboxIdx}
+          onClose={() => setLightbox(null)}
+          onIndexChange={setLightboxIdx}
+        />
+      )}
+    </div>
+  );
+}
+
+/** Bridges a File to the ImageAnnotator by creating a temporary object URL. */
+function AnnotatorHost({ file, onCancel, onSave }: {
+  file: File; onCancel: () => void; onSave: (blob: Blob, name: string) => void;
+}) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    const u = URL.createObjectURL(file);
+    setUrl(u);
+    return () => URL.revokeObjectURL(u);
+  }, [file]);
+  if (!url) return null;
+  return <ImageAnnotator src={url} fileName={file.name} onCancel={onCancel} onSave={onSave} />;
+}
+
+/** Attachment tile for the doctor notes composer: inline image preview with
+ *  "annotate" and "remove" actions, or a file icon for non-images. */
+function NoteAttachmentTile({ file, onRemove, onAnnotate, onOpen }: {
+  file: File; onRemove: () => void;
+  onAnnotate?: () => void;
+  onOpen?: (url: string) => void;
+}) {
+  const isImage = file.type.startsWith("image/");
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!isImage) return;
+    const u = URL.createObjectURL(file);
+    setUrl(u);
+    return () => URL.revokeObjectURL(u);
+  }, [file, isImage]);
+
+  return (
+    <div className="relative group rounded-lg border border-border bg-muted/40 overflow-hidden">
+      <button type="button" onClick={onRemove}
+        className="absolute top-1 left-1 z-10 rounded-full bg-black/55 text-white p-0.5 hover:bg-destructive"
+        aria-label="حذف">
+        <X className="size-3" />
+      </button>
+      {isImage && url ? (
+        <button type="button" onClick={() => onOpen?.(url)} className="block w-full">
+          <img src={url} alt={file.name} className="h-20 w-full object-cover" />
+        </button>
+      ) : (
+        <div className="h-20 w-full grid place-items-center text-muted-foreground">
+          <FileText className="size-7" />
+        </div>
+      )}
+      {isImage && onAnnotate && (
+        <button type="button" onClick={onAnnotate}
+          className="absolute bottom-8 right-1 z-10 inline-flex items-center gap-1 rounded-md bg-gold text-gold-foreground px-1.5 py-0.5 text-[9px] font-bold shadow-gold hover:brightness-105">
+          <Highlighter className="size-3" /> رسم وقياس
+        </button>
+      )}
+      <div className="px-1.5 py-1 border-t border-border/60">
+        <div className="truncate text-[10px] font-bold" title={file.name}>{file.name}</div>
+        <div className="text-[9px] text-muted-foreground font-mono">{(file.size / 1024).toFixed(1)} KB</div>
+      </div>
+    </div>
+  );
+}
+
 
 
