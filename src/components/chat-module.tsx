@@ -993,6 +993,41 @@ function FileBubble({ msg, mine }: { msg: LocalMsg; mine: boolean }) {
       ? `${(msg.attachment_size/1024/1024).toFixed(1)} MB`
       : `${(msg.attachment_size/1024).toFixed(1)} KB`
     : "";
+  if (isImage) {
+    return (
+      <>
+        <div className="mt-1 space-y-1.5">
+          <button type="button" onClick={() => imgUrl && setLightbox(true)}
+            className="block rounded-lg overflow-hidden border border-border/60 bg-black/5">
+            {imgUrl ? (
+              <img src={imgUrl} alt={msg.attachment_name || "صورة"} loading="lazy"
+                className="max-h-64 w-auto max-w-full object-contain" />
+            ) : (
+              <div className="h-40 w-56 grid place-items-center text-muted-foreground">
+                <Loader2Icon />
+              </div>
+            )}
+          </button>
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] opacity-70 truncate">{msg.attachment_name}{sizeLabel ? ` — ${sizeLabel}` : ""}</span>
+            <button onClick={download} disabled={busy || !!msg._local}
+              className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold shrink-0 disabled:opacity-50 ${mine ? "bg-white/20 hover:bg-white/30" : "gradient-gold text-gold-foreground"}`}
+              title="تحميل الصورة">
+              <Download className="size-3.5" /> تحميل
+            </button>
+          </div>
+        </div>
+        {lightbox && imgUrl && (
+          <ImageLightbox
+            images={[{ url: imgUrl, name: msg.attachment_name || "صورة" }]}
+            index={0}
+            onClose={() => setLightbox(false)}
+            onIndexChange={() => {}}
+          />
+        )}
+      </>
+    );
+  }
   return (
     <>
     <div className={`mt-1 flex items-center gap-2 rounded-lg border px-3 py-2 ${mine ? "border-white/30 bg-white/10" : "border-border bg-muted/40"}`}>
@@ -1023,6 +1058,10 @@ function FileBubble({ msg, mine }: { msg: LocalMsg; mine: boolean }) {
     />
     </>
   );
+}
+
+function Loader2Icon() {
+  return <Loader2 className="size-5 animate-spin" />;
 }
 
 
