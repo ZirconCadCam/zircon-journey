@@ -11,8 +11,9 @@ import { InAppFileViewer } from "@/components/in-app-file-viewer";
 import {
   Send, Paperclip, Mic, Square, X, MessageSquare, Plus, Archive, ArchiveRestore,
   Search, FileText, Download, ChevronRight, Trash2, Check, CheckCheck, Clock, AlertCircle,
-  Copy, Reply, Share2, Save, FolderOpen, Pause, Play, RotateCw, Pencil, ExternalLink,
+  Copy, Reply, Share2, Save, FolderOpen, Pause, Play, RotateCw, Pencil, ExternalLink, Loader2,
 } from "lucide-react";
+import { ImageLightbox } from "@/components/image-lightbox";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 import { compareByCreatedAt, formatChatTime, formatChatFull, formatDayLabel, isNewDay } from "@/lib/time";
