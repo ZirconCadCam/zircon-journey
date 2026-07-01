@@ -923,15 +923,33 @@ function MessageStatus({ msg, otherParticipants }: { msg: LocalMsg; otherPartici
   return <span title="تم التسليم"><Check className="size-3.5 opacity-90" /></span>;
 }
 
+const IMG_RE = /\.(png|jpe?g|gif|webp|bmp|heic|heif|svg)$/i;
+function isImageMsg(msg: LocalMsg): boolean {
+  return (msg.attachment_mime?.startsWith("image/") ?? false) || IMG_RE.test(msg.attachment_name || "");
+}
+
 function FileBubble({ msg, mine }: { msg: LocalMsg; mine: boolean }) {
   const [busy, setBusy] = useState(false);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerUrl, setViewerUrl] = useState<string | null>(null);
+  const [imgUrl, setImgUrl] = useState<string | null>(null);
+  const [lightbox, setLightbox] = useState(false);
+  const isImage = isImageMsg(msg);
   async function resolveUrl(): Promise<string | null> {
     if (!msg.attachment_path) return null;
     if (/^https?:\/\//i.test(msg.attachment_path)) return msg.attachment_path;
-    return await getSignedUrl(msg.attachment_path, 600);
+    return await getSignedUrl(msg.attachment_path, 60 * 60);
   }
+
+  // Resolve a preview URL for images so they render inline (open) in the chat.
+  useEffect(() => {
+    if (!isImage) return;
+    if (msg._file) { const u = URL.createObjectURL(msg._file); setImgUrl(u); return () => URL.revokeObjectURL(u); }
+    let cancelled = false;
+    (async () => { const u = await resolveUrl(); if (!cancelled) setImgUrl(u); })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [msg.attachment_path, msg._file, isImage]);
   async function forceDownload(url: string, name: string) {
     try {
       const res = await fetch(url);
