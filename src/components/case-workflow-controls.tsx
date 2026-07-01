@@ -4,12 +4,14 @@ import { toast } from "sonner";
 import {
   CheckSquare, Square, Loader2, AlertCircle,
   FileArchive, FileCode, ChevronDown, ChevronUp, Check, Send, Truck,
-  ThumbsUp, Pencil, X, Archive, Download, Type, FileText,
+  ThumbsUp, Pencil, X, Archive, Download, Type, FileText, Image as ImageIcon, Highlighter,
 } from "lucide-react";
 import type { RoleKey } from "@/lib/chat";
 import { ROLE_LABEL, getSignedUrl } from "@/lib/chat";
 import { CaseFileActivityLog } from "@/components/case-file-activity-log";
 import { ShadeConfirm, ShadePicker, CaseShadeConfirm } from "@/components/shade-confirm";
+import { ImageAnnotator } from "@/components/image-annotator";
+import { ImageLightbox } from "@/components/image-lightbox";
 
 export interface WorkflowCase {
   id: string;
