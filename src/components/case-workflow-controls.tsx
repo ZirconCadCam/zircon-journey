@@ -1184,6 +1184,14 @@ function DoctorControls({ c, actorName, doctorName }: {
         </div>
       )}
 
+      {/* Persistent notes channel: always open until the case is finally
+          archived, so the doctor can keep sending notes/images (with drawings
+          and measurements) to the designer and technician in parallel. */}
+      {!archived && (
+        <DoctorNotesComposer c={c} actorName={actorName} doctorName={doctorName} />
+      )}
+
+
       {reviewReady && !decision && !confirmApprove && (
         <div className="space-y-2">
           <div className="text-xs font-bold text-foreground">قرار الطبيب بعد المراجعة:</div>
