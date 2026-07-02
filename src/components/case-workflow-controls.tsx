@@ -1546,7 +1546,39 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
           className="w-full bg-transparent p-2.5 text-sm outline-none border-0 resize-y" />
       </div>
 
-      <div className="flex justify-end">
+      {/* Images already sent for this case, with any team replies (comments)
+          the designer/technician left on each one. */}
+      {Array.isArray(c.notes_images) && c.notes_images.length > 0 && (
+        <div className="rounded-xl border border-border bg-muted/20 p-2.5 space-y-2.5">
+          <div className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
+            <ImageIcon className="size-3.5 text-gold" /> صور الحالة وتعليقات الفريق
+          </div>
+          {c.notes_images.map((img, idx) => {
+            const cmts = (c.notes_image_comments ?? []).filter(k => k.image_url === img.url);
+            return (
+              <div key={img.url} className="flex gap-2.5">
+                <button type="button"
+                  onClick={() => { setLightbox(c.notes_images as { url: string; name: string }[]); setLightboxIdx(idx); }}
+                  className="shrink-0 rounded-lg overflow-hidden border border-border hover:border-gold transition">
+                  <img src={img.url} alt={img.name} loading="lazy" className="h-16 w-16 object-cover" />
+                </button>
+                <div className="flex-1 min-w-0 space-y-1">
+                  <div className="truncate text-[10px] font-bold text-muted-foreground">{img.name}</div>
+                  {cmts.length === 0 ? (
+                    <div className="text-[10px] text-muted-foreground">لا توجد تعليقات بعد.</div>
+                  ) : cmts.map((k, ki) => (
+                    <div key={ki} className="rounded-lg bg-background border border-border/60 px-2 py-1">
+                      <div className="text-[10px] font-bold text-gold">{k.author_name || ROLE_LABEL[k.author_role as RoleKey] || k.author_role}</div>
+                      <div className="text-[11px] whitespace-pre-wrap">{k.comment}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
         <button type="button" onClick={send} disabled={busy}
           className="inline-flex items-center gap-1.5 rounded-lg gradient-brown px-4 py-2 text-xs font-bold shadow-luxury disabled:opacity-50">
           {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
