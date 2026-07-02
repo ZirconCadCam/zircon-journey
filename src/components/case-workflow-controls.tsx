@@ -1466,10 +1466,12 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
           message_type: "text",
         });
       }
+      const newImages: { url: string; name: string }[] = [];
       for (const f of files) {
         const up = await uploadAttachment(f, c, "doctor-notes");
         if (!up) continue;
         const isImage = f.type.startsWith("image/");
+        if (isImage) newImages.push({ url: up.url, name: f.name });
         await supabase.from("chat_messages").insert({
           conversation_id: convId, sender: "doctor", sender_name: actorName,
           content: `${isImage ? "🖼️ صورة" : "📎 ملف"} من الطبيب — الحالة ${c.case_code}`,
@@ -1480,8 +1482,19 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
           attachment_size: f.size,
         });
       }
+      // Persist uploaded images onto the case so they appear in the designer's
+      // case info (under the 3D scan) and remain part of the case data.
+      if (newImages.length) {
+        const { data: row } = await supabase.from("slot_cases")
+          .select("notes_images").eq("id", c.id).maybeSingle();
+        const prev = Array.isArray((row as any)?.notes_images)
+          ? ((row as any).notes_images as { url: string; name: string }[]) : [];
+        await supabase.from("slot_cases")
+          .update({ notes_images: [...prev, ...newImages] as any }).eq("id", c.id);
+      }
       toast.success("✅ تم إرسال الملاحظات للمصمم والفني");
       setNotes(""); setFiles([]);
+
     } catch (err: any) {
       toast.error(err?.message || "تعذر الإرسال");
     } finally { setBusy(false); }
