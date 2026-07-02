@@ -59,6 +59,7 @@ interface Case {
   case_type: string | null;
   notes: string | null;
   notes_images?: { url: string; name: string }[] | null;
+  notes_image_comments?: import("@/lib/image-comments").NoteImageComment[] | null;
   status: string;
   created_at: string;
   scan_path: string | null;
