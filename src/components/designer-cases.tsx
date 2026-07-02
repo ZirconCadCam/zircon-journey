@@ -14,6 +14,8 @@ import { CaseChatButton } from "@/components/case-chat-dialog";
 import { ZipViewerDialog } from "@/components/zip-viewer-dialog";
 import { TechRevisionPanel } from "@/components/tech-revision-panel";
 import { ImageLightbox } from "@/components/image-lightbox";
+import { addImageComment, postImageCommentToChat, type NoteImageComment } from "@/lib/image-comments";
+import { MessageSquare, ZoomIn as ZoomInIcon } from "lucide-react";
 
 /** Inject hex overrides for our oklch CSS variables into html2canvas's cloned doc. */
 const H2C_ONCLONE = (doc: Document) => {
