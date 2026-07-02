@@ -1140,7 +1140,34 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                           )}
                         </div>
                       )}
+
+                      {Array.isArray(c.notes_images) && c.notes_images.length > 0 && (
+                        <div className="mt-3 rounded-xl border border-gold/30 bg-muted/20 p-2.5">
+                          <div className="text-[11px] font-bold text-gold mb-2 flex items-center gap-1.5">
+                            <ScanLine className="size-3.5" /> صور مرفقة من الطبيب (تحت المسح ثلاثي الأبعاد)
+                          </div>
+                          <div className="space-y-3">
+                            {c.notes_images.map((img, idx) => (
+                              <DoctorImageComment
+                                key={img.url}
+                                caseId={c.id}
+                                caseCode={c.case_code}
+                                doctorSlot={c.doctor_slot}
+                                patientName={c.patient_name}
+                                image={img}
+                                comments={(c.notes_image_comments ?? []).filter(k => k.image_url === img.url)}
+                                canComment={actor === "designer" || actor === "technician"}
+                                actor={actor as RoleKey}
+                                actorName={actorName ?? ROLE_LABEL[actor as RoleKey]}
+                                onOpen={() => setLightbox({ images: c.notes_images as { url: string; name: string }[], index: idx })}
+                                onAdded={refreshCases}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
+
 
                     <div className="flex flex-col gap-2 shrink-0">
                       {actor !== "admin" && (
