@@ -1344,3 +1344,90 @@ function row(label: string, value: string) {
 function escapeHtml(s: string) {
   return s.replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]!));
 }
+
+/** A doctor-attached image shown in the designer/technician case card, with an
+ *  inline comment thread. Designer/technician replies are saved on the case and
+ *  posted to the case chat so they reach the doctor as a comment on the image. */
+function DoctorImageComment({
+  caseId, caseCode, doctorSlot, patientName, image, comments, canComment,
+  actor, actorName, onOpen, onAdded,
+}: {
+  caseId: string;
+  caseCode: string;
+  doctorSlot: number;
+  patientName: string;
+  image: { url: string; name: string };
+  comments: NoteImageComment[];
+  canComment: boolean;
+  actor: RoleKey;
+  actorName: string;
+  onOpen: () => void;
+  onAdded: () => void | Promise<void>;
+}) {
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function submit() {
+    if (!text.trim()) { toast.error("اكتب تعليقك أولاً"); return; }
+    setBusy(true);
+    try {
+      const entry: NoteImageComment = {
+        image_url: image.url,
+        author_role: actor,
+        author_name: actorName,
+        comment: text.trim(),
+        created_at: new Date().toISOString(),
+      };
+      await addImageComment(caseId, entry);
+      await postImageCommentToChat({
+        doctorSlot, caseCode, patientName,
+        authorRole: actor, authorName: actorName,
+        imageName: image.name, comment: text.trim(),
+      });
+      setText("");
+      toast.success("تم إرسال تعليقك للطبيب");
+      await onAdded();
+    } catch {
+      toast.error("تعذر إرسال التعليق");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="flex gap-2.5">
+      <button type="button" onClick={onOpen}
+        className="shrink-0 rounded-lg overflow-hidden border border-border hover:border-gold transition"
+        title="انقر للتكبير">
+        <img src={image.url} alt={image.name} loading="lazy" className="h-20 w-20 object-cover" />
+      </button>
+      <div className="flex-1 min-w-0 space-y-1.5">
+        <div className="truncate text-[10px] font-bold text-muted-foreground">{image.name}</div>
+        {comments.map((k, ki) => (
+          <div key={ki} className="rounded-lg bg-card border border-border/60 px-2 py-1">
+            <div className="text-[10px] font-bold text-gold">
+              {k.author_name || ROLE_LABEL[k.author_role as RoleKey] || k.author_role}
+            </div>
+            <div className="text-[11px] whitespace-pre-wrap text-foreground/90">{k.comment}</div>
+          </div>
+        ))}
+        {canComment && (
+          <div className="flex items-end gap-1.5">
+            <textarea
+              value={text}
+              onChange={e => setText(e.target.value)}
+              rows={1}
+              placeholder="اكتب تعليقك للطبيب على هذه الصورة…"
+              className="flex-1 resize-y rounded-lg border border-input bg-background px-2 py-1 text-[11px] outline-none focus:border-gold"
+            />
+            <button type="button" onClick={submit} disabled={busy}
+              className="inline-flex items-center gap-1 rounded-lg gradient-gold text-gold-foreground px-2.5 py-1.5 text-[11px] font-bold shadow-gold disabled:opacity-50">
+              {busy ? <Loader2 className="size-3.5 animate-spin" /> : <MessageSquare className="size-3.5" />} تعليق
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
