@@ -63,6 +63,9 @@ export interface WorkflowCase {
   notes?: string | null;
   scan_path?: string | null;
   scan_name?: string | null;
+  scan_mime?: string | null;
+  notes_images?: { url: string; name: string }[] | null;
+  notes_image_comments?: import("@/lib/image-comments").NoteImageComment[] | null;
 }
 
 interface Props {
@@ -1463,10 +1466,12 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
           message_type: "text",
         });
       }
+      const newImages: { url: string; name: string }[] = [];
       for (const f of files) {
         const up = await uploadAttachment(f, c, "doctor-notes");
         if (!up) continue;
         const isImage = f.type.startsWith("image/");
+        if (isImage) newImages.push({ url: up.url, name: f.name });
         await supabase.from("chat_messages").insert({
           conversation_id: convId, sender: "doctor", sender_name: actorName,
           content: `${isImage ? "🖼️ صورة" : "📎 ملف"} من الطبيب — الحالة ${c.case_code}`,
@@ -1477,8 +1482,19 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
           attachment_size: f.size,
         });
       }
+      // Persist uploaded images onto the case so they appear in the designer's
+      // case info (under the 3D scan) and remain part of the case data.
+      if (newImages.length) {
+        const { data: row } = await supabase.from("slot_cases")
+          .select("notes_images").eq("id", c.id).maybeSingle();
+        const prev = Array.isArray((row as any)?.notes_images)
+          ? ((row as any).notes_images as { url: string; name: string }[]) : [];
+        await supabase.from("slot_cases")
+          .update({ notes_images: [...prev, ...newImages] as any }).eq("id", c.id);
+      }
       toast.success("✅ تم إرسال الملاحظات للمصمم والفني");
       setNotes(""); setFiles([]);
+
     } catch (err: any) {
       toast.error(err?.message || "تعذر الإرسال");
     } finally { setBusy(false); }
@@ -1529,6 +1545,39 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
           placeholder="اكتب ملاحظاتك للمصمم والفني… يمكنك إرفاق صور والرسم عليها لشرح المطلوب."
           className="w-full bg-transparent p-2.5 text-sm outline-none border-0 resize-y" />
       </div>
+
+      {/* Images already sent for this case, with any team replies (comments)
+          the designer/technician left on each one. */}
+      {Array.isArray(c.notes_images) && c.notes_images.length > 0 && (
+        <div className="rounded-xl border border-border bg-muted/20 p-2.5 space-y-2.5">
+          <div className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
+            <ImageIcon className="size-3.5 text-gold" /> صور الحالة وتعليقات الفريق
+          </div>
+          {c.notes_images.map((img, idx) => {
+            const cmts = (c.notes_image_comments ?? []).filter(k => k.image_url === img.url);
+            return (
+              <div key={img.url} className="flex gap-2.5">
+                <button type="button"
+                  onClick={() => { setLightbox(c.notes_images as { url: string; name: string }[]); setLightboxIdx(idx); }}
+                  className="shrink-0 rounded-lg overflow-hidden border border-border hover:border-gold transition">
+                  <img src={img.url} alt={img.name} loading="lazy" className="h-16 w-16 object-cover" />
+                </button>
+                <div className="flex-1 min-w-0 space-y-1">
+                  <div className="truncate text-[10px] font-bold text-muted-foreground">{img.name}</div>
+                  {cmts.length === 0 ? (
+                    <div className="text-[10px] text-muted-foreground">لا توجد تعليقات بعد.</div>
+                  ) : cmts.map((k, ki) => (
+                    <div key={ki} className="rounded-lg bg-background border border-border/60 px-2 py-1">
+                      <div className="text-[10px] font-bold text-gold">{k.author_name || ROLE_LABEL[k.author_role as RoleKey] || k.author_role}</div>
+                      <div className="text-[11px] whitespace-pre-wrap">{k.comment}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <div className="flex justify-end">
         <button type="button" onClick={send} disabled={busy}

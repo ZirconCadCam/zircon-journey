@@ -622,6 +622,7 @@ export type Database = {
           new_delivered_at: string | null
           new_read_at: string | null
           notes: string | null
+          notes_image_comments: Json
           notes_images: Json
           patient_age: number | null
           patient_gender: string | null
@@ -693,6 +694,7 @@ export type Database = {
           new_delivered_at?: string | null
           new_read_at?: string | null
           notes?: string | null
+          notes_image_comments?: Json
           notes_images?: Json
           patient_age?: number | null
           patient_gender?: string | null
@@ -764,6 +766,7 @@ export type Database = {
           new_delivered_at?: string | null
           new_read_at?: string | null
           notes?: string | null
+          notes_image_comments?: Json
           notes_images?: Json
           patient_age?: number | null
           patient_gender?: string | null

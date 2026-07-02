@@ -14,6 +14,8 @@ import { CaseChatButton } from "@/components/case-chat-dialog";
 import { ZipViewerDialog } from "@/components/zip-viewer-dialog";
 import { TechRevisionPanel } from "@/components/tech-revision-panel";
 import { ImageLightbox } from "@/components/image-lightbox";
+import { addImageComment, postImageCommentToChat, type NoteImageComment } from "@/lib/image-comments";
+import { MessageSquare } from "lucide-react";
 
 /** Inject hex overrides for our oklch CSS variables into html2canvas's cloned doc. */
 const H2C_ONCLONE = (doc: Document) => {
@@ -59,6 +61,7 @@ interface Case {
   case_type: string | null;
   notes: string | null;
   notes_images?: { url: string; name: string }[] | null;
+  notes_image_comments?: import("@/lib/image-comments").NoteImageComment[] | null;
   status: string;
   created_at: string;
   scan_path: string | null;
@@ -1061,27 +1064,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                         </div>
                       )}
 
-                      {Array.isArray(c.notes_images) && c.notes_images.length > 0 && (
-                        <div className="mt-3">
-                          <div className="text-[11px] font-bold text-muted-foreground mb-1.5">صور الملاحظات</div>
-                          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                            {c.notes_images.map((img, idx) => (
-                              <button
-                                key={img.url}
-                                type="button"
-                                onClick={() => setLightbox({ images: c.notes_images as { url: string; name: string }[], index: idx })}
-                                className="group relative block rounded-lg overflow-hidden border border-border hover:border-gold transition cursor-zoom-in"
-                                title="انقر للتكبير"
-                              >
-                                <img src={img.url} alt={img.name} className="w-full h-20 object-cover" loading="lazy" />
-                                <span className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition">
-                                  <ZoomIn className="size-5 text-white opacity-0 group-hover:opacity-100 transition" />
-                                </span>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+
 
                       {(actor === "technician" || actor === "admin") && textRevisions[c.case_code] && (
                         <div className="mt-3 text-xs bg-amber-500/10 border border-amber-500/40 rounded-lg p-2.5">
@@ -1140,7 +1123,34 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                           )}
                         </div>
                       )}
+
+                      {Array.isArray(c.notes_images) && c.notes_images.length > 0 && (
+                        <div className="mt-3 rounded-xl border border-gold/30 bg-muted/20 p-2.5">
+                          <div className="text-[11px] font-bold text-gold mb-2 flex items-center gap-1.5">
+                            <ScanLine className="size-3.5" /> صور مرفقة من الطبيب (تحت المسح ثلاثي الأبعاد)
+                          </div>
+                          <div className="space-y-3">
+                            {c.notes_images.map((img, idx) => (
+                              <DoctorImageComment
+                                key={img.url}
+                                caseId={c.id}
+                                caseCode={c.case_code}
+                                doctorSlot={c.doctor_slot}
+                                patientName={c.patient_name}
+                                image={img}
+                                comments={(c.notes_image_comments ?? []).filter(k => k.image_url === img.url)}
+                                canComment={actor === "designer" || actor === "technician"}
+                                actor={actor as RoleKey}
+                                actorName={actorName ?? ROLE_LABEL[actor as RoleKey]}
+                                onOpen={() => setLightbox({ images: c.notes_images as { url: string; name: string }[], index: idx })}
+                                onAdded={refreshCases}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
+
 
                     <div className="flex flex-col gap-2 shrink-0">
                       {actor !== "admin" && (
@@ -1334,3 +1344,90 @@ function row(label: string, value: string) {
 function escapeHtml(s: string) {
   return s.replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]!));
 }
+
+/** A doctor-attached image shown in the designer/technician case card, with an
+ *  inline comment thread. Designer/technician replies are saved on the case and
+ *  posted to the case chat so they reach the doctor as a comment on the image. */
+function DoctorImageComment({
+  caseId, caseCode, doctorSlot, patientName, image, comments, canComment,
+  actor, actorName, onOpen, onAdded,
+}: {
+  caseId: string;
+  caseCode: string;
+  doctorSlot: number;
+  patientName: string;
+  image: { url: string; name: string };
+  comments: NoteImageComment[];
+  canComment: boolean;
+  actor: RoleKey;
+  actorName: string;
+  onOpen: () => void;
+  onAdded: () => void | Promise<void>;
+}) {
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function submit() {
+    if (!text.trim()) { toast.error("اكتب تعليقك أولاً"); return; }
+    setBusy(true);
+    try {
+      const entry: NoteImageComment = {
+        image_url: image.url,
+        author_role: actor,
+        author_name: actorName,
+        comment: text.trim(),
+        created_at: new Date().toISOString(),
+      };
+      await addImageComment(caseId, entry);
+      await postImageCommentToChat({
+        doctorSlot, caseCode, patientName,
+        authorRole: actor, authorName: actorName,
+        imageName: image.name, comment: text.trim(),
+      });
+      setText("");
+      toast.success("تم إرسال تعليقك للطبيب");
+      await onAdded();
+    } catch {
+      toast.error("تعذر إرسال التعليق");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="flex gap-2.5">
+      <button type="button" onClick={onOpen}
+        className="shrink-0 rounded-lg overflow-hidden border border-border hover:border-gold transition"
+        title="انقر للتكبير">
+        <img src={image.url} alt={image.name} loading="lazy" className="h-20 w-20 object-cover" />
+      </button>
+      <div className="flex-1 min-w-0 space-y-1.5">
+        <div className="truncate text-[10px] font-bold text-muted-foreground">{image.name}</div>
+        {comments.map((k, ki) => (
+          <div key={ki} className="rounded-lg bg-card border border-border/60 px-2 py-1">
+            <div className="text-[10px] font-bold text-gold">
+              {k.author_name || ROLE_LABEL[k.author_role as RoleKey] || k.author_role}
+            </div>
+            <div className="text-[11px] whitespace-pre-wrap text-foreground/90">{k.comment}</div>
+          </div>
+        ))}
+        {canComment && (
+          <div className="flex items-end gap-1.5">
+            <textarea
+              value={text}
+              onChange={e => setText(e.target.value)}
+              rows={1}
+              placeholder="اكتب تعليقك للطبيب على هذه الصورة…"
+              className="flex-1 resize-y rounded-lg border border-input bg-background px-2 py-1 text-[11px] outline-none focus:border-gold"
+            />
+            <button type="button" onClick={submit} disabled={busy}
+              className="inline-flex items-center gap-1 rounded-lg gradient-gold text-gold-foreground px-2.5 py-1.5 text-[11px] font-bold shadow-gold disabled:opacity-50">
+              {busy ? <Loader2 className="size-3.5 animate-spin" /> : <MessageSquare className="size-3.5" />} تعليق
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
