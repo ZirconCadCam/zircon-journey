@@ -1579,6 +1579,7 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
         </div>
       )}
 
+      <div className="flex justify-end">
         <button type="button" onClick={send} disabled={busy}
           className="inline-flex items-center gap-1.5 rounded-lg gradient-brown px-4 py-2 text-xs font-bold shadow-luxury disabled:opacity-50">
           {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
