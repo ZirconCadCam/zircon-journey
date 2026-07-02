@@ -63,6 +63,9 @@ export interface WorkflowCase {
   notes?: string | null;
   scan_path?: string | null;
   scan_name?: string | null;
+  scan_mime?: string | null;
+  notes_images?: { url: string; name: string }[] | null;
+  notes_image_comments?: import("@/lib/image-comments").NoteImageComment[] | null;
 }
 
 interface Props {
