@@ -1581,7 +1581,7 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
           </div>
         )}
 
-        <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3}
+        <textarea value={notes} onChange={e => { setNotes(e.target.value); setSent(false); }} rows={3}
           placeholder="اكتب ملاحظاتك للمصمم والفني… يمكنك إرفاق صور والرسم عليها لشرح المطلوب."
           className="w-full bg-transparent p-2.5 text-sm outline-none border-0 resize-y" />
       </div>
