@@ -277,6 +277,16 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
       const r = await saveToCenter(blob, att.name, caseCode);
       setProgress(p => ({ ...p, [att.url]: { pct: 100, loaded: blob.size, total: blob.size, phase: "done" } }));
       toast.success(r.fallback ? "تم تنزيل الملف" : `تم الحفظ في ${r.path}`);
+      // Right after the download completes, open the file: on the native app
+      // this shows the device's app chooser (open & view inside «رحلة الزركون»);
+      // on the web it opens the in-app viewer.
+      const mime = mimeForName(att.name);
+      if ((await isNativeApp()) && r.uri) {
+        const opened = await openNativeUri(r.uri, mime);
+        if (!opened) setViewer(att);
+      } else {
+        setViewer(att);
+      }
     } catch (e: any) {
       toast.error(e?.message || "تعذر تنزيل الملف");
     } finally {
