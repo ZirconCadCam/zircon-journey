@@ -1440,14 +1440,54 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
   const [notes, setNotes] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
+  // Dims the send button once a batch is successfully sent; any new edit
+  // (typing, attaching, annotating) re-activates it.
+  const [sent, setSent] = useState(false);
   const [annotateIdx, setAnnotateIdx] = useState<number | null>(null);
+  // Annotate an already-sent case image (stays editable until final archive).
+  const [annotateSent, setAnnotateSent] = useState<{ url: string; name: string } | null>(null);
   const [lightbox, setLightbox] = useState<{ url: string; name: string }[] | null>(null);
   const [lightboxIdx, setLightboxIdx] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
   const imgRef = useRef<HTMLInputElement>(null);
 
+  const archived = !!c.final_archived;
+
   function addFiles(list: File[]) {
-    if (list.length) setFiles(prev => [...prev, ...list]);
+    if (list.length) { setFiles(prev => [...prev, ...list]); setSent(false); }
+  }
+
+  /** Append an image to the case data (so it stays part of the case). */
+  async function persistImageToCase(url: string, name: string) {
+    const { data: row } = await supabase.from("slot_cases")
+      .select("notes_images").eq("id", c.id).maybeSingle();
+    const prev = Array.isArray((row as any)?.notes_images)
+      ? ((row as any).notes_images as { url: string; name: string }[]) : [];
+    await supabase.from("slot_cases")
+      .update({ notes_images: [...prev, { url, name }] as any }).eq("id", c.id);
+  }
+
+  /** Re-send an annotated version of an already-sent case image. */
+  async function sendAnnotatedImage(blob: Blob, name: string) {
+    setBusy(true);
+    try {
+      const convId = await ensureCaseConvAll(c);
+      if (!convId) { toast.error("تعذر فتح محادثة الحالة"); return; }
+      const file = new File([blob], name, { type: "image/png" });
+      const up = await uploadAttachment(file, c, "doctor-notes");
+      if (!up) { toast.error("تعذر رفع الصورة"); return; }
+      await supabase.from("chat_messages").insert({
+        conversation_id: convId, sender: "doctor", sender_name: actorName,
+        content: `🖼️ صورة مُعدّلة من الطبيب — الحالة ${c.case_code}`,
+        message_type: "file",
+        attachment_path: up.url, attachment_name: name,
+        attachment_mime: "image/png", attachment_size: file.size,
+      });
+      await persistImageToCase(up.url, name);
+      toast.success("✅ تم إرسال الصورة المُعدّلة للمصمم والفني");
+    } catch (err: any) {
+      toast.error(err?.message || "تعذر الإرسال");
+    } finally { setBusy(false); }
   }
 
   async function send() {
@@ -1493,7 +1533,7 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
           .update({ notes_images: [...prev, ...newImages] as any }).eq("id", c.id);
       }
       toast.success("✅ تم إرسال الملاحظات للمصمم والفني");
-      setNotes(""); setFiles([]);
+      setNotes(""); setFiles([]); setSent(true);
 
     } catch (err: any) {
       toast.error(err?.message || "تعذر الإرسال");
