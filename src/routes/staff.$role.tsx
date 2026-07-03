@@ -51,6 +51,8 @@ function StaffPortal() {
     if (!VALID.includes(role)) return;
     if (typeof window === "undefined") return;
     if (localStorage.getItem("zircon_admin_all") === "1") { setAuthed(true); return; }
+    // Designer enters directly without a password gate.
+    if (NO_PASSWORD_ROLES.includes(role)) { setAuthed(true); return; }
     if (localStorage.getItem(`zircon_staff_${role}`) !== "1") return;
 
     // For single-device roles, verify this device still owns the session.
