@@ -5,6 +5,7 @@ import { ROLE_LABEL, type RoleKey } from "@/lib/chat";
 import { Z } from "@/lib/z-index";
 import { supabase } from "@/integrations/supabase/client";
 import { autoCacheFile, saveToCenter } from "@/lib/file-manager";
+import { isNativeApp, openNativeUri } from "@/lib/native-fs";
 import { InAppFileViewer } from "@/components/in-app-file-viewer";
 import { incomingAlert, stopRing } from "@/lib/notify";
 import { toast } from "sonner";
