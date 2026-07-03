@@ -24,9 +24,11 @@ export const Route = createFileRoute("/staff/$role")({
 const VALID: RoleKey[] = ["designer", "technician", "secretary_sanaa", "secretary_ibb", "admin"];
 
 // Roles whose login is bound to a single device (logging in elsewhere signs the
-// previous device out). The designer works from a single PC, so we remember the
-// session and enforce single-device access.
-const SINGLE_DEVICE_ROLES: RoleKey[] = ["designer"];
+// previous device out).
+const SINGLE_DEVICE_ROLES: RoleKey[] = [];
+
+// Roles that enter their portal directly without a password gate.
+const NO_PASSWORD_ROLES: RoleKey[] = ["designer"];
 
 /** Stable per-browser device identifier (persisted across refresh/login). */
 function getDeviceId(): string {
