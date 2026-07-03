@@ -1586,8 +1586,9 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
           className="w-full bg-transparent p-2.5 text-sm outline-none border-0 resize-y" />
       </div>
 
-      {/* Images already sent for this case, with any team replies (comments)
-          the designer/technician left on each one. */}
+      {/* Images already sent for this case remain interactive and editable
+          (open / annotate / re-send) until the case is finally archived, with
+          any replies (comments) the designer/technician left on each one. */}
       {Array.isArray(c.notes_images) && c.notes_images.length > 0 && (
         <div className="rounded-xl border border-border bg-muted/20 p-2.5 space-y-2.5">
           <div className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
@@ -1597,11 +1598,19 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
             const cmts = (c.notes_image_comments ?? []).filter(k => k.image_url === img.url);
             return (
               <div key={img.url} className="flex gap-2.5">
-                <button type="button"
-                  onClick={() => { setLightbox(c.notes_images as { url: string; name: string }[]); setLightboxIdx(idx); }}
-                  className="shrink-0 rounded-lg overflow-hidden border border-border hover:border-gold transition">
-                  <img src={img.url} alt={img.name} loading="lazy" className="h-16 w-16 object-cover" />
-                </button>
+                <div className="shrink-0 space-y-1">
+                  <button type="button"
+                    onClick={() => { setLightbox(c.notes_images as { url: string; name: string }[]); setLightboxIdx(idx); }}
+                    className="block rounded-lg overflow-hidden border border-border hover:border-gold transition">
+                    <img src={img.url} alt={img.name} loading="lazy" className="h-16 w-16 object-cover" />
+                  </button>
+                  {!archived && (
+                    <button type="button" onClick={() => setAnnotateSent(img)}
+                      className="inline-flex w-16 items-center justify-center gap-1 rounded-md bg-gold text-gold-foreground px-1 py-0.5 text-[9px] font-bold shadow-gold hover:brightness-105">
+                      <Highlighter className="size-3" /> رسم
+                    </button>
+                  )}
+                </div>
                 <div className="flex-1 min-w-0 space-y-1">
                   <div className="truncate text-[10px] font-bold text-muted-foreground">{img.name}</div>
                   {cmts.length === 0 ? (
