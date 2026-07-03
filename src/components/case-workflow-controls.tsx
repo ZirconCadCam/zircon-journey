@@ -1440,14 +1440,54 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
   const [notes, setNotes] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
+  // Dims the send button once a batch is successfully sent; any new edit
+  // (typing, attaching, annotating) re-activates it.
+  const [sent, setSent] = useState(false);
   const [annotateIdx, setAnnotateIdx] = useState<number | null>(null);
+  // Annotate an already-sent case image (stays editable until final archive).
+  const [annotateSent, setAnnotateSent] = useState<{ url: string; name: string } | null>(null);
   const [lightbox, setLightbox] = useState<{ url: string; name: string }[] | null>(null);
   const [lightboxIdx, setLightboxIdx] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
   const imgRef = useRef<HTMLInputElement>(null);
 
+  const archived = !!c.final_archived;
+
   function addFiles(list: File[]) {
-    if (list.length) setFiles(prev => [...prev, ...list]);
+    if (list.length) { setFiles(prev => [...prev, ...list]); setSent(false); }
+  }
+
+  /** Append an image to the case data (so it stays part of the case). */
+  async function persistImageToCase(url: string, name: string) {
+    const { data: row } = await supabase.from("slot_cases")
+      .select("notes_images").eq("id", c.id).maybeSingle();
+    const prev = Array.isArray((row as any)?.notes_images)
+      ? ((row as any).notes_images as { url: string; name: string }[]) : [];
+    await supabase.from("slot_cases")
+      .update({ notes_images: [...prev, { url, name }] as any }).eq("id", c.id);
+  }
+
+  /** Re-send an annotated version of an already-sent case image. */
+  async function sendAnnotatedImage(blob: Blob, name: string) {
+    setBusy(true);
+    try {
+      const convId = await ensureCaseConvAll(c);
+      if (!convId) { toast.error("تعذر فتح محادثة الحالة"); return; }
+      const file = new File([blob], name, { type: "image/png" });
+      const up = await uploadAttachment(file, c, "doctor-notes");
+      if (!up) { toast.error("تعذر رفع الصورة"); return; }
+      await supabase.from("chat_messages").insert({
+        conversation_id: convId, sender: "doctor", sender_name: actorName,
+        content: `🖼️ صورة مُعدّلة من الطبيب — الحالة ${c.case_code}`,
+        message_type: "file",
+        attachment_path: up.url, attachment_name: name,
+        attachment_mime: "image/png", attachment_size: file.size,
+      });
+      await persistImageToCase(up.url, name);
+      toast.success("✅ تم إرسال الصورة المُعدّلة للمصمم والفني");
+    } catch (err: any) {
+      toast.error(err?.message || "تعذر الإرسال");
+    } finally { setBusy(false); }
   }
 
   async function send() {
@@ -1493,7 +1533,7 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
           .update({ notes_images: [...prev, ...newImages] as any }).eq("id", c.id);
       }
       toast.success("✅ تم إرسال الملاحظات للمصمم والفني");
-      setNotes(""); setFiles([]);
+      setNotes(""); setFiles([]); setSent(true);
 
     } catch (err: any) {
       toast.error(err?.message || "تعذر الإرسال");
@@ -1541,13 +1581,14 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
           </div>
         )}
 
-        <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3}
+        <textarea value={notes} onChange={e => { setNotes(e.target.value); setSent(false); }} rows={3}
           placeholder="اكتب ملاحظاتك للمصمم والفني… يمكنك إرفاق صور والرسم عليها لشرح المطلوب."
           className="w-full bg-transparent p-2.5 text-sm outline-none border-0 resize-y" />
       </div>
 
-      {/* Images already sent for this case, with any team replies (comments)
-          the designer/technician left on each one. */}
+      {/* Images already sent for this case remain interactive and editable
+          (open / annotate / re-send) until the case is finally archived, with
+          any replies (comments) the designer/technician left on each one. */}
       {Array.isArray(c.notes_images) && c.notes_images.length > 0 && (
         <div className="rounded-xl border border-border bg-muted/20 p-2.5 space-y-2.5">
           <div className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
@@ -1557,11 +1598,19 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
             const cmts = (c.notes_image_comments ?? []).filter(k => k.image_url === img.url);
             return (
               <div key={img.url} className="flex gap-2.5">
-                <button type="button"
-                  onClick={() => { setLightbox(c.notes_images as { url: string; name: string }[]); setLightboxIdx(idx); }}
-                  className="shrink-0 rounded-lg overflow-hidden border border-border hover:border-gold transition">
-                  <img src={img.url} alt={img.name} loading="lazy" className="h-16 w-16 object-cover" />
-                </button>
+                <div className="shrink-0 space-y-1">
+                  <button type="button"
+                    onClick={() => { setLightbox(c.notes_images as { url: string; name: string }[]); setLightboxIdx(idx); }}
+                    className="block rounded-lg overflow-hidden border border-border hover:border-gold transition">
+                    <img src={img.url} alt={img.name} loading="lazy" className="h-16 w-16 object-cover" />
+                  </button>
+                  {!archived && (
+                    <button type="button" onClick={() => setAnnotateSent(img)}
+                      className="inline-flex w-16 items-center justify-center gap-1 rounded-md bg-gold text-gold-foreground px-1 py-0.5 text-[9px] font-bold shadow-gold hover:brightness-105">
+                      <Highlighter className="size-3" /> رسم
+                    </button>
+                  )}
+                </div>
                 <div className="flex-1 min-w-0 space-y-1">
                   <div className="truncate text-[10px] font-bold text-muted-foreground">{img.name}</div>
                   {cmts.length === 0 ? (
@@ -1579,9 +1628,12 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
         </div>
       )}
 
-      <div className="flex justify-end">
-        <button type="button" onClick={send} disabled={busy}
-          className="inline-flex items-center gap-1.5 rounded-lg gradient-brown px-4 py-2 text-xs font-bold shadow-luxury disabled:opacity-50">
+      <div className="flex items-center justify-end gap-2">
+        {sent && !busy && (
+          <span className="text-[10px] font-bold text-emerald-600">✓ تم الإرسال</span>
+        )}
+        <button type="button" onClick={send} disabled={busy || sent}
+          className="inline-flex items-center gap-1.5 rounded-lg gradient-brown px-4 py-2 text-xs font-bold shadow-luxury disabled:opacity-50 disabled:cursor-not-allowed">
           {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
           إرسال للمصمم والفني
         </button>
@@ -1595,7 +1647,21 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
             const newFile = new File([blob], name, { type: "image/png" });
             setFiles(prev => prev.map((f, j) => j === annotateIdx ? newFile : f));
             setAnnotateIdx(null);
+            setSent(false);
             toast.success("تم حفظ الشرح على الصورة");
+          }}
+        />
+      )}
+
+      {annotateSent && (
+        <ImageAnnotator
+          src={annotateSent.url}
+          fileName={annotateSent.name.replace(/\.(png|jpe?g|webp|gif)$/i, "") + "-معدلة.png"}
+          onCancel={() => setAnnotateSent(null)}
+          onSave={async (blob, name) => {
+            const target = annotateSent;
+            setAnnotateSent(null);
+            await sendAnnotatedImage(blob, name || `${target.name}-معدلة.png`);
           }}
         />
       )}

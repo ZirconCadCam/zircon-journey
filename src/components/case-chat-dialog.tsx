@@ -5,6 +5,7 @@ import { ROLE_LABEL, type RoleKey } from "@/lib/chat";
 import { Z } from "@/lib/z-index";
 import { supabase } from "@/integrations/supabase/client";
 import { autoCacheFile, saveToCenter } from "@/lib/file-manager";
+import { isNativeApp, openNativeUri } from "@/lib/native-fs";
 import { InAppFileViewer } from "@/components/in-app-file-viewer";
 import { incomingAlert, stopRing } from "@/lib/notify";
 import { toast } from "sonner";
@@ -160,6 +161,19 @@ function fmtBytes(n: number): string {
   return `${(n / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${u[i]}`;
 }
 
+/** Best-effort MIME type from a filename, used when opening with device apps. */
+function mimeForName(name: string): string {
+  const n = name.toLowerCase();
+  if (/\.html?$/.test(n)) return "text/html";
+  if (/\.pdf$/.test(n)) return "application/pdf";
+  if (/\.rar$/.test(n)) return "application/vnd.rar";
+  if (/\.zip$/.test(n)) return "application/zip";
+  if (/\.png$/.test(n)) return "image/png";
+  if (/\.jpe?g$/.test(n)) return "image/jpeg";
+  if (/\.webp$/.test(n)) return "image/webp";
+  return "application/octet-stream";
+}
+
 function phaseLabel(p: DlPhase): string {
   switch (p) {
     case "download": return "جارٍ التنزيل…";
@@ -276,6 +290,16 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
       const r = await saveToCenter(blob, att.name, caseCode);
       setProgress(p => ({ ...p, [att.url]: { pct: 100, loaded: blob.size, total: blob.size, phase: "done" } }));
       toast.success(r.fallback ? "تم تنزيل الملف" : `تم الحفظ في ${r.path}`);
+      // Right after the download completes, open the file: on the native app
+      // this shows the device's app chooser (open & view inside «رحلة الزركون»);
+      // on the web it opens the in-app viewer.
+      const mime = mimeForName(att.name);
+      if ((await isNativeApp()) && r.uri) {
+        const opened = await openNativeUri(r.uri, mime);
+        if (!opened) setViewer(att);
+      } else {
+        setViewer(att);
+      }
     } catch (e: any) {
       toast.error(e?.message || "تعذر تنزيل الملف");
     } finally {

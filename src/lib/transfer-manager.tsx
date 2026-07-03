@@ -356,6 +356,26 @@ function TransferDonePopup({ p }: { p: CompletedPopup }) {
     const t = setTimeout(() => dismissPopup(p.id), 5000);
     return () => clearTimeout(t);
   }, [p.id, viewerOpen, p.persistent]);
+
+  // As soon as a readable file (zip/rar/html/pdf/image) finishes downloading,
+  // offer the right way to open it immediately: on the native app this shows
+  // the device's app chooser; on the web it opens the in-app viewer.
+  const [autoTried, setAutoTried] = useState(false);
+  useEffect(() => {
+    if (autoTried || isUpload) return;
+    const name = (p.filename || "").toLowerCase();
+    if (!/\.(zip|rar|html?|pdf|png|jpe?g|webp|gif)$/.test(name)) return;
+    setAutoTried(true);
+    (async () => {
+      if (p.nativeUri) {
+        const ok = await openNativeUri(p.nativeUri, p.mime);
+        if (ok) { dismissPopup(p.id); return; }
+      }
+      if (canView) setViewerOpen(true);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-emerald-500/40 bg-card/95 backdrop-blur p-3 shadow-luxury animate-in slide-in-from-bottom-2">
       <div className="size-9 shrink-0 grid place-items-center rounded-xl bg-emerald-500/15 text-emerald-600">
