@@ -161,6 +161,19 @@ function fmtBytes(n: number): string {
   return `${(n / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${u[i]}`;
 }
 
+/** Best-effort MIME type from a filename, used when opening with device apps. */
+function mimeForName(name: string): string {
+  const n = name.toLowerCase();
+  if (/\.html?$/.test(n)) return "text/html";
+  if (/\.pdf$/.test(n)) return "application/pdf";
+  if (/\.rar$/.test(n)) return "application/vnd.rar";
+  if (/\.zip$/.test(n)) return "application/zip";
+  if (/\.png$/.test(n)) return "image/png";
+  if (/\.jpe?g$/.test(n)) return "image/jpeg";
+  if (/\.webp$/.test(n)) return "image/webp";
+  return "application/octet-stream";
+}
+
 function phaseLabel(p: DlPhase): string {
   switch (p) {
     case "download": return "جارٍ التنزيل…";
