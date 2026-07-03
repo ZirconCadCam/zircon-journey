@@ -1628,9 +1628,12 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
         </div>
       )}
 
-      <div className="flex justify-end">
-        <button type="button" onClick={send} disabled={busy}
-          className="inline-flex items-center gap-1.5 rounded-lg gradient-brown px-4 py-2 text-xs font-bold shadow-luxury disabled:opacity-50">
+      <div className="flex items-center justify-end gap-2">
+        {sent && !busy && (
+          <span className="text-[10px] font-bold text-emerald-600">✓ تم الإرسال</span>
+        )}
+        <button type="button" onClick={send} disabled={busy || sent}
+          className="inline-flex items-center gap-1.5 rounded-lg gradient-brown px-4 py-2 text-xs font-bold shadow-luxury disabled:opacity-50 disabled:cursor-not-allowed">
           {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
           إرسال للمصمم والفني
         </button>
@@ -1644,7 +1647,21 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
             const newFile = new File([blob], name, { type: "image/png" });
             setFiles(prev => prev.map((f, j) => j === annotateIdx ? newFile : f));
             setAnnotateIdx(null);
+            setSent(false);
             toast.success("تم حفظ الشرح على الصورة");
+          }}
+        />
+      )}
+
+      {annotateSent && (
+        <ImageAnnotator
+          src={annotateSent.url}
+          fileName={annotateSent.name.replace(/\.(png|jpe?g|webp|gif)$/i, "") + "-معدلة.png"}
+          onCancel={() => setAnnotateSent(null)}
+          onSave={async (blob, name) => {
+            const target = annotateSent;
+            setAnnotateSent(null);
+            await sendAnnotatedImage(blob, name || `${target.name}-معدلة.png`);
           }}
         />
       )}
