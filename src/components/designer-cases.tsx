@@ -1366,6 +1366,23 @@ function DoctorImageComment({
 }) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
+  const taRef = useRef<HTMLTextAreaElement>(null);
+
+  // Voice recording state
+  const [recording, setRecording] = useState(false);
+  const [recSec, setRecSec] = useState(0);
+  const [sendingVoice, setSendingVoice] = useState(false);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const recTimerRef = useRef<number | null>(null);
+
+  // Auto-grow the textarea so the whole comment stays visible while typing.
+  function autoGrow(el: HTMLTextAreaElement | null) {
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 320)}px`;
+  }
+  useEffect(() => { autoGrow(taRef.current); }, [text]);
 
   async function submit() {
     if (!text.trim()) { toast.error("اكتب تعليقك أولاً"); return; }
@@ -1393,6 +1410,54 @@ function DoctorImageComment({
       setBusy(false);
     }
   }
+
+  async function startRecording() {
+    if (!navigator.mediaDevices?.getUserMedia) { toast.error("التسجيل غير مدعوم في هذا المتصفح"); return; }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mr = new MediaRecorder(stream);
+      chunksRef.current = [];
+      mr.ondataavailable = (ev) => { if (ev.data.size) chunksRef.current.push(ev.data); };
+      mr.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        const secs = recSec;
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        if (blob.size < 1024) { toast.error("التسجيل قصير جداً"); return; }
+        setSendingVoice(true);
+        try {
+          await postImageVoiceToChat({
+            doctorSlot, caseCode, patientName,
+            authorRole: actor, authorName: actorName,
+            imageName: image.name, blob, durationSec: secs,
+          });
+          toast.success("تم إرسال المقطع الصوتي للطبيب");
+          await onAdded();
+        } catch {
+          toast.error("تعذر إرسال المقطع الصوتي");
+        } finally {
+          setSendingVoice(false);
+        }
+      };
+      mr.start();
+      recorderRef.current = mr;
+      setRecording(true); setRecSec(0);
+      recTimerRef.current = window.setInterval(() => setRecSec(s => s + 1), 1000);
+    } catch { toast.error("تعذر الوصول للميكروفون"); }
+  }
+
+  function stopRecording(cancel = false) {
+    const mr = recorderRef.current;
+    if (recTimerRef.current) { clearInterval(recTimerRef.current); recTimerRef.current = null; }
+    setRecording(false);
+    if (!mr) return;
+    if (cancel) {
+      mr.ondataavailable = null as any;
+      mr.onstop = () => mr.stream?.getTracks().forEach(t => t.stop());
+    }
+    try { mr.stop(); } catch {}
+    recorderRef.current = null;
+  }
+
 
   return (
     <div className="flex gap-2.5">
