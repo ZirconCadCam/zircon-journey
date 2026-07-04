@@ -13,6 +13,7 @@ import { NotificationSettings } from "@/components/notification-settings";
 import { DoctorAvatar } from "@/components/doctor-avatar";
 
 import { ROLE_LABEL, STAFF_PASSWORDS, type RoleKey } from "@/lib/chat";
+import { saveStaffSession, hasValidStaffSession, clearStaffSession } from "@/lib/staff-session";
 import { getStage, deriveStageKey } from "@/lib/case-stages";
 import { Sparkles, ArrowRight, Lock, Stethoscope, MessageSquare, ClipboardList, Settings, Archive, FileArchive, FileText, Search, Bell } from "lucide-react";
 import { toast } from "sonner";
