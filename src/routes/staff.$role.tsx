@@ -45,7 +45,13 @@ interface Doctor { slot: number; name: string; branch: string | null; active: bo
 function StaffPortal() {
   const { role } = Route.useParams() as { role: RoleKey };
   const nav = useNavigate();
-  const [authed, setAuthed] = useState(false);
+  const [authed, setAuthed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    // Designer (and any no-password role) enters directly on every device.
+    if (NO_PASSWORD_ROLES.includes(role)) return true;
+    if (localStorage.getItem("zircon_admin_all") === "1") return true;
+    return false;
+  });
 
   useEffect(() => {
     if (!VALID.includes(role)) return;
