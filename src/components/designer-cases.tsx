@@ -14,8 +14,8 @@ import { CaseChatButton } from "@/components/case-chat-dialog";
 import { ZipViewerDialog } from "@/components/zip-viewer-dialog";
 import { TechRevisionPanel } from "@/components/tech-revision-panel";
 import { ImageLightbox } from "@/components/image-lightbox";
-import { addImageComment, postImageCommentToChat, type NoteImageComment } from "@/lib/image-comments";
-import { MessageSquare } from "lucide-react";
+import { addImageComment, postImageCommentToChat, postImageVoiceToChat, type NoteImageComment } from "@/lib/image-comments";
+import { MessageSquare, Mic, Square, Trash2 as TrashIcon } from "lucide-react";
 
 /** Inject hex overrides for our oklch CSS variables into html2canvas's cloned doc. */
 const H2C_ONCLONE = (doc: Document) => {
@@ -1366,6 +1366,23 @@ function DoctorImageComment({
 }) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
+  const taRef = useRef<HTMLTextAreaElement>(null);
+
+  // Voice recording state
+  const [recording, setRecording] = useState(false);
+  const [recSec, setRecSec] = useState(0);
+  const [sendingVoice, setSendingVoice] = useState(false);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const recTimerRef = useRef<number | null>(null);
+
+  // Auto-grow the textarea so the whole comment stays visible while typing.
+  function autoGrow(el: HTMLTextAreaElement | null) {
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 320)}px`;
+  }
+  useEffect(() => { autoGrow(taRef.current); }, [text]);
 
   async function submit() {
     if (!text.trim()) { toast.error("اكتب تعليقك أولاً"); return; }
@@ -1394,6 +1411,54 @@ function DoctorImageComment({
     }
   }
 
+  async function startRecording() {
+    if (!navigator.mediaDevices?.getUserMedia) { toast.error("التسجيل غير مدعوم في هذا المتصفح"); return; }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mr = new MediaRecorder(stream);
+      chunksRef.current = [];
+      mr.ondataavailable = (ev) => { if (ev.data.size) chunksRef.current.push(ev.data); };
+      mr.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        const secs = recSec;
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        if (blob.size < 1024) { toast.error("التسجيل قصير جداً"); return; }
+        setSendingVoice(true);
+        try {
+          await postImageVoiceToChat({
+            doctorSlot, caseCode, patientName,
+            authorRole: actor, authorName: actorName,
+            imageName: image.name, blob, durationSec: secs,
+          });
+          toast.success("تم إرسال المقطع الصوتي للطبيب");
+          await onAdded();
+        } catch {
+          toast.error("تعذر إرسال المقطع الصوتي");
+        } finally {
+          setSendingVoice(false);
+        }
+      };
+      mr.start();
+      recorderRef.current = mr;
+      setRecording(true); setRecSec(0);
+      recTimerRef.current = window.setInterval(() => setRecSec(s => s + 1), 1000);
+    } catch { toast.error("تعذر الوصول للميكروفون"); }
+  }
+
+  function stopRecording(cancel = false) {
+    const mr = recorderRef.current;
+    if (recTimerRef.current) { clearInterval(recTimerRef.current); recTimerRef.current = null; }
+    setRecording(false);
+    if (!mr) return;
+    if (cancel) {
+      mr.ondataavailable = null as any;
+      mr.onstop = () => mr.stream?.getTracks().forEach(t => t.stop());
+    }
+    try { mr.stop(); } catch {}
+    recorderRef.current = null;
+  }
+
+
   return (
     <div className="flex gap-2.5">
       <button type="button" onClick={onOpen}
@@ -1412,18 +1477,46 @@ function DoctorImageComment({
           </div>
         ))}
         {canComment && (
-          <div className="flex items-end gap-1.5">
+          <div className="space-y-1.5">
             <textarea
+              ref={taRef}
               value={text}
               onChange={e => setText(e.target.value)}
-              rows={1}
+              rows={3}
               placeholder="اكتب تعليقك للطبيب على هذه الصورة…"
-              className="flex-1 resize-y rounded-lg border border-input bg-background px-2 py-1 text-[11px] outline-none focus:border-gold"
+              className="w-full min-h-[72px] resize-y overflow-y-auto rounded-lg border border-input bg-background px-2 py-1.5 text-[12px] leading-relaxed outline-none focus:border-gold"
             />
-            <button type="button" onClick={submit} disabled={busy}
-              className="inline-flex items-center gap-1 rounded-lg gradient-gold text-gold-foreground px-2.5 py-1.5 text-[11px] font-bold shadow-gold disabled:opacity-50">
-              {busy ? <Loader2 className="size-3.5 animate-spin" /> : <MessageSquare className="size-3.5" />} تعليق
-            </button>
+            <div className="flex items-center gap-1.5">
+              {!recording ? (
+                <button type="button" onClick={startRecording} disabled={sendingVoice || busy}
+                  title="تسجيل مقطع صوتي"
+                  className="inline-flex items-center gap-1 rounded-lg border border-input bg-background px-2.5 py-1.5 text-[11px] font-bold hover:border-gold disabled:opacity-50">
+                  {sendingVoice ? <Loader2 className="size-3.5 animate-spin" /> : <Mic className="size-3.5 text-rose-500" />}
+                  {sendingVoice ? "جارٍ الإرسال…" : "تسجيل صوتي"}
+                </button>
+              ) : (
+                <div className="inline-flex items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1 rounded-lg bg-rose-500/10 text-rose-600 px-2 py-1.5 text-[11px] font-bold">
+                    <span className="size-2 rounded-full bg-rose-500 animate-pulse" />
+                    {String(Math.floor(recSec / 60)).padStart(2, "0")}:{String(recSec % 60).padStart(2, "0")}
+                  </span>
+                  <button type="button" onClick={() => stopRecording(false)}
+                    title="إيقاف وإرسال"
+                    className="inline-flex items-center gap-1 rounded-lg gradient-gold text-gold-foreground px-2.5 py-1.5 text-[11px] font-bold shadow-gold">
+                    <Square className="size-3.5" /> إرسال
+                  </button>
+                  <button type="button" onClick={() => stopRecording(true)}
+                    title="إلغاء التسجيل"
+                    className="inline-flex items-center gap-1 rounded-lg border border-input bg-background px-2 py-1.5 text-[11px] font-bold hover:border-rose-400">
+                    <TrashIcon className="size-3.5" />
+                  </button>
+                </div>
+              )}
+              <button type="button" onClick={submit} disabled={busy || recording}
+                className="ms-auto inline-flex items-center gap-1 rounded-lg gradient-gold text-gold-foreground px-3 py-1.5 text-[11px] font-bold shadow-gold disabled:opacity-50">
+                {busy ? <Loader2 className="size-3.5 animate-spin" /> : <MessageSquare className="size-3.5" />} تعليق
+              </button>
+            </div>
           </div>
         )}
       </div>
