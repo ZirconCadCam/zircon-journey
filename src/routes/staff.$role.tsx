@@ -60,8 +60,22 @@ function StaffPortal() {
     if (!VALID.includes(role)) return;
     if (typeof window === "undefined") return;
     if (localStorage.getItem("zircon_admin_all") === "1") { setAuthed(true); return; }
-    // Designer enters directly without a password gate.
-    if (NO_PASSWORD_ROLES.includes(role)) { setAuthed(true); return; }
+    // Designer enters directly and gets a durable session refreshed on each open.
+    if (NO_PASSWORD_ROLES.includes(role)) {
+      saveStaffSession(role);
+      setAuthed(true);
+      return;
+    }
+    // Restore a still-valid stored session without asking for the password again.
+    if (hasValidStaffSession(role)) {
+      // Refresh the sliding expiry so active users stay signed in.
+      saveStaffSession(role);
+      if (localStorage.getItem(`zircon_staff_${role}`) !== "1") {
+        localStorage.setItem(`zircon_staff_${role}`, "1");
+      }
+      setAuthed(true);
+      return;
+    }
     if (localStorage.getItem(`zircon_staff_${role}`) !== "1") return;
 
     // For single-device roles, verify this device still owns the session.
@@ -73,10 +87,12 @@ function StaffPortal() {
         });
         if (cancelled) return;
         if (!error && data === true) {
+          saveStaffSession(role);
           setAuthed(true);
         } else {
           // Another device took over the session — require the password again.
           localStorage.removeItem(`zircon_staff_${role}`);
+          clearStaffSession(role);
           setAuthed(false);
           toast("تم تسجيل الدخول من جهاز آخر. يرجى إدخال كلمة المرور مجددًا.");
         }
@@ -84,6 +100,7 @@ function StaffPortal() {
       return () => { cancelled = true; };
     }
 
+    saveStaffSession(role);
     setAuthed(true);
   }, [role]);
 
