@@ -41,9 +41,28 @@ export async function postImageCommentToChat(opts: {
   imageName: string;
   comment: string;
 }): Promise<void> {
-  const prefix = `[${opts.caseCode}]`;
+  const convId = await resolveCaseConversation(opts.doctorSlot, opts.caseCode, opts.patientName, opts.authorRole);
+  if (!convId) return;
+
+  await supabase.from("chat_messages").insert({
+    conversation_id: convId,
+    sender: opts.authorRole,
+    sender_name: opts.authorName,
+    content: `💬 تعليق على صورة (${opts.imageName}) — الحالة ${opts.caseCode}\n${opts.comment}`,
+    message_type: "text",
+  });
+}
+
+/** Find (or create) the case-scoped doctor↔designer↔technician conversation. */
+async function resolveCaseConversation(
+  doctorSlot: number,
+  caseCode: string,
+  patientName: string,
+  authorRole: RoleKey,
+): Promise<string | undefined> {
+  const prefix = `[${caseCode}]`;
   const { data: existing } = await supabase.from("chat_conversations")
-    .select("id,participants,title").eq("doctor_slot", opts.doctorSlot);
+    .select("id,participants,title").eq("doctor_slot", doctorSlot);
   let convId = (existing ?? []).find((x: any) =>
     Array.isArray(x.participants)
     && x.participants.includes("doctor")
@@ -55,20 +74,49 @@ export async function postImageCommentToChat(opts: {
   if (!convId) {
     const { data: created } = await supabase.from("chat_conversations")
       .insert({
-        doctor_slot: opts.doctorSlot,
+        doctor_slot: doctorSlot,
         participants: ["doctor", "designer", "technician"],
-        title: `${prefix} ${opts.patientName}`,
-        created_by: opts.authorRole,
+        title: `${prefix} ${patientName}`,
+        created_by: authorRole,
       }).select("id").single();
     convId = created?.id;
   }
-  if (!convId) return;
+  return convId;
+}
 
-  await supabase.from("chat_messages").insert({
+/** Upload a recorded voice clip and post it to the case chat so the doctor
+ *  receives it as a voice reply tied to the image. */
+export async function postImageVoiceToChat(opts: {
+  doctorSlot: number;
+  caseCode: string;
+  patientName: string;
+  authorRole: RoleKey;
+  authorName: string;
+  imageName: string;
+  blob: Blob;
+  durationSec?: number;
+}): Promise<void> {
+  const convId = await resolveCaseConversation(opts.doctorSlot, opts.caseCode, opts.patientName, opts.authorRole);
+  if (!convId) throw new Error("no conversation");
+
+  const fileName = `voice-${Date.now()}.webm`;
+  const path = `${opts.doctorSlot}/${convId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${fileName}`;
+  const { error: upErr } = await supabase.storage
+    .from(ATTACHMENTS_BUCKET)
+    .upload(path, opts.blob, { contentType: opts.blob.type || "audio/webm", upsert: false });
+  if (upErr) throw upErr;
+
+  const secs = opts.durationSec ? ` (${opts.durationSec}s)` : "";
+  const { error } = await supabase.from("chat_messages").insert({
     conversation_id: convId,
     sender: opts.authorRole,
     sender_name: opts.authorName,
-    content: `💬 تعليق على صورة (${opts.imageName}) — الحالة ${opts.caseCode}\n${opts.comment}`,
-    message_type: "text",
+    content: `🎤 تسجيل صوتي على صورة (${opts.imageName}) — الحالة ${opts.caseCode}${secs}`,
+    message_type: "audio",
+    attachment_path: path,
+    attachment_name: fileName,
+    attachment_mime: opts.blob.type || "audio/webm",
+    attachment_size: opts.blob.size,
   });
+  if (error) throw error;
 }
