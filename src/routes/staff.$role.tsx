@@ -51,6 +51,8 @@ function StaffPortal() {
     // Designer (and any no-password role) enters directly on every device.
     if (NO_PASSWORD_ROLES.includes(role)) return true;
     if (localStorage.getItem("zircon_admin_all") === "1") return true;
+    // A previously established, non-expired session keeps the role signed in.
+    if (hasValidStaffSession(role)) return true;
     return false;
   });
 
