@@ -13,6 +13,7 @@ import { NotificationSettings } from "@/components/notification-settings";
 import { DoctorAvatar } from "@/components/doctor-avatar";
 
 import { ROLE_LABEL, STAFF_PASSWORDS, type RoleKey } from "@/lib/chat";
+import { saveStaffSession, hasValidStaffSession, clearStaffSession } from "@/lib/staff-session";
 import { getStage, deriveStageKey } from "@/lib/case-stages";
 import { Sparkles, ArrowRight, Lock, Stethoscope, MessageSquare, ClipboardList, Settings, Archive, FileArchive, FileText, Search, Bell } from "lucide-react";
 import { toast } from "sonner";
@@ -50,6 +51,8 @@ function StaffPortal() {
     // Designer (and any no-password role) enters directly on every device.
     if (NO_PASSWORD_ROLES.includes(role)) return true;
     if (localStorage.getItem("zircon_admin_all") === "1") return true;
+    // A previously established, non-expired session keeps the role signed in.
+    if (hasValidStaffSession(role)) return true;
     return false;
   });
 
@@ -57,8 +60,22 @@ function StaffPortal() {
     if (!VALID.includes(role)) return;
     if (typeof window === "undefined") return;
     if (localStorage.getItem("zircon_admin_all") === "1") { setAuthed(true); return; }
-    // Designer enters directly without a password gate.
-    if (NO_PASSWORD_ROLES.includes(role)) { setAuthed(true); return; }
+    // Designer enters directly and gets a durable session refreshed on each open.
+    if (NO_PASSWORD_ROLES.includes(role)) {
+      saveStaffSession(role);
+      setAuthed(true);
+      return;
+    }
+    // Restore a still-valid stored session without asking for the password again.
+    if (hasValidStaffSession(role)) {
+      // Refresh the sliding expiry so active users stay signed in.
+      saveStaffSession(role);
+      if (localStorage.getItem(`zircon_staff_${role}`) !== "1") {
+        localStorage.setItem(`zircon_staff_${role}`, "1");
+      }
+      setAuthed(true);
+      return;
+    }
     if (localStorage.getItem(`zircon_staff_${role}`) !== "1") return;
 
     // For single-device roles, verify this device still owns the session.
@@ -70,10 +87,12 @@ function StaffPortal() {
         });
         if (cancelled) return;
         if (!error && data === true) {
+          saveStaffSession(role);
           setAuthed(true);
         } else {
           // Another device took over the session — require the password again.
           localStorage.removeItem(`zircon_staff_${role}`);
+          clearStaffSession(role);
           setAuthed(false);
           toast("تم تسجيل الدخول من جهاز آخر. يرجى إدخال كلمة المرور مجددًا.");
         }
@@ -81,6 +100,7 @@ function StaffPortal() {
       return () => { cancelled = true; };
     }
 
+    saveStaffSession(role);
     setAuthed(true);
   }, [role]);
 
@@ -120,6 +140,8 @@ function StaffPortal() {
 
   if (!authed) return <Gate role={role} onOk={async () => {
     localStorage.setItem(`zircon_staff_${role}`, "1");
+    // Persist a durable session so reopening the app does not ask again.
+    saveStaffSession(role);
     // Bind this login to the current device for single-device roles (designer).
     if (SINGLE_DEVICE_ROLES.includes(role)) {
       await supabase.rpc("claim_staff_session", { p_role: role, p_device: getDeviceId() });
@@ -129,6 +151,7 @@ function StaffPortal() {
 
   return <Inner role={role} onLogout={async () => {
     localStorage.removeItem(`zircon_staff_${role}`);
+    clearStaffSession(role);
     if (SINGLE_DEVICE_ROLES.includes(role)) {
       await supabase.rpc("clear_staff_session", { p_role: role, p_device: getDeviceId() });
     }
