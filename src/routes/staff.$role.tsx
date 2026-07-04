@@ -140,6 +140,8 @@ function StaffPortal() {
 
   if (!authed) return <Gate role={role} onOk={async () => {
     localStorage.setItem(`zircon_staff_${role}`, "1");
+    // Persist a durable session so reopening the app does not ask again.
+    saveStaffSession(role);
     // Bind this login to the current device for single-device roles (designer).
     if (SINGLE_DEVICE_ROLES.includes(role)) {
       await supabase.rpc("claim_staff_session", { p_role: role, p_device: getDeviceId() });
@@ -149,6 +151,7 @@ function StaffPortal() {
 
   return <Inner role={role} onLogout={async () => {
     localStorage.removeItem(`zircon_staff_${role}`);
+    clearStaffSession(role);
     if (SINGLE_DEVICE_ROLES.includes(role)) {
       await supabase.rpc("clear_staff_session", { p_role: role, p_device: getDeviceId() });
     }
