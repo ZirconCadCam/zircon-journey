@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { RoleKey } from "@/lib/chat";
+import { ATTACHMENTS_BUCKET, type RoleKey } from "@/lib/chat";
 
 /** A comment left by a team member (designer/technician) on an image the
  *  doctor attached to a case. Comments are stored on the case row and also
