@@ -325,12 +325,13 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
 
 
   /* ------------------------------------------------------------------
-   * Voice arrival alerts (designer = new .zip, technician = new .rar)
+   * Voice arrival alerts (technician = new .rar arriving).
+   * The designer has its own richer engine below.
    * ------------------------------------------------------------------ */
   const seenIds = useRef<Set<string> | null>(null);
   useEffect(() => {
     if (loading) return;
-    if (actor !== "designer" && actor !== "technician") return;
+    if (actor !== "technician") return;
     const currentIds = new Set(visibleForActor.map(c => c.id));
     if (seenIds.current === null) {
       // First pass after load — establish baseline silently.
@@ -353,6 +354,92 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     }
     seenIds.current = currentIds;
   }, [visibleForActor, loading, actor, doctorMap]);
+
+  /* ------------------------------------------------------------------
+   * Designer notification engine — professional audio + visual + badge
+   * alerts whenever a DOCTOR creates or edits a case.
+   *   • New case      → landline ring + spoken alert + toast + shade badge.
+   *   • Edited case   → status chime + toast (doctor changed data/notes/image).
+   * Badges (sidebar + per-card) are driven by `unseenMap` and persist until
+   * the designer opens the doctor's list; this effect only handles the
+   * live "moment of arrival" audio/visual burst.
+   * ------------------------------------------------------------------ */
+  const sigRef = useRef<Map<string, string> | null>(null);
+  useEffect(() => {
+    if (loading || actor !== "designer") return;
+    const current = new Map<string, string>();
+    for (const c of activeCases) current.set(c.id, caseSignature(c));
+
+    if (sigRef.current === null) {
+      // First pass after load — establish baseline silently and seed the
+      // durable "seen" store the very first time the designer uses the app.
+      sigRef.current = current;
+      if (!hasBaseline()) {
+        const base: SeenMap = {};
+        current.forEach((sig, id) => { base[id] = sig; });
+        saveSeen(base);
+        setSeen(base);
+      }
+      return;
+    }
+
+    const prev = sigRef.current;
+    const fresh: { c: typeof activeCases[number]; kind: "new" | "updated" }[] = [];
+    for (const c of activeCases) {
+      const sig = current.get(c.id)!;
+      const before = prev.get(c.id);
+      if (before === undefined) fresh.push({ c, kind: "new" });
+      else if (before !== sig) fresh.push({ c, kind: "updated" });
+    }
+    sigRef.current = current;
+    if (fresh.length === 0) return;
+
+    const news = fresh.filter(f => f.kind === "new");
+    const updates = fresh.filter(f => f.kind === "updated");
+    const nameOf = (slot: number) =>
+      (doctorMap.get(slot)?.name ?? `Slot ${slot}`).replace(/^د\.?\s*/, "");
+
+    setAlertPulse(true);
+    window.setTimeout(() => setAlertPulse(false), 6000);
+
+    if (news.length > 0) {
+      playPhoneRing(5000);
+      const first = news[0].c;
+      const dn = nameOf(first.doctor_slot);
+      const title = news.length > 1
+        ? `📩 ${news.length} حالات جديدة من الأطباء`
+        : `📩 حالة جديدة من الدكتور ${dn}`;
+      const body = news.length > 1
+        ? `وردت ${news.length} حالات جديدة بانتظار التصميم`
+        : `${first.patient_name} — بانتظار التصميم`;
+      toast(title, { description: body, icon: <BellRing className="size-4 text-gold" />, duration: 7000 });
+      void systemNotify(title, body);
+      speak(news.length > 1
+        ? `لديك ${news.length} حالات جديدة من الأطباء بانتظار التصميم.`
+        : `لديك حالة جديدة من الدكتور ${dn}. المريض ${first.patient_name}.`);
+    }
+
+    if (updates.length > 0) {
+      playSystemChime();
+      const first = updates[0].c;
+      const dn = nameOf(first.doctor_slot);
+      const title = updates.length > 1
+        ? `✏️ ${updates.length} تحديثات من الأطباء`
+        : `✏️ تحديث من الدكتور ${dn}`;
+      const body = updates.length > 1
+        ? `قام الأطباء بتحديث بيانات ${updates.length} حالات`
+        : `تم تحديث بيانات الحالة: ${first.patient_name}`;
+      toast(title, { description: body, icon: <RefreshCw className="size-4 text-emerald-500" />, duration: 7000, className: "border-emerald-500/40" });
+      void systemNotify(title, body);
+    }
+  }, [activeCases, loading, actor, doctorMap]);
+
+  // Ask for notification permission once, so alerts reach the device shade
+  // even when the designer tab is in the background.
+  useEffect(() => {
+    if (actor === "designer") void ensureNotifyPermission();
+  }, [actor]);
+
 
   /* ------------------------------------------------------------------
    * Load designer → technician text revisions for the visible cases so the
