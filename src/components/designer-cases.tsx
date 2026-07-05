@@ -1198,13 +1198,25 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
             {visibleForActor.map(c => {
               const doctor = doctorMap.get(c.doctor_slot);
               const busy = busyId === c.id;
+              const unseenKind = actor === "designer" ? unseenMap.get(c.id) : undefined;
               return (
-                <li key={c.id} className={`rounded-2xl bg-card border p-5 shadow-luxury hover:border-gold/60 transition ${c.pinned && view === "archive" ? "border-gold ring-1 ring-gold/40" : "border-border"}`}>
+                <li key={c.id} className={`relative rounded-2xl bg-card border p-5 shadow-luxury hover:border-gold/60 transition ${unseenKind ? "border-gold ring-2 ring-gold/40" : c.pinned && view === "archive" ? "border-gold ring-1 ring-gold/40" : "border-border"}`}>
+                  {unseenKind && (
+                    <button
+                      onClick={() => markSeen([c.id])}
+                      title="تحديد كمقروء"
+                      className={`absolute -top-2 -left-2 z-10 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-extrabold shadow-gold animate-pulse ${unseenKind === "new" ? "gradient-gold text-gold-foreground" : "bg-emerald-500 text-white"}`}>
+                      {unseenKind === "new"
+                        ? <><BellRing className="size-3" /> حالة جديدة</>
+                        : <><RefreshCw className="size-3" /> تحديث من الطبيب</>}
+                    </button>
+                  )}
                   <div className="flex items-start justify-between flex-wrap gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-mono text-xs rounded-md bg-muted px-2 py-0.5 font-bold">{c.case_code}</span>
                         <span className="text-[11px] rounded-full gradient-gold text-gold-foreground px-2 py-0.5 font-bold">{getStage(deriveStageKey(c)).label}</span>
+
                         {(c.revision_design_done || c.revision_design_file_path) && (actor === "technician" || actor === "admin") && (
                           <span className="text-[10px] rounded-full bg-amber-500 text-white px-2 py-0.5 font-bold inline-flex items-center gap-1" title="ملف التصميم المعدّل من المصمم — أحدث نسخة">
                             <RefreshCw className="size-3" /> ملف معدّل · آخر تحديث
