@@ -1088,28 +1088,59 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     <div className="grid lg:grid-cols-[280px_1fr] gap-5">
       {/* Doctor filter sidebar */}
       <aside className="rounded-2xl bg-card border border-border overflow-hidden shadow-luxury self-start">
-        <div className="p-4 border-b border-border font-bold text-sm flex items-center gap-2">
-          <Stethoscope className="size-4 text-gold" /> فلترة حسب الطبيب
+        <div className="p-4 border-b border-border font-bold text-sm flex items-center justify-between gap-2">
+          <span className="flex items-center gap-2">
+            <Stethoscope className="size-4 text-gold" /> فلترة حسب الطبيب
+          </span>
+          {actor === "designer" && unseenTotal > 0 && (
+            <button
+              onClick={markAllSeen}
+              title="تحديد كل تحديثات الأطباء كمقروءة"
+              className="inline-flex items-center gap-1 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-[10px] font-bold text-emerald-600 hover:bg-emerald-500/20 transition">
+              <CheckCheck className="size-3" /> مقروء
+            </button>
+          )}
         </div>
+        {actor === "designer" && unseenTotal > 0 && (
+          <div className={`flex items-center gap-2 px-4 py-2 text-[11px] font-bold text-gold-foreground gradient-gold ${alertPulse ? "animate-pulse" : ""}`}>
+            <BellRing className="size-3.5" />
+            {unseenTotal} تحديث جديد من الأطباء
+          </div>
+        )}
         <ul className="divide-y divide-border max-h-[600px] overflow-y-auto">
           <li>
             <button onClick={() => setFilterSlot("all")}
               className={`w-full text-start p-3 flex items-center justify-between transition ${filterSlot === "all" ? "bg-gold/10 border-r-4 border-gold" : "hover:bg-muted/40"}`}>
               <span className="font-bold text-sm">كل الأطباء</span>
-              <span className="text-[11px] rounded-full bg-muted px-2 py-0.5 font-bold">{activeCases.length}</span>
+              <span className="flex items-center gap-1.5">
+                {actor === "designer" && unseenTotal > 0 && (
+                  <span className="inline-flex min-w-4 h-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-extrabold text-destructive-foreground">{unseenTotal}</span>
+                )}
+                <span className="text-[11px] rounded-full bg-muted px-2 py-0.5 font-bold">{activeCases.length}</span>
+              </span>
             </button>
           </li>
           {doctors.map(d => {
             const count = grouped.get(d.slot) ?? 0;
             const on = filterSlot === d.slot;
+            const unseen = actor === "designer" ? (unseenByDoctor.get(d.slot) ?? 0) : 0;
             return (
               <li key={d.slot}>
-                <button onClick={() => setFilterSlot(d.slot)}
-                  className={`w-full text-start p-3 flex items-center gap-2 transition ${on ? "bg-gold/10 border-r-4 border-gold" : "hover:bg-muted/40"}`}>
-                  <DoctorAvatar name={d.name} className="size-8" rounded="lg" />
+                <button
+                  onClick={() => { setFilterSlot(d.slot); if (actor === "designer") markDoctorSeen(d.slot); }}
+                  className={`w-full text-start p-3 flex items-center gap-2 transition ${on ? "bg-gold/10 border-r-4 border-gold" : "hover:bg-muted/40"} ${unseen > 0 ? "bg-gold/[0.06]" : ""}`}>
+                  <span className="relative shrink-0">
+                    <DoctorAvatar name={d.name} className="size-8" rounded="lg" />
+                    {unseen > 0 && (
+                      <span className="absolute -top-1 -right-1 inline-flex min-w-4 h-4 items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-extrabold text-destructive-foreground ring-2 ring-card animate-pulse">{unseen}</span>
+                    )}
+                  </span>
 
                   <div className="min-w-0 flex-1">
-                    <div className="font-bold text-xs truncate">{d.name}</div>
+                    <div className="font-bold text-xs truncate flex items-center gap-1">
+                      {d.name}
+                      {unseen > 0 && <BellRing className="size-3 text-gold shrink-0" />}
+                    </div>
                     <div className="text-[10px] text-muted-foreground">{d.branch === "sanaa" ? "صنعاء" : d.branch === "ibb" ? "إب" : ""}</div>
                   </div>
                   {count > 0 && <span className="text-[10px] rounded-full bg-muted px-2 py-0.5 font-bold">{count}</span>}
@@ -1119,6 +1150,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
           })}
         </ul>
       </aside>
+
 
       {/* Cases list */}
       <section className="space-y-4">
