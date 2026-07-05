@@ -130,6 +130,15 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
   const [downloadedZips, setDownloadedZips] = useState<Record<string, { fileName: string; mime?: string | null }>>({});
   // Manual refresh button state.
   const [refreshing, setRefreshing] = useState(false);
+  // Designer-only: durable "seen" map so unseen doctor-update badges persist
+  // across refreshes and only clear when the designer looks at the case.
+  const [seen, setSeen] = useState<SeenMap>({});
+  // A brief header pulse whenever a fresh doctor update lands while on-page.
+  const [alertPulse, setAlertPulse] = useState(false);
+
+  useEffect(() => {
+    if (actor === "designer") setSeen(loadSeen());
+  }, [actor]);
 
   useEffect(() => {
     setDownloadedZips(loadZipDownloads(actor));
