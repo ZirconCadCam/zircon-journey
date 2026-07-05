@@ -226,6 +226,63 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     return counts;
   }, [activeCases]);
 
+  /* ------------------------------------------------------------------
+   * Designer-only: unseen "doctor update" tracking.
+   *   unseenMap  → caseId → "new" | "updated" for cases the doctor
+   *                created/edited and the designer hasn't looked at yet.
+   *   unseenByDoctor → per-doctor unseen count (drives the sidebar badges).
+   * ------------------------------------------------------------------ */
+  const unseenMap = useMemo(() => {
+    const m = new Map<string, "new" | "updated">();
+    if (actor !== "designer") return m;
+    for (const c of activeCases) {
+      const sig = caseSignature(c);
+      const prev = seen[c.id];
+      if (prev === undefined) m.set(c.id, "new");
+      else if (prev !== sig) m.set(c.id, "updated");
+    }
+    return m;
+  }, [activeCases, seen, actor]);
+
+  const unseenByDoctor = useMemo(() => {
+    const m = new Map<number, number>();
+    if (actor !== "designer") return m;
+    for (const c of activeCases) {
+      if (unseenMap.has(c.id)) m.set(c.doctor_slot, (m.get(c.doctor_slot) ?? 0) + 1);
+    }
+    return m;
+  }, [activeCases, unseenMap, actor]);
+
+  const unseenTotal = unseenMap.size;
+
+  /** Mark a set of cases as seen (persist + clear their badges). */
+  const markSeen = useCallback((ids: string[]) => {
+    if (actor !== "designer" || ids.length === 0) return;
+    setSeen((prev) => {
+      const next = { ...prev };
+      const byId = new Map(activeCases.map((c) => [c.id, c] as const));
+      let changed = false;
+      for (const id of ids) {
+        const c = byId.get(id);
+        if (!c) continue;
+        const sig = caseSignature(c);
+        if (next[id] !== sig) { next[id] = sig; changed = true; }
+      }
+      if (changed) saveSeen(next);
+      return changed ? next : prev;
+    });
+  }, [actor, activeCases]);
+
+  const markDoctorSeen = useCallback((slot: number) => {
+    markSeen(activeCases.filter((c) => c.doctor_slot === slot).map((c) => c.id));
+  }, [markSeen, activeCases]);
+
+  const markAllSeen = useCallback(() => {
+    markSeen(activeCases.map((c) => c.id));
+    toast.success("تمّت مشاهدة كل تحديثات الأطباء");
+  }, [markSeen, activeCases]);
+
+
   // Compute the "pending file" gate: if this actor already checked a case
   // but didn't yet send the .rar file, block ticking new ones.
   const pendingCaseCode = useMemo(() => {
