@@ -15,7 +15,9 @@ import { ZipViewerDialog } from "@/components/zip-viewer-dialog";
 import { TechRevisionPanel } from "@/components/tech-revision-panel";
 import { ImageLightbox } from "@/components/image-lightbox";
 import { addImageComment, postImageCommentToChat, postImageVoiceToChat, type NoteImageComment } from "@/lib/image-comments";
-import { MessageSquare, Mic, Square, Trash2 as TrashIcon } from "lucide-react";
+import { MessageSquare, Mic, Square, Trash2 as TrashIcon, BellRing, Sparkles, CheckCheck } from "lucide-react";
+import { caseSignature, loadSeen, saveSeen, hasBaseline, type SeenMap } from "@/lib/designer-alerts";
+import { playPhoneRing, playSystemChime, systemNotify, ensureNotifyPermission } from "@/lib/notify";
 
 /** Inject hex overrides for our oklch CSS variables into html2canvas's cloned doc. */
 const H2C_ONCLONE = (doc: Document) => {
@@ -128,6 +130,15 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
   const [downloadedZips, setDownloadedZips] = useState<Record<string, { fileName: string; mime?: string | null }>>({});
   // Manual refresh button state.
   const [refreshing, setRefreshing] = useState(false);
+  // Designer-only: durable "seen" map so unseen doctor-update badges persist
+  // across refreshes and only clear when the designer looks at the case.
+  const [seen, setSeen] = useState<SeenMap>({});
+  // A brief header pulse whenever a fresh doctor update lands while on-page.
+  const [alertPulse, setAlertPulse] = useState(false);
+
+  useEffect(() => {
+    if (actor === "designer") setSeen(loadSeen());
+  }, [actor]);
 
   useEffect(() => {
     setDownloadedZips(loadZipDownloads(actor));
@@ -215,6 +226,63 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     return counts;
   }, [activeCases]);
 
+  /* ------------------------------------------------------------------
+   * Designer-only: unseen "doctor update" tracking.
+   *   unseenMap  → caseId → "new" | "updated" for cases the doctor
+   *                created/edited and the designer hasn't looked at yet.
+   *   unseenByDoctor → per-doctor unseen count (drives the sidebar badges).
+   * ------------------------------------------------------------------ */
+  const unseenMap = useMemo(() => {
+    const m = new Map<string, "new" | "updated">();
+    if (actor !== "designer") return m;
+    for (const c of activeCases) {
+      const sig = caseSignature(c);
+      const prev = seen[c.id];
+      if (prev === undefined) m.set(c.id, "new");
+      else if (prev !== sig) m.set(c.id, "updated");
+    }
+    return m;
+  }, [activeCases, seen, actor]);
+
+  const unseenByDoctor = useMemo(() => {
+    const m = new Map<number, number>();
+    if (actor !== "designer") return m;
+    for (const c of activeCases) {
+      if (unseenMap.has(c.id)) m.set(c.doctor_slot, (m.get(c.doctor_slot) ?? 0) + 1);
+    }
+    return m;
+  }, [activeCases, unseenMap, actor]);
+
+  const unseenTotal = unseenMap.size;
+
+  /** Mark a set of cases as seen (persist + clear their badges). */
+  const markSeen = useCallback((ids: string[]) => {
+    if (actor !== "designer" || ids.length === 0) return;
+    setSeen((prev) => {
+      const next = { ...prev };
+      const byId = new Map(activeCases.map((c) => [c.id, c] as const));
+      let changed = false;
+      for (const id of ids) {
+        const c = byId.get(id);
+        if (!c) continue;
+        const sig = caseSignature(c);
+        if (next[id] !== sig) { next[id] = sig; changed = true; }
+      }
+      if (changed) saveSeen(next);
+      return changed ? next : prev;
+    });
+  }, [actor, activeCases]);
+
+  const markDoctorSeen = useCallback((slot: number) => {
+    markSeen(activeCases.filter((c) => c.doctor_slot === slot).map((c) => c.id));
+  }, [markSeen, activeCases]);
+
+  const markAllSeen = useCallback(() => {
+    markSeen(activeCases.map((c) => c.id));
+    toast.success("تمّت مشاهدة كل تحديثات الأطباء");
+  }, [markSeen, activeCases]);
+
+
   // Compute the "pending file" gate: if this actor already checked a case
   // but didn't yet send the .rar file, block ticking new ones.
   const pendingCaseCode = useMemo(() => {
@@ -257,12 +325,13 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
 
 
   /* ------------------------------------------------------------------
-   * Voice arrival alerts (designer = new .zip, technician = new .rar)
+   * Voice arrival alerts (technician = new .rar arriving).
+   * The designer has its own richer engine below.
    * ------------------------------------------------------------------ */
   const seenIds = useRef<Set<string> | null>(null);
   useEffect(() => {
     if (loading) return;
-    if (actor !== "designer" && actor !== "technician") return;
+    if (actor !== "technician") return;
     const currentIds = new Set(visibleForActor.map(c => c.id));
     if (seenIds.current === null) {
       // First pass after load — establish baseline silently.
@@ -285,6 +354,92 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     }
     seenIds.current = currentIds;
   }, [visibleForActor, loading, actor, doctorMap]);
+
+  /* ------------------------------------------------------------------
+   * Designer notification engine — professional audio + visual + badge
+   * alerts whenever a DOCTOR creates or edits a case.
+   *   • New case      → landline ring + spoken alert + toast + shade badge.
+   *   • Edited case   → status chime + toast (doctor changed data/notes/image).
+   * Badges (sidebar + per-card) are driven by `unseenMap` and persist until
+   * the designer opens the doctor's list; this effect only handles the
+   * live "moment of arrival" audio/visual burst.
+   * ------------------------------------------------------------------ */
+  const sigRef = useRef<Map<string, string> | null>(null);
+  useEffect(() => {
+    if (loading || actor !== "designer") return;
+    const current = new Map<string, string>();
+    for (const c of activeCases) current.set(c.id, caseSignature(c));
+
+    if (sigRef.current === null) {
+      // First pass after load — establish baseline silently and seed the
+      // durable "seen" store the very first time the designer uses the app.
+      sigRef.current = current;
+      if (!hasBaseline()) {
+        const base: SeenMap = {};
+        current.forEach((sig, id) => { base[id] = sig; });
+        saveSeen(base);
+        setSeen(base);
+      }
+      return;
+    }
+
+    const prev = sigRef.current;
+    const fresh: { c: typeof activeCases[number]; kind: "new" | "updated" }[] = [];
+    for (const c of activeCases) {
+      const sig = current.get(c.id)!;
+      const before = prev.get(c.id);
+      if (before === undefined) fresh.push({ c, kind: "new" });
+      else if (before !== sig) fresh.push({ c, kind: "updated" });
+    }
+    sigRef.current = current;
+    if (fresh.length === 0) return;
+
+    const news = fresh.filter(f => f.kind === "new");
+    const updates = fresh.filter(f => f.kind === "updated");
+    const nameOf = (slot: number) =>
+      (doctorMap.get(slot)?.name ?? `Slot ${slot}`).replace(/^د\.?\s*/, "");
+
+    setAlertPulse(true);
+    window.setTimeout(() => setAlertPulse(false), 6000);
+
+    if (news.length > 0) {
+      playPhoneRing(5000);
+      const first = news[0].c;
+      const dn = nameOf(first.doctor_slot);
+      const title = news.length > 1
+        ? `📩 ${news.length} حالات جديدة من الأطباء`
+        : `📩 حالة جديدة من الدكتور ${dn}`;
+      const body = news.length > 1
+        ? `وردت ${news.length} حالات جديدة بانتظار التصميم`
+        : `${first.patient_name} — بانتظار التصميم`;
+      toast(title, { description: body, icon: <BellRing className="size-4 text-gold" />, duration: 7000 });
+      void systemNotify(title, body);
+      speak(news.length > 1
+        ? `لديك ${news.length} حالات جديدة من الأطباء بانتظار التصميم.`
+        : `لديك حالة جديدة من الدكتور ${dn}. المريض ${first.patient_name}.`);
+    }
+
+    if (updates.length > 0) {
+      playSystemChime();
+      const first = updates[0].c;
+      const dn = nameOf(first.doctor_slot);
+      const title = updates.length > 1
+        ? `✏️ ${updates.length} تحديثات من الأطباء`
+        : `✏️ تحديث من الدكتور ${dn}`;
+      const body = updates.length > 1
+        ? `قام الأطباء بتحديث بيانات ${updates.length} حالات`
+        : `تم تحديث بيانات الحالة: ${first.patient_name}`;
+      toast(title, { description: body, icon: <RefreshCw className="size-4 text-emerald-500" />, duration: 7000, className: "border-emerald-500/40" });
+      void systemNotify(title, body);
+    }
+  }, [activeCases, loading, actor, doctorMap]);
+
+  // Ask for notification permission once, so alerts reach the device shade
+  // even when the designer tab is in the background.
+  useEffect(() => {
+    if (actor === "designer") void ensureNotifyPermission();
+  }, [actor]);
+
 
   /* ------------------------------------------------------------------
    * Load designer → technician text revisions for the visible cases so the
@@ -933,28 +1088,59 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     <div className="grid lg:grid-cols-[280px_1fr] gap-5">
       {/* Doctor filter sidebar */}
       <aside className="rounded-2xl bg-card border border-border overflow-hidden shadow-luxury self-start">
-        <div className="p-4 border-b border-border font-bold text-sm flex items-center gap-2">
-          <Stethoscope className="size-4 text-gold" /> فلترة حسب الطبيب
+        <div className="p-4 border-b border-border font-bold text-sm flex items-center justify-between gap-2">
+          <span className="flex items-center gap-2">
+            <Stethoscope className="size-4 text-gold" /> فلترة حسب الطبيب
+          </span>
+          {actor === "designer" && unseenTotal > 0 && (
+            <button
+              onClick={markAllSeen}
+              title="تحديد كل تحديثات الأطباء كمقروءة"
+              className="inline-flex items-center gap-1 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-[10px] font-bold text-emerald-600 hover:bg-emerald-500/20 transition">
+              <CheckCheck className="size-3" /> مقروء
+            </button>
+          )}
         </div>
+        {actor === "designer" && unseenTotal > 0 && (
+          <div className={`flex items-center gap-2 px-4 py-2 text-[11px] font-bold text-gold-foreground gradient-gold ${alertPulse ? "animate-pulse" : ""}`}>
+            <BellRing className="size-3.5" />
+            {unseenTotal} تحديث جديد من الأطباء
+          </div>
+        )}
         <ul className="divide-y divide-border max-h-[600px] overflow-y-auto">
           <li>
             <button onClick={() => setFilterSlot("all")}
               className={`w-full text-start p-3 flex items-center justify-between transition ${filterSlot === "all" ? "bg-gold/10 border-r-4 border-gold" : "hover:bg-muted/40"}`}>
               <span className="font-bold text-sm">كل الأطباء</span>
-              <span className="text-[11px] rounded-full bg-muted px-2 py-0.5 font-bold">{activeCases.length}</span>
+              <span className="flex items-center gap-1.5">
+                {actor === "designer" && unseenTotal > 0 && (
+                  <span className="inline-flex min-w-4 h-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-extrabold text-destructive-foreground">{unseenTotal}</span>
+                )}
+                <span className="text-[11px] rounded-full bg-muted px-2 py-0.5 font-bold">{activeCases.length}</span>
+              </span>
             </button>
           </li>
           {doctors.map(d => {
             const count = grouped.get(d.slot) ?? 0;
             const on = filterSlot === d.slot;
+            const unseen = actor === "designer" ? (unseenByDoctor.get(d.slot) ?? 0) : 0;
             return (
               <li key={d.slot}>
-                <button onClick={() => setFilterSlot(d.slot)}
-                  className={`w-full text-start p-3 flex items-center gap-2 transition ${on ? "bg-gold/10 border-r-4 border-gold" : "hover:bg-muted/40"}`}>
-                  <DoctorAvatar name={d.name} className="size-8" rounded="lg" />
+                <button
+                  onClick={() => { setFilterSlot(d.slot); if (actor === "designer") markDoctorSeen(d.slot); }}
+                  className={`w-full text-start p-3 flex items-center gap-2 transition ${on ? "bg-gold/10 border-r-4 border-gold" : "hover:bg-muted/40"} ${unseen > 0 ? "bg-gold/[0.06]" : ""}`}>
+                  <span className="relative shrink-0">
+                    <DoctorAvatar name={d.name} className="size-8" rounded="lg" />
+                    {unseen > 0 && (
+                      <span className="absolute -top-1 -right-1 inline-flex min-w-4 h-4 items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-extrabold text-destructive-foreground ring-2 ring-card animate-pulse">{unseen}</span>
+                    )}
+                  </span>
 
                   <div className="min-w-0 flex-1">
-                    <div className="font-bold text-xs truncate">{d.name}</div>
+                    <div className="font-bold text-xs truncate flex items-center gap-1">
+                      {d.name}
+                      {unseen > 0 && <BellRing className="size-3 text-gold shrink-0" />}
+                    </div>
                     <div className="text-[10px] text-muted-foreground">{d.branch === "sanaa" ? "صنعاء" : d.branch === "ibb" ? "إب" : ""}</div>
                   </div>
                   {count > 0 && <span className="text-[10px] rounded-full bg-muted px-2 py-0.5 font-bold">{count}</span>}
@@ -964,6 +1150,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
           })}
         </ul>
       </aside>
+
 
       {/* Cases list */}
       <section className="space-y-4">
@@ -1011,13 +1198,25 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
             {visibleForActor.map(c => {
               const doctor = doctorMap.get(c.doctor_slot);
               const busy = busyId === c.id;
+              const unseenKind = actor === "designer" ? unseenMap.get(c.id) : undefined;
               return (
-                <li key={c.id} className={`rounded-2xl bg-card border p-5 shadow-luxury hover:border-gold/60 transition ${c.pinned && view === "archive" ? "border-gold ring-1 ring-gold/40" : "border-border"}`}>
+                <li key={c.id} className={`relative rounded-2xl bg-card border p-5 shadow-luxury hover:border-gold/60 transition ${unseenKind ? "border-gold ring-2 ring-gold/40" : c.pinned && view === "archive" ? "border-gold ring-1 ring-gold/40" : "border-border"}`}>
+                  {unseenKind && (
+                    <button
+                      onClick={() => markSeen([c.id])}
+                      title="تحديد كمقروء"
+                      className={`absolute -top-2 -left-2 z-10 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-extrabold shadow-gold animate-pulse ${unseenKind === "new" ? "gradient-gold text-gold-foreground" : "bg-emerald-500 text-white"}`}>
+                      {unseenKind === "new"
+                        ? <><BellRing className="size-3" /> حالة جديدة</>
+                        : <><RefreshCw className="size-3" /> تحديث من الطبيب</>}
+                    </button>
+                  )}
                   <div className="flex items-start justify-between flex-wrap gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-mono text-xs rounded-md bg-muted px-2 py-0.5 font-bold">{c.case_code}</span>
                         <span className="text-[11px] rounded-full gradient-gold text-gold-foreground px-2 py-0.5 font-bold">{getStage(deriveStageKey(c)).label}</span>
+
                         {(c.revision_design_done || c.revision_design_file_path) && (actor === "technician" || actor === "admin") && (
                           <span className="text-[10px] rounded-full bg-amber-500 text-white px-2 py-0.5 font-bold inline-flex items-center gap-1" title="ملف التصميم المعدّل من المصمم — أحدث نسخة">
                             <RefreshCw className="size-3" /> ملف معدّل · آخر تحديث
