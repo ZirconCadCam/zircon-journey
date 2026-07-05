@@ -941,7 +941,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
             <button onClick={() => setFilterSlot("all")}
               className={`w-full text-start p-3 flex items-center justify-between transition ${filterSlot === "all" ? "bg-gold/10 border-r-4 border-gold" : "hover:bg-muted/40"}`}>
               <span className="font-bold text-sm">كل الأطباء</span>
-              <span className="text-[11px] rounded-full bg-muted px-2 py-0.5 font-bold">{cases.length}</span>
+              <span className="text-[11px] rounded-full bg-muted px-2 py-0.5 font-bold">{activeCases.length}</span>
             </button>
           </li>
           {doctors.map(d => {
