@@ -15,7 +15,9 @@ import { ZipViewerDialog } from "@/components/zip-viewer-dialog";
 import { TechRevisionPanel } from "@/components/tech-revision-panel";
 import { ImageLightbox } from "@/components/image-lightbox";
 import { addImageComment, postImageCommentToChat, postImageVoiceToChat, type NoteImageComment } from "@/lib/image-comments";
-import { MessageSquare, Mic, Square, Trash2 as TrashIcon } from "lucide-react";
+import { MessageSquare, Mic, Square, Trash2 as TrashIcon, BellRing, Sparkles, CheckCheck } from "lucide-react";
+import { caseSignature, loadSeen, saveSeen, hasBaseline, type SeenMap } from "@/lib/designer-alerts";
+import { playPhoneRing, playSystemChime, systemNotify, ensureNotifyPermission } from "@/lib/notify";
 
 /** Inject hex overrides for our oklch CSS variables into html2canvas's cloned doc. */
 const H2C_ONCLONE = (doc: Document) => {
