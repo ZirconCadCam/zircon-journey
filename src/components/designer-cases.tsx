@@ -201,11 +201,19 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
   }
 
 
+  // Only count cases that are still live on the doctor's own page — i.e. not
+  // manually archived and not finally archived. This keeps the per-doctor
+  // badge here identical to the number of cases the doctor actually sees.
+  const activeCases = useMemo(
+    () => cases.filter(c => !c.archived && !c.final_archived),
+    [cases],
+  );
+
   const grouped = useMemo(() => {
     const counts = new Map<number, number>();
-    cases.forEach(c => counts.set(c.doctor_slot, (counts.get(c.doctor_slot) ?? 0) + 1));
+    activeCases.forEach(c => counts.set(c.doctor_slot, (counts.get(c.doctor_slot) ?? 0) + 1));
     return counts;
-  }, [cases]);
+  }, [activeCases]);
 
   // Compute the "pending file" gate: if this actor already checked a case
   // but didn't yet send the .rar file, block ticking new ones.
