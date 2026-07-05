@@ -201,11 +201,19 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
   }
 
 
+  // Only count cases that are still live on the doctor's own page — i.e. not
+  // manually archived and not finally archived. This keeps the per-doctor
+  // badge here identical to the number of cases the doctor actually sees.
+  const activeCases = useMemo(
+    () => cases.filter(c => !c.archived && !c.final_archived),
+    [cases],
+  );
+
   const grouped = useMemo(() => {
     const counts = new Map<number, number>();
-    cases.forEach(c => counts.set(c.doctor_slot, (counts.get(c.doctor_slot) ?? 0) + 1));
+    activeCases.forEach(c => counts.set(c.doctor_slot, (counts.get(c.doctor_slot) ?? 0) + 1));
     return counts;
-  }, [cases]);
+  }, [activeCases]);
 
   // Compute the "pending file" gate: if this actor already checked a case
   // but didn't yet send the .rar file, block ticking new ones.
@@ -933,7 +941,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
             <button onClick={() => setFilterSlot("all")}
               className={`w-full text-start p-3 flex items-center justify-between transition ${filterSlot === "all" ? "bg-gold/10 border-r-4 border-gold" : "hover:bg-muted/40"}`}>
               <span className="font-bold text-sm">كل الأطباء</span>
-              <span className="text-[11px] rounded-full bg-muted px-2 py-0.5 font-bold">{cases.length}</span>
+              <span className="text-[11px] rounded-full bg-muted px-2 py-0.5 font-bold">{activeCases.length}</span>
             </button>
           </li>
           {doctors.map(d => {
