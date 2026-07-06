@@ -1650,7 +1650,7 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
       </div>
 
       <div className="rounded-xl border border-input bg-background overflow-hidden focus-within:border-gold transition">
-        <div class="" className="flex items-center gap-2 flex-wrap border-b border-border/60 bg-muted/40 px-2 py-1.5">
+        <div className="flex items-center gap-2 flex-wrap border-b border-border/60 bg-muted/40 px-2 py-1.5">
           <button type="button" onClick={() => imgRef.current?.click()}
             className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-gold/60 bg-gold/5 px-2.5 py-1 text-[11px] font-bold hover:bg-gold/10">
             <ImageIcon className="size-3.5" /> إضافة صورة
