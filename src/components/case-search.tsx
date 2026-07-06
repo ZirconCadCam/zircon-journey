@@ -31,7 +31,7 @@ interface CaseRow {
   scan_size: number | null;
   design_done?: boolean | null; design_file_sent?: boolean | null;
   tech_data_sent_to_secretary?: boolean | null; final_archived?: boolean | null;
-  archived?: boolean | null;
+  archived?: boolean | null; pinned?: boolean | null;
   [k: string]: any;
 }
 
