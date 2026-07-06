@@ -64,6 +64,10 @@ export interface WorkflowCase {
   scan_path?: string | null;
   scan_name?: string | null;
   scan_mime?: string | null;
+  extra_zip_path?: string | null;
+  extra_zip_name?: string | null;
+  extra_zip_mime?: string | null;
+  extra_zip_size?: number | null;
   notes_images?: { url: string; name: string }[] | null;
   notes_image_comments?: import("@/lib/image-comments").NoteImageComment[] | null;
 }
