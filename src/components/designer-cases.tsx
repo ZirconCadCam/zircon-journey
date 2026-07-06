@@ -70,6 +70,10 @@ interface Case {
   scan_name: string | null;
   scan_size: number | null;
   scan_mime: string | null;
+  extra_zip_path?: string | null;
+  extra_zip_name?: string | null;
+  extra_zip_mime?: string | null;
+  extra_zip_size?: number | null;
   design_done: boolean | null;
   design_file_sent: boolean | null;
   design_html_sent?: boolean | null;
