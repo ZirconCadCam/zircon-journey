@@ -3,8 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Search, Calendar, Building2, User, Hash, Phone,
   ClipboardList, ScanLine, Download, X, Loader2, FileText,
+  MoreVertical, Pin, PinOff, Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import { getStage, deriveStageKey } from "@/lib/case-stages";
 import { ShadeBadge } from "@/components/shade-badge";
 import { DoctorAvatar } from "@/components/doctor-avatar";
