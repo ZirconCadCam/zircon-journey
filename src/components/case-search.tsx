@@ -100,8 +100,32 @@ export function CaseSearch({ actor, restrictSlot }: { actor: Actor; restrictSlot
         if (!hay.includes(term)) return false;
       }
       return true;
-    });
+    }).sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned));
   }, [scoped, q, branch, from, to, doctorMap]);
+
+  /** Admin: pin/unpin a case so it sorts to the top of search results. */
+  async function togglePin(c: CaseRow) {
+    const next = !c.pinned;
+    setCases(prev => prev.map(x => x.id === c.id ? { ...x, pinned: next } : x));
+    const { error } = await supabase.from("slot_cases").update({ pinned: next }).eq("id", c.id);
+    if (error) {
+      setCases(prev => prev.map(x => x.id === c.id ? { ...x, pinned: c.pinned } : x));
+      toast.error("تعذر تحديث التثبيت");
+      return;
+    }
+    toast.success(next ? "تم تثبيت الحالة" : "تم إلغاء التثبيت");
+  }
+
+  /** Admin: permanently delete a case. */
+  async function deleteCase(c: CaseRow) {
+    if (!confirm(`حذف الحالة ${c.case_code} نهائياً؟ لا يمكن التراجع.`)) return;
+    setBusy(c.id);
+    const { error } = await supabase.from("slot_cases").delete().eq("id", c.id);
+    setBusy(null);
+    if (error) { toast.error("تعذر الحذف"); return; }
+    setCases(prev => prev.filter(x => x.id !== c.id));
+    toast.success("تم حذف الحالة نهائياً");
+  }
 
   async function openScan(c: CaseRow) {
     if (!c.scan_path) { toast.error("لا يوجد ملف مرفق"); return; }
