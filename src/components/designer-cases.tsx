@@ -1335,6 +1335,23 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                         </div>
                       )}
 
+                      {c.extra_zip_path && (
+                        <div className="mt-2">
+                          <button
+                            type="button"
+                            onClick={() => downloadCloudFile(c.extra_zip_path, c.extra_zip_name || `${c.case_code}-extra.zip`, c.extra_zip_mime || "application/zip", locFor(c, "downloaded"))}
+                            className="inline-flex items-center gap-2 text-xs bg-amber-500/10 border border-amber-500/40 rounded-lg px-3 py-1.5 hover:bg-amber-500 hover:text-white transition cursor-pointer"
+                            title="ملف ZIP إضافي مرفق من الطبيب"
+                          >
+                            <FileArchive className="size-3.5 text-amber-600" />
+                            <span className="font-bold">ملف ZIP إضافي:</span>
+                            <span className="truncate max-w-[200px] underline underline-offset-2">{c.extra_zip_name || "ملف.zip"}</span>
+                            {c.extra_zip_size ? <span className="text-muted-foreground">({(c.extra_zip_size/1024/1024).toFixed(1)} MB)</span> : null}
+                            <Download className="size-3.5" />
+                          </button>
+                        </div>
+                      )}
+
                       {Array.isArray(c.notes_images) && c.notes_images.length > 0 && (
                         <div className="mt-3 rounded-xl border border-gold/30 bg-muted/20 p-2.5">
                           <div className="text-[11px] font-bold text-gold mb-2 flex items-center gap-1.5">
