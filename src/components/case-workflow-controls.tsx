@@ -1650,7 +1650,7 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
       </div>
 
       <div className="rounded-xl border border-input bg-background overflow-hidden focus-within:border-gold transition">
-        <div className="flex items-center gap-2 flex-wrap border-b border-border/60 bg-muted/40 px-2 py-1.5">
+        <div class="" className="flex items-center gap-2 flex-wrap border-b border-border/60 bg-muted/40 px-2 py-1.5">
           <button type="button" onClick={() => imgRef.current?.click()}
             className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-gold/60 bg-gold/5 px-2.5 py-1 text-[11px] font-bold hover:bg-gold/10">
             <ImageIcon className="size-3.5" /> إضافة صورة
@@ -1659,12 +1659,44 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
             className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-border px-2.5 py-1 text-[11px] font-bold hover:border-gold">
             <FileArchive className="size-3.5" /> إرفاق ملف
           </button>
+          <button type="button" onClick={() => zipRef.current?.click()} disabled={zipBusy}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-amber-500/60 bg-amber-500/5 px-2.5 py-1 text-[11px] font-bold hover:bg-amber-500/10 disabled:opacity-60">
+            {zipBusy ? <Loader2 className="size-3.5 animate-spin" /> : <FileArchive className="size-3.5 text-amber-600" />} إرفاق ZIP
+          </button>
+          {recording ? (
+            <span className="inline-flex items-center gap-1.5">
+              <button type="button" onClick={() => stopRecording(false)}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 text-white px-2.5 py-1 text-[11px] font-bold animate-pulse">
+                <Square className="size-3.5" /> إيقاف وإرسال {String(Math.floor(recordSec / 60)).padStart(2, "0")}:{String(recordSec % 60).padStart(2, "0")}
+              </button>
+              <button type="button" onClick={() => stopRecording(true)}
+                className="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-[11px] font-bold hover:border-rose-600">
+                <X className="size-3.5" /> إلغاء
+              </button>
+            </span>
+          ) : (
+            <button type="button" onClick={startRecording} disabled={busy}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-rose-500/60 bg-rose-500/5 px-2.5 py-1 text-[11px] font-bold hover:bg-rose-500/10 disabled:opacity-60">
+              <Mic className="size-3.5 text-rose-600" /> تسجيل صوتي
+            </button>
+          )}
           <span className="text-[10px] text-muted-foreground">اضغط على الصورة ثم «رسم وقياس» للشرح.</span>
           <input ref={imgRef} type="file" accept="image/*" multiple className="hidden"
             onChange={(e) => { const l = Array.from(e.target.files ?? []); if (e.target) e.target.value = ""; addFiles(l); }} />
           <input ref={fileRef} type="file" multiple className="hidden"
             onChange={(e) => { const l = Array.from(e.target.files ?? []); if (e.target) e.target.value = ""; addFiles(l); }} />
+          <input ref={zipRef} type="file" accept=".zip,application/zip,application/x-zip-compressed" className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (e.target) e.target.value = ""; if (f) void attachZip(f); }} />
         </div>
+
+        {zipInfo && (
+          <div className="flex items-center gap-2 px-2.5 py-1.5 border-b border-border/60 bg-amber-500/5 text-[11px]">
+            <FileArchive className="size-3.5 text-amber-600 shrink-0" />
+            <span className="font-bold text-amber-700">ملف ZIP إضافي مرفق:</span>
+            <span className="truncate">{zipInfo.name}</span>
+            {zipInfo.size > 0 && <span className="text-muted-foreground shrink-0">({(zipInfo.size / 1024 / 1024).toFixed(1)} MB)</span>}
+          </div>
+        )}
 
         {files.length > 0 && (
           <div className="grid grid-cols-3 gap-2 p-2 border-b border-border/60 bg-muted/20 max-h-64 overflow-auto">
