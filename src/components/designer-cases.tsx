@@ -1485,6 +1485,12 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                               <Archive className="size-4 ml-2" /> أرشفة
                             </DropdownMenuItem>
                           )}
+                          {/* Designer: delete case */}
+                          {view === "active" && actor === "designer" && (
+                            <DropdownMenuItem onClick={() => deleteCase(c)} className="text-destructive focus:text-destructive">
+                              <Trash2 className="size-4 ml-2" /> حذف الحالة
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
