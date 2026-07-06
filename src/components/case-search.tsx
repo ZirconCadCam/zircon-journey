@@ -261,15 +261,45 @@ export function CaseSearch({ actor, restrictSlot }: { actor: Actor; restrictSlot
                     )}
                   </div>
 
-                  {c.scan_path && (
-                    <button onClick={() => openScan(c)} disabled={busyThis}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold hover:border-gold transition disabled:opacity-60 shrink-0"
-                      title="فتح/تنزيل ملف الحالة">
-                      {busyThis ? <Loader2 className="size-3.5 animate-spin" /> : <ScanLine className="size-3.5 text-gold" />}
-                      <span>الملف</span>
-                      <Download className="size-3.5" />
-                    </button>
-                  )}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {c.pinned && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-gold/15 text-gold px-2 py-0.5 text-[10px] font-bold">
+                        <Pin className="size-3" /> مثبّتة
+                      </span>
+                    )}
+                    {c.scan_path && (
+                      <button onClick={() => openScan(c)} disabled={busyThis}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold hover:border-gold transition disabled:opacity-60"
+                        title="فتح/تنزيل ملف الحالة">
+                        {busyThis ? <Loader2 className="size-3.5 animate-spin" /> : <ScanLine className="size-3.5 text-gold" />}
+                        <span>الملف</span>
+                        <Download className="size-3.5" />
+                      </button>
+                    )}
+                    {actor === "admin" && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            className="inline-flex items-center justify-center rounded-lg border border-border bg-card p-2 hover:border-gold transition"
+                            title="خيارات">
+                            <MoreVertical className="size-4" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="min-w-[160px]">
+                          <DropdownMenuItem onClick={() => togglePin(c)}>
+                            {c.pinned
+                              ? <><PinOff className="size-4" /> إلغاء التثبيت</>
+                              : <><Pin className="size-4" /> تثبيت</>}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => deleteCase(c)}
+                            className="text-destructive focus:text-destructive">
+                            <Trash2 className="size-4" /> حذف الحالة
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
                 </div>
               </li>
             );
