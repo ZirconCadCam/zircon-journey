@@ -614,6 +614,10 @@ export type Database = {
           design_sent_at: string | null
           doctor_decision: string | null
           doctor_slot: number
+          extra_zip_mime: string | null
+          extra_zip_name: string | null
+          extra_zip_path: string | null
+          extra_zip_size: number | null
           fabrication_done: boolean
           fabrication_file_sent: boolean
           final_archived: boolean
@@ -686,6 +690,10 @@ export type Database = {
           design_sent_at?: string | null
           doctor_decision?: string | null
           doctor_slot: number
+          extra_zip_mime?: string | null
+          extra_zip_name?: string | null
+          extra_zip_path?: string | null
+          extra_zip_size?: number | null
           fabrication_done?: boolean
           fabrication_file_sent?: boolean
           final_archived?: boolean
@@ -758,6 +766,10 @@ export type Database = {
           design_sent_at?: string | null
           doctor_decision?: string | null
           doctor_slot?: number
+          extra_zip_mime?: string | null
+          extra_zip_name?: string | null
+          extra_zip_path?: string | null
+          extra_zip_size?: number | null
           fabrication_done?: boolean
           fabrication_file_sent?: boolean
           final_archived?: boolean

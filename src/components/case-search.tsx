@@ -3,8 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Search, Calendar, Building2, User, Hash, Phone,
   ClipboardList, ScanLine, Download, X, Loader2, FileText,
+  MoreVertical, Pin, PinOff, Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import { getStage, deriveStageKey } from "@/lib/case-stages";
 import { ShadeBadge } from "@/components/shade-badge";
 import { DoctorAvatar } from "@/components/doctor-avatar";
@@ -27,7 +31,7 @@ interface CaseRow {
   scan_size: number | null;
   design_done?: boolean | null; design_file_sent?: boolean | null;
   tech_data_sent_to_secretary?: boolean | null; final_archived?: boolean | null;
-  archived?: boolean | null;
+  archived?: boolean | null; pinned?: boolean | null;
   [k: string]: any;
 }
 
@@ -96,8 +100,32 @@ export function CaseSearch({ actor, restrictSlot }: { actor: Actor; restrictSlot
         if (!hay.includes(term)) return false;
       }
       return true;
-    });
+    }).sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned));
   }, [scoped, q, branch, from, to, doctorMap]);
+
+  /** Admin: pin/unpin a case so it sorts to the top of search results. */
+  async function togglePin(c: CaseRow) {
+    const next = !c.pinned;
+    setCases(prev => prev.map(x => x.id === c.id ? { ...x, pinned: next } : x));
+    const { error } = await supabase.from("slot_cases").update({ pinned: next }).eq("id", c.id);
+    if (error) {
+      setCases(prev => prev.map(x => x.id === c.id ? { ...x, pinned: c.pinned } : x));
+      toast.error("تعذر تحديث التثبيت");
+      return;
+    }
+    toast.success(next ? "تم تثبيت الحالة" : "تم إلغاء التثبيت");
+  }
+
+  /** Admin: permanently delete a case. */
+  async function deleteCase(c: CaseRow) {
+    if (!confirm(`حذف الحالة ${c.case_code} نهائياً؟ لا يمكن التراجع.`)) return;
+    setBusy(c.id);
+    const { error } = await supabase.from("slot_cases").delete().eq("id", c.id);
+    setBusy(null);
+    if (error) { toast.error("تعذر الحذف"); return; }
+    setCases(prev => prev.filter(x => x.id !== c.id));
+    toast.success("تم حذف الحالة نهائياً");
+  }
 
   async function openScan(c: CaseRow) {
     if (!c.scan_path) { toast.error("لا يوجد ملف مرفق"); return; }
@@ -233,15 +261,45 @@ export function CaseSearch({ actor, restrictSlot }: { actor: Actor; restrictSlot
                     )}
                   </div>
 
-                  {c.scan_path && (
-                    <button onClick={() => openScan(c)} disabled={busyThis}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold hover:border-gold transition disabled:opacity-60 shrink-0"
-                      title="فتح/تنزيل ملف الحالة">
-                      {busyThis ? <Loader2 className="size-3.5 animate-spin" /> : <ScanLine className="size-3.5 text-gold" />}
-                      <span>الملف</span>
-                      <Download className="size-3.5" />
-                    </button>
-                  )}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {c.pinned && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-gold/15 text-gold px-2 py-0.5 text-[10px] font-bold">
+                        <Pin className="size-3" /> مثبّتة
+                      </span>
+                    )}
+                    {c.scan_path && (
+                      <button onClick={() => openScan(c)} disabled={busyThis}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold hover:border-gold transition disabled:opacity-60"
+                        title="فتح/تنزيل ملف الحالة">
+                        {busyThis ? <Loader2 className="size-3.5 animate-spin" /> : <ScanLine className="size-3.5 text-gold" />}
+                        <span>الملف</span>
+                        <Download className="size-3.5" />
+                      </button>
+                    )}
+                    {actor === "admin" && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            className="inline-flex items-center justify-center rounded-lg border border-border bg-card p-2 hover:border-gold transition"
+                            title="خيارات">
+                            <MoreVertical className="size-4" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="min-w-[160px]">
+                          <DropdownMenuItem onClick={() => togglePin(c)}>
+                            {c.pinned
+                              ? <><PinOff className="size-4" /> إلغاء التثبيت</>
+                              : <><Pin className="size-4" /> تثبيت</>}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => deleteCase(c)}
+                            className="text-destructive focus:text-destructive">
+                            <Trash2 className="size-4" /> حذف الحالة
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
                 </div>
               </li>
             );

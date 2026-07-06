@@ -5,6 +5,7 @@ import {
   CheckSquare, Square, Loader2, AlertCircle,
   FileArchive, FileCode, ChevronDown, ChevronUp, Check, Send, Truck,
   ThumbsUp, Pencil, X, Archive, Download, Type, FileText, Image as ImageIcon, Highlighter,
+  Mic, Trash2,
 } from "lucide-react";
 import type { RoleKey } from "@/lib/chat";
 import { ROLE_LABEL, getSignedUrl } from "@/lib/chat";
@@ -64,6 +65,10 @@ export interface WorkflowCase {
   scan_path?: string | null;
   scan_name?: string | null;
   scan_mime?: string | null;
+  extra_zip_path?: string | null;
+  extra_zip_name?: string | null;
+  extra_zip_mime?: string | null;
+  extra_zip_size?: number | null;
   notes_images?: { url: string; name: string }[] | null;
   notes_image_comments?: import("@/lib/image-comments").NoteImageComment[] | null;
 }
@@ -1450,11 +1455,107 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
   const [lightboxIdx, setLightboxIdx] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
   const imgRef = useRef<HTMLInputElement>(null);
+  const zipRef = useRef<HTMLInputElement>(null);
+  const [zipBusy, setZipBusy] = useState(false);
+  const [zipInfo, setZipInfo] = useState<{ name: string; size: number } | null>(
+    c.extra_zip_path ? { name: c.extra_zip_name || "ملف.zip", size: c.extra_zip_size || 0 } : null,
+  );
+  // Voice recording (sends a voice reply to the case chat for the designer/tech).
+  const [recording, setRecording] = useState(false);
+  const [recordSec, setRecordSec] = useState(0);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const recTimerRef = useRef<number | null>(null);
 
   const archived = !!c.final_archived;
 
   function addFiles(list: File[]) {
     if (list.length) { setFiles(prev => [...prev, ...list]); setSent(false); }
+  }
+
+  /** Attach a ZIP file directly to the case so it appears to the designer as a
+   *  second ZIP next to the 3D-scan ZIP. Uploads immediately on pick. */
+  async function attachZip(file: File) {
+    setZipBusy(true);
+    try {
+      const up = await uploadAttachment(file, c, "doctor-notes");
+      if (!up) { toast.error("تعذر رفع ملف ZIP"); return; }
+      const mime = file.type || "application/zip";
+      await supabase.from("slot_cases").update({
+        extra_zip_path: up.url,
+        extra_zip_name: file.name,
+        extra_zip_mime: mime,
+        extra_zip_size: file.size,
+      }).eq("id", c.id);
+      const convId = await ensureCaseConvAll(c);
+      if (convId) {
+        await supabase.from("chat_messages").insert({
+          conversation_id: convId, sender: "doctor", sender_name: actorName,
+          content: `🗜️ ملف ZIP إضافي من الطبيب — الحالة ${c.case_code}`,
+          message_type: "file",
+          attachment_path: up.url, attachment_name: file.name,
+          attachment_mime: mime, attachment_size: file.size,
+        });
+      }
+      setZipInfo({ name: file.name, size: file.size });
+      toast.success("✅ تم إرفاق ملف ZIP للحالة");
+    } catch (e: any) {
+      toast.error(e?.message || "تعذر الإرفاق");
+    } finally { setZipBusy(false); }
+  }
+
+  /** Record a voice clip and send it to the case chat for the designer/tech. */
+  async function startRecording() {
+    if (!navigator.mediaDevices?.getUserMedia) { toast.error("التسجيل غير مدعوم في هذا المتصفح"); return; }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mr = new MediaRecorder(stream);
+      chunksRef.current = [];
+      mr.ondataavailable = (ev) => { if (ev.data.size) chunksRef.current.push(ev.data); };
+      mr.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        await sendVoice(blob);
+      };
+      mr.start();
+      recorderRef.current = mr;
+      setRecording(true); setRecordSec(0);
+      recTimerRef.current = window.setInterval(() => setRecordSec(s => s + 1), 1000);
+    } catch { toast.error("تعذر الوصول للميكروفون"); }
+  }
+
+  function stopRecording(cancel = false) {
+    const mr = recorderRef.current;
+    if (recTimerRef.current) { clearInterval(recTimerRef.current); recTimerRef.current = null; }
+    setRecording(false);
+    if (!mr) return;
+    if (cancel) {
+      mr.ondataavailable = null as any;
+      mr.onstop = () => mr.stream?.getTracks().forEach(t => t.stop());
+    }
+    try { mr.stop(); } catch {}
+    recorderRef.current = null;
+  }
+
+  async function sendVoice(blob: Blob) {
+    setBusy(true);
+    try {
+      const convId = await ensureCaseConvAll(c);
+      if (!convId) { toast.error("تعذر فتح محادثة الحالة"); return; }
+      const file = new File([blob], `voice-${Date.now()}.webm`, { type: blob.type || "audio/webm" });
+      const up = await uploadAttachment(file, c, "doctor-notes");
+      if (!up) { toast.error("تعذر رفع التسجيل"); return; }
+      await supabase.from("chat_messages").insert({
+        conversation_id: convId, sender: "doctor", sender_name: actorName,
+        content: `🎤 تسجيل صوتي من الطبيب — الحالة ${c.case_code}`,
+        message_type: "audio",
+        attachment_path: up.url, attachment_name: file.name,
+        attachment_mime: file.type || "audio/webm", attachment_size: file.size,
+      });
+      toast.success("✅ تم إرسال التسجيل الصوتي للمصمم والفني");
+    } catch (e: any) {
+      toast.error(e?.message || "تعذر الإرسال");
+    } finally { setBusy(false); }
   }
 
   /** Append an image to the case data (so it stays part of the case). */
@@ -1558,12 +1659,44 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
             className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-border px-2.5 py-1 text-[11px] font-bold hover:border-gold">
             <FileArchive className="size-3.5" /> إرفاق ملف
           </button>
+          <button type="button" onClick={() => zipRef.current?.click()} disabled={zipBusy}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-amber-500/60 bg-amber-500/5 px-2.5 py-1 text-[11px] font-bold hover:bg-amber-500/10 disabled:opacity-60">
+            {zipBusy ? <Loader2 className="size-3.5 animate-spin" /> : <FileArchive className="size-3.5 text-amber-600" />} إرفاق ZIP
+          </button>
+          {recording ? (
+            <span className="inline-flex items-center gap-1.5">
+              <button type="button" onClick={() => stopRecording(false)}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 text-white px-2.5 py-1 text-[11px] font-bold animate-pulse">
+                <Square className="size-3.5" /> إيقاف وإرسال {String(Math.floor(recordSec / 60)).padStart(2, "0")}:{String(recordSec % 60).padStart(2, "0")}
+              </button>
+              <button type="button" onClick={() => stopRecording(true)}
+                className="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-[11px] font-bold hover:border-rose-600">
+                <X className="size-3.5" /> إلغاء
+              </button>
+            </span>
+          ) : (
+            <button type="button" onClick={startRecording} disabled={busy}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-rose-500/60 bg-rose-500/5 px-2.5 py-1 text-[11px] font-bold hover:bg-rose-500/10 disabled:opacity-60">
+              <Mic className="size-3.5 text-rose-600" /> تسجيل صوتي
+            </button>
+          )}
           <span className="text-[10px] text-muted-foreground">اضغط على الصورة ثم «رسم وقياس» للشرح.</span>
           <input ref={imgRef} type="file" accept="image/*" multiple className="hidden"
             onChange={(e) => { const l = Array.from(e.target.files ?? []); if (e.target) e.target.value = ""; addFiles(l); }} />
           <input ref={fileRef} type="file" multiple className="hidden"
             onChange={(e) => { const l = Array.from(e.target.files ?? []); if (e.target) e.target.value = ""; addFiles(l); }} />
+          <input ref={zipRef} type="file" accept=".zip,application/zip,application/x-zip-compressed" className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (e.target) e.target.value = ""; if (f) void attachZip(f); }} />
         </div>
+
+        {zipInfo && (
+          <div className="flex items-center gap-2 px-2.5 py-1.5 border-b border-border/60 bg-amber-500/5 text-[11px]">
+            <FileArchive className="size-3.5 text-amber-600 shrink-0" />
+            <span className="font-bold text-amber-700">ملف ZIP إضافي مرفق:</span>
+            <span className="truncate">{zipInfo.name}</span>
+            {zipInfo.size > 0 && <span className="text-muted-foreground shrink-0">({(zipInfo.size / 1024 / 1024).toFixed(1)} MB)</span>}
+          </div>
+        )}
 
         {files.length > 0 && (
           <div className="grid grid-cols-3 gap-2 p-2 border-b border-border/60 bg-muted/20 max-h-64 overflow-auto">
