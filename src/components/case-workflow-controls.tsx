@@ -1511,6 +1511,11 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
         });
       }
       setZipInfo({ name: file.name, size: file.size });
+      const { autoSendFileToTelegram } = await import("@/lib/telegram-auto");
+      autoSendFileToTelegram({
+        kind: "zip", from: `الطبيب (${actorName})`, caseCode: c.case_code,
+        patientName: c.patient_name, url: up.url, filename: file.name,
+      });
       toast.success("✅ تم إرفاق ملف ZIP للحالة");
     } catch (e: any) {
       toast.error(e?.message || "تعذر الإرفاق");
