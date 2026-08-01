@@ -163,6 +163,15 @@ function NewSlotCase() {
       setNoteImages((prev) => [...prev, ...uploaded]);
       setSavedOnce(false);
       setSavedSig(null);
+      // Instant auto-forward of the images to the clinic's Telegram group.
+      const { autoSendFilesToTelegram } = await import("@/lib/telegram-auto");
+      autoSendFilesToTelegram(
+        [
+          "🖼️ إرسال تلقائي — صور من الطبيب (حالة جديدة)",
+          form.patient_name.trim() ? `المريض: ${form.patient_name.trim()}` : null,
+        ].filter(Boolean).join("\n"),
+        uploaded.map((u) => ({ url: u.url, filename: u.name })),
+      );
       toast.success(`تم رفع ${uploaded.length} صورة`, { id: tid });
     } catch {
       toast.error("تعذّر رفع الصورة — حاول مرة أخرى", { id: tid });
@@ -329,6 +338,18 @@ function NewSlotCase() {
           });
         } catch { /* best-effort */ }
       }
+
+      // Instant auto-forward of the 3D-scan ZIP to the clinic's Telegram group.
+      if (scan_path && scan_name) {
+        const { autoSendFileToTelegram } = await import("@/lib/telegram-auto");
+        autoSendFileToTelegram({
+          kind: "zip", from: "الطبيب", caseCode: inserted?.case_code ?? "-",
+          patientName: form.patient_name.trim(),
+          url: scan_path, filename: scan_name,
+        });
+      }
+
+
 
 
 

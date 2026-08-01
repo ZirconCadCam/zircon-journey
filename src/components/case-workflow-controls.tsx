@@ -310,6 +310,13 @@ function DesignerControls({ c, actorName, doctorName, target, blockedByPending }
         design_done: true,
         design_sent_at: new Date().toISOString(),
       }).eq("id", c.id);
+      // Instant auto-forward to the clinic's Telegram group.
+      const { autoSendFileToTelegram } = await import("@/lib/telegram-auto");
+      autoSendFileToTelegram({
+        kind: "rar", from: `المصمم (${actorName})`, caseCode: c.case_code,
+        patientName: c.patient_name, doctorName,
+        url: up.url, filename: f.name,
+      });
       toast.success(`✅ تم إرسال ملف التصميم إلى ${ROLE_LABEL[target]}`);
     } catch (err: any) { toast.error(err.message || "فشل الإرسال"); }
     finally { setBusy(false); }
@@ -471,6 +478,12 @@ function DesignerRevisionSection({ c, actorName, doctorName }: {
         revision_design_file_name: f.name,
         revision_design_done: true,
       }).eq("id", c.id);
+      const { autoSendFileToTelegram } = await import("@/lib/telegram-auto");
+      autoSendFileToTelegram({
+        kind: "rar", from: `المصمم (${actorName}) — تعديل`, caseCode: c.case_code,
+        patientName: c.patient_name, doctorName,
+        url: up.url, filename: f.name,
+      });
       toast.success("تم إرسال التعديل للفني");
     } catch (err: any) { toast.error(err.message || "فشل الإرسال"); }
     finally { setBusy(false); }
@@ -1498,6 +1511,11 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
         });
       }
       setZipInfo({ name: file.name, size: file.size });
+      const { autoSendFileToTelegram } = await import("@/lib/telegram-auto");
+      autoSendFileToTelegram({
+        kind: "zip", from: `الطبيب (${actorName})`, caseCode: c.case_code,
+        patientName: c.patient_name, url: up.url, filename: file.name,
+      });
       toast.success("✅ تم إرفاق ملف ZIP للحالة");
     } catch (e: any) {
       toast.error(e?.message || "تعذر الإرفاق");
@@ -1632,6 +1650,18 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
           ? ((row as any).notes_images as { url: string; name: string }[]) : [];
         await supabase.from("slot_cases")
           .update({ notes_images: [...prev, ...newImages] as any }).eq("id", c.id);
+      }
+      if (newImages.length) {
+        const { autoSendFilesToTelegram } = await import("@/lib/telegram-auto");
+        autoSendFilesToTelegram(
+          [
+            "🖼️ إرسال تلقائي — صور من الطبيب",
+            `المصدر: الطبيب (${actorName})`,
+            `الحالة: ${c.case_code}`,
+            `المريض: ${c.patient_name}`,
+          ].join("\n"),
+          newImages.map((i) => ({ url: i.url, filename: i.name })),
+        );
       }
       toast.success("✅ تم إرسال الملاحظات للمصمم والفني");
       setNotes(""); setFiles([]); setSent(true);
