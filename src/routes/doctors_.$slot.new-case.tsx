@@ -165,11 +165,16 @@ function NewSlotCase() {
       setSavedSig(null);
       // Instant auto-forward of the images to the clinic's Telegram group.
       const { autoSendFilesToTelegram } = await import("@/lib/telegram-auto");
+      const { buildCaseCaption } = await import("@/lib/telegram-auto");
       autoSendFilesToTelegram(
-        [
-          "🖼️ إرسال تلقائي — صور من الطبيب (حالة جديدة)",
-          form.patient_name.trim() ? `المريض: ${form.patient_name.trim()}` : null,
-        ].filter(Boolean).join("\n"),
+        buildCaseCaption({
+          icon: "🖼️",
+          title: "إرسال تلقائي — صور من الطبيب",
+          from: "الطبيب",
+          patientName: form.patient_name.trim() || null,
+          stageLabel: "حالة جديدة",
+          filenames: uploaded.map((u) => u.name),
+        }),
         uploaded.map((u) => ({ url: u.url, filename: u.name })),
       );
       toast.success(`تم رفع ${uploaded.length} صورة`, { id: tid });
@@ -345,6 +350,8 @@ function NewSlotCase() {
         autoSendFileToTelegram({
           kind: "zip", from: "الطبيب", caseCode: inserted?.case_code ?? "-",
           patientName: form.patient_name.trim(),
+          caseId: inserted?.id ?? null,
+          stageLabel: "حالة جديدة",
           url: scan_path, filename: scan_name,
         });
       }

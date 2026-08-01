@@ -312,9 +312,11 @@ function DesignerControls({ c, actorName, doctorName, target, blockedByPending }
       }).eq("id", c.id);
       // Instant auto-forward to the clinic's Telegram group.
       const { autoSendFileToTelegram } = await import("@/lib/telegram-auto");
+      const { deriveStageKey, getStage } = await import("@/lib/case-stages");
       autoSendFileToTelegram({
         kind: "rar", from: `المصمم (${actorName})`, caseCode: c.case_code,
-        patientName: c.patient_name, doctorName,
+        patientName: c.patient_name, doctorName, caseId: c.id,
+        stageLabel: getStage(deriveStageKey({ ...(c as any), design_file_sent: true, design_done: true })).label,
         url: up.url, filename: f.name,
       });
       toast.success(`✅ تم إرسال ملف التصميم إلى ${ROLE_LABEL[target]}`);
@@ -479,9 +481,11 @@ function DesignerRevisionSection({ c, actorName, doctorName }: {
         revision_design_done: true,
       }).eq("id", c.id);
       const { autoSendFileToTelegram } = await import("@/lib/telegram-auto");
+      const { deriveStageKey, getStage } = await import("@/lib/case-stages");
       autoSendFileToTelegram({
         kind: "rar", from: `المصمم (${actorName}) — تعديل`, caseCode: c.case_code,
-        patientName: c.patient_name, doctorName,
+        patientName: c.patient_name, doctorName, caseId: c.id,
+        stageLabel: getStage(deriveStageKey({ ...(c as any), revision_design_done: true })).label,
         url: up.url, filename: f.name,
       });
       toast.success("تم إرسال التعديل للفني");
@@ -1512,9 +1516,12 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
       }
       setZipInfo({ name: file.name, size: file.size });
       const { autoSendFileToTelegram } = await import("@/lib/telegram-auto");
+      const { deriveStageKey, getStage } = await import("@/lib/case-stages");
       autoSendFileToTelegram({
         kind: "zip", from: `الطبيب (${actorName})`, caseCode: c.case_code,
-        patientName: c.patient_name, url: up.url, filename: file.name,
+        patientName: c.patient_name, caseId: c.id,
+        stageLabel: getStage(deriveStageKey(c as any)).label,
+        url: up.url, filename: file.name,
       });
       toast.success("✅ تم إرفاق ملف ZIP للحالة");
     } catch (e: any) {
@@ -1652,14 +1659,19 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
           .update({ notes_images: [...prev, ...newImages] as any }).eq("id", c.id);
       }
       if (newImages.length) {
-        const { autoSendFilesToTelegram } = await import("@/lib/telegram-auto");
+        const { autoSendFilesToTelegram, buildCaseCaption } = await import("@/lib/telegram-auto");
+        const { deriveStageKey, getStage } = await import("@/lib/case-stages");
         autoSendFilesToTelegram(
-          [
-            "🖼️ إرسال تلقائي — صور من الطبيب",
-            `المصدر: الطبيب (${actorName})`,
-            `الحالة: ${c.case_code}`,
-            `المريض: ${c.patient_name}`,
-          ].join("\n"),
+          buildCaseCaption({
+            icon: "🖼️",
+            title: "إرسال تلقائي — صور من الطبيب",
+            from: `الطبيب (${actorName})`,
+            caseCode: c.case_code,
+            patientName: c.patient_name,
+            stageLabel: getStage(deriveStageKey(c as any)).label,
+            caseId: c.id,
+            filenames: newImages.map((i) => i.name),
+          }),
           newImages.map((i) => ({ url: i.url, filename: i.name })),
         );
       }
