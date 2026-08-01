@@ -1651,6 +1651,18 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
         await supabase.from("slot_cases")
           .update({ notes_images: [...prev, ...newImages] as any }).eq("id", c.id);
       }
+      if (newImages.length) {
+        const { autoSendFilesToTelegram } = await import("@/lib/telegram-auto");
+        autoSendFilesToTelegram(
+          [
+            "🖼️ إرسال تلقائي — صور من الطبيب",
+            `المصدر: الطبيب (${actorName})`,
+            `الحالة: ${c.case_code}`,
+            `المريض: ${c.patient_name}`,
+          ].join("\n"),
+          newImages.map((i) => ({ url: i.url, filename: i.name })),
+        );
+      }
       toast.success("✅ تم إرسال الملاحظات للمصمم والفني");
       setNotes(""); setFiles([]); setSent(true);
 
