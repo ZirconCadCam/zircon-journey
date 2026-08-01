@@ -339,6 +339,18 @@ function NewSlotCase() {
         } catch { /* best-effort */ }
       }
 
+      // Instant auto-forward of the 3D-scan ZIP to the clinic's Telegram group.
+      if (scan_path && scan_name) {
+        const { autoSendFileToTelegram } = await import("@/lib/telegram-auto");
+        autoSendFileToTelegram({
+          kind: "zip", from: "الطبيب", caseCode: inserted?.case_code ?? "-",
+          patientName: form.patient_name.trim(),
+          url: scan_path, filename: scan_name,
+        });
+      }
+
+
+
 
 
       // Auto-handoff: send the full case payload to the designer via chat.
