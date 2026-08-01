@@ -310,6 +310,13 @@ function DesignerControls({ c, actorName, doctorName, target, blockedByPending }
         design_done: true,
         design_sent_at: new Date().toISOString(),
       }).eq("id", c.id);
+      // Instant auto-forward to the clinic's Telegram group.
+      const { autoSendFileToTelegram } = await import("@/lib/telegram-auto");
+      autoSendFileToTelegram({
+        kind: "rar", from: `المصمم (${actorName})`, caseCode: c.case_code,
+        patientName: c.patient_name, doctorName,
+        url: up.url, filename: f.name,
+      });
       toast.success(`✅ تم إرسال ملف التصميم إلى ${ROLE_LABEL[target]}`);
     } catch (err: any) { toast.error(err.message || "فشل الإرسال"); }
     finally { setBusy(false); }
