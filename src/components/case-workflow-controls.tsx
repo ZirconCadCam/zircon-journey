@@ -478,6 +478,12 @@ function DesignerRevisionSection({ c, actorName, doctorName }: {
         revision_design_file_name: f.name,
         revision_design_done: true,
       }).eq("id", c.id);
+      const { autoSendFileToTelegram } = await import("@/lib/telegram-auto");
+      autoSendFileToTelegram({
+        kind: "rar", from: `المصمم (${actorName}) — تعديل`, caseCode: c.case_code,
+        patientName: c.patient_name, doctorName,
+        url: up.url, filename: f.name,
+      });
       toast.success("تم إرسال التعديل للفني");
     } catch (err: any) { toast.error(err.message || "فشل الإرسال"); }
     finally { setBusy(false); }
