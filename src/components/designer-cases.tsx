@@ -1178,10 +1178,12 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
       <section className="space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="text-sm text-muted-foreground">
-            عرض <span className="font-bold text-foreground">{visibleForActor.length}</span> حالة
+            عرض <span className="font-bold text-foreground">{displayed.length}</span> حالة
+            {stageFilter !== "all" && <span className="text-muted-foreground"> من {visibleForActor.length}</span>}
             {view === "archive" && <span className="text-gold font-bold"> (الأرشيف)</span>}
             {filterSlot !== "all" && doctorMap.get(filterSlot) && <> — {doctorMap.get(filterSlot)!.name}</>}
           </div>
+
           <div className="flex items-center gap-2">
             <button onClick={manualRefresh} disabled={refreshing}
               title="تحديث القائمة"
