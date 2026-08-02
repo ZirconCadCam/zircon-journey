@@ -100,7 +100,7 @@ interface Case {
 }
 
 import { CaseWorkflowControls } from "@/components/case-workflow-controls";
-import { deriveStageKey, getStage } from "@/lib/case-stages";
+import { deriveStageKey, getStage, STAGES, type CaseStage } from "@/lib/case-stages";
 import type { RoleKey } from "@/lib/chat";
 import { ROLE_LABEL, getSignedUrl } from "@/lib/chat";
 import { speak, arabicOrdinal } from "@/lib/voice-notify";
@@ -119,6 +119,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [cases, setCases] = useState<Case[]>([]);
   const [filterSlot, setFilterSlot] = useState<number | "all">("all");
+  const [stageFilter, setStageFilter] = useState<CaseStage | "all">("all");
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [view, setView] = useState<"active" | "archive">("active");
@@ -326,6 +327,23 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     }
     return active;
   }, [filtered, actor, doctorMap, view]);
+
+  /* Stage-level filtering (professional stage filter bar). */
+  const stageCounts = useMemo(() => {
+    const m = new Map<CaseStage, number>();
+    for (const c of visibleForActor) {
+      const k = deriveStageKey(c);
+      m.set(k, (m.get(k) ?? 0) + 1);
+    }
+    return m;
+  }, [visibleForActor]);
+
+  const displayed = useMemo(() => {
+    if (stageFilter === "all") return visibleForActor;
+    return visibleForActor.filter(c => deriveStageKey(c) === stageFilter);
+  }, [visibleForActor, stageFilter]);
+
+
 
 
   /* ------------------------------------------------------------------
@@ -1160,10 +1178,12 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
       <section className="space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="text-sm text-muted-foreground">
-            عرض <span className="font-bold text-foreground">{visibleForActor.length}</span> حالة
+            عرض <span className="font-bold text-foreground">{displayed.length}</span> حالة
+            {stageFilter !== "all" && <span className="text-muted-foreground"> من {visibleForActor.length}</span>}
             {view === "archive" && <span className="text-gold font-bold"> (الأرشيف)</span>}
             {filterSlot !== "all" && doctorMap.get(filterSlot) && <> — {doctorMap.get(filterSlot)!.name}</>}
           </div>
+
           <div className="flex items-center gap-2">
             <button onClick={manualRefresh} disabled={refreshing}
               title="تحديث القائمة"
@@ -1191,15 +1211,41 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
           </div>
         </div>
 
+        {/* Stage filter bar */}
+        <div className="rounded-2xl bg-card border border-border p-3 shadow-luxury">
+          <div className="flex items-center gap-2 mb-2 text-xs font-bold text-muted-foreground">
+            <ClipboardCheck className="size-3.5 text-gold" /> فلترة حسب مستوى الحالة
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => setStageFilter("all")}
+              className={`px-3 py-1.5 rounded-full text-[11px] font-bold border transition ${stageFilter === "all" ? "gradient-gold text-gold-foreground border-transparent shadow-gold" : "border-border bg-background hover:border-gold"}`}>
+              الكل <span className="opacity-80">({visibleForActor.length})</span>
+            </button>
+            {STAGES.map(s => {
+              const n = stageCounts.get(s.key) ?? 0;
+              const on = stageFilter === s.key;
+              return (
+                <button key={s.key}
+                  onClick={() => setStageFilter(on ? "all" : s.key)}
+                  disabled={n === 0 && !on}
+                  className={`px-3 py-1.5 rounded-full text-[11px] font-bold border transition disabled:opacity-40 disabled:cursor-not-allowed ${on ? "gradient-gold text-gold-foreground border-transparent shadow-gold" : "border-border bg-background hover:border-gold"}`}>
+                  {s.label} <span className="opacity-80">({n})</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
-        {visibleForActor.length === 0 ? (
+        {displayed.length === 0 ? (
           <div className="rounded-2xl bg-card border border-border p-12 text-center text-muted-foreground shadow-luxury">
             <ClipboardList className="size-10 mx-auto mb-3 opacity-40" />
             لا توجد حالات لعرضها
           </div>
         ) : (
           <ul className="space-y-3">
-            {visibleForActor.map(c => {
+            {displayed.map(c => {
+
               const doctor = doctorMap.get(c.doctor_slot);
               const busy = busyId === c.id;
               const unseenKind = actor === "designer" ? unseenMap.get(c.id) : undefined;
