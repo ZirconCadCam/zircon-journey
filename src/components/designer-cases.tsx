@@ -327,6 +327,23 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     return active;
   }, [filtered, actor, doctorMap, view]);
 
+  /* Stage-level filtering (professional stage filter bar). */
+  const stageCounts = useMemo(() => {
+    const m = new Map<CaseStage, number>();
+    for (const c of visibleForActor) {
+      const k = deriveStageKey(c);
+      m.set(k, (m.get(k) ?? 0) + 1);
+    }
+    return m;
+  }, [visibleForActor]);
+
+  const displayed = useMemo(() => {
+    if (stageFilter === "all") return visibleForActor;
+    return visibleForActor.filter(c => deriveStageKey(c) === stageFilter);
+  }, [visibleForActor, stageFilter]);
+
+
+
 
   /* ------------------------------------------------------------------
    * Voice arrival alerts (technician = new .rar arriving).
