@@ -1632,7 +1632,7 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
       if (oldUrl) await replaceImageInCase(oldUrl, up.url, name);
       else await persistImageToCase(up.url, name);
       toast.success("✅ تم تحديث الصورة عند المصمم والفني بآخر تعديل");
-      onChanged?.();
+      
     } catch (err: any) {
       toast.error(err?.message || "تعذر الإرسال");
     } finally { setBusy(false); }
