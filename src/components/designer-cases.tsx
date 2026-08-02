@@ -1211,15 +1211,41 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
           </div>
         </div>
 
+        {/* Stage filter bar */}
+        <div className="rounded-2xl bg-card border border-border p-3 shadow-luxury">
+          <div className="flex items-center gap-2 mb-2 text-xs font-bold text-muted-foreground">
+            <ClipboardCheck className="size-3.5 text-gold" /> فلترة حسب مستوى الحالة
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => setStageFilter("all")}
+              className={`px-3 py-1.5 rounded-full text-[11px] font-bold border transition ${stageFilter === "all" ? "gradient-gold text-gold-foreground border-transparent shadow-gold" : "border-border bg-background hover:border-gold"}`}>
+              الكل <span className="opacity-80">({visibleForActor.length})</span>
+            </button>
+            {STAGES.map(s => {
+              const n = stageCounts.get(s.key) ?? 0;
+              const on = stageFilter === s.key;
+              return (
+                <button key={s.key}
+                  onClick={() => setStageFilter(on ? "all" : s.key)}
+                  disabled={n === 0 && !on}
+                  className={`px-3 py-1.5 rounded-full text-[11px] font-bold border transition disabled:opacity-40 disabled:cursor-not-allowed ${on ? "gradient-gold text-gold-foreground border-transparent shadow-gold" : "border-border bg-background hover:border-gold"}`}>
+                  {s.label} <span className="opacity-80">({n})</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
-        {visibleForActor.length === 0 ? (
+        {displayed.length === 0 ? (
           <div className="rounded-2xl bg-card border border-border p-12 text-center text-muted-foreground shadow-luxury">
             <ClipboardList className="size-10 mx-auto mb-3 opacity-40" />
             لا توجد حالات لعرضها
           </div>
         ) : (
           <ul className="space-y-3">
-            {visibleForActor.map(c => {
+            {displayed.map(c => {
+
               const doctor = doctorMap.get(c.doctor_slot);
               const busy = busyId === c.id;
               const unseenKind = actor === "designer" ? unseenMap.get(c.id) : undefined;
