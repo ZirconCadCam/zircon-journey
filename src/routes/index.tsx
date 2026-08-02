@@ -1,12 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Sparkles, Stethoscope, Layers, Wrench, Users, Shield } from "lucide-react";
+import { StalledAlertsBadge, useStalledCases } from "@/components/stalled-alerts";
 
 export const Route = createFileRoute("/")({
   component: Landing,
 });
 
 function Landing() {
+  const stalled = useStalledCases();
   return (
+
     <div className="min-h-screen">
       {/* Header */}
       <header className="border-b border-border/60 backdrop-blur-sm bg-background/80 sticky top-0 z-50">
@@ -59,28 +62,35 @@ function Landing() {
         <h2 className="text-3xl font-bold text-center mb-12">منصات مخصصة لكل دور</h2>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-5">
           {[
-            { icon: Stethoscope, t: "بوابة الطبيب", d: "حالات خاصة وسجل المرضى", to: "/doctors" as const },
-            { icon: Layers, t: "مصمم CAD/CAM", d: "محادثات مع الأطباء واستلام الملفات", to: "/staff/$role" as const, params: { role: "designer" } },
-            { icon: Wrench, t: "فني المختبر", d: "تنسيق النحت والتسليم", to: "/staff/$role" as const, params: { role: "technician" } },
+            { icon: Stethoscope, t: "بوابة الطبيب", d: "حالات خاصة وسجل المرضى", to: "/doctors" as const, alert: "doctor" },
+            { icon: Layers, t: "مصمم CAD/CAM", d: "محادثات مع الأطباء واستلام الملفات", to: "/staff/$role" as const, params: { role: "designer" }, alert: "designer" },
+            { icon: Wrench, t: "فني المختبر", d: "تنسيق النحت والتسليم", to: "/staff/$role" as const, params: { role: "technician" }, alert: "technician" },
             { icon: Users, t: "سكرتارية صنعاء", d: "تنسيق فرع صنعاء", to: "/staff/$role" as const, params: { role: "secretary_sanaa" } },
             { icon: Users, t: "سكرتارية إب", d: "تنسيق فرع إب", to: "/staff/$role" as const, params: { role: "secretary_ibb" } },
             { icon: Shield, t: "إدارة المركز", d: "إشراف ومراقبة المحادثات", to: "/staff/$role" as const, params: { role: "admin" } },
           ].map((c: any) => (
-            <Link
-              key={c.t}
-              to={c.to}
-              params={c.params}
-              className="rounded-2xl bg-card border border-border p-6 hover:shadow-luxury hover:-translate-y-1 transition block"
-            >
-              <div className="size-12 rounded-xl gradient-gold grid place-items-center mb-4 shadow-gold">
-                <c.icon className="size-6" />
-              </div>
-              <div className="font-bold text-lg">{c.t}</div>
-              <div className="text-sm text-muted-foreground mt-1">{c.d}</div>
-            </Link>
+            <div key={c.t} className="relative">
+              {c.alert && (
+                <div className="absolute top-3 left-3 z-10">
+                  <StalledAlertsBadge role={c.alert} all={stalled} label={c.t} />
+                </div>
+              )}
+              <Link
+                to={c.to}
+                params={c.params}
+                className="rounded-2xl bg-card border border-border p-6 hover:shadow-luxury hover:-translate-y-1 transition block h-full"
+              >
+                <div className="size-12 rounded-xl gradient-gold grid place-items-center mb-4 shadow-gold">
+                  <c.icon className="size-6" />
+                </div>
+                <div className="font-bold text-lg">{c.t}</div>
+                <div className="text-sm text-muted-foreground mt-1">{c.d}</div>
+              </Link>
+            </div>
           ))}
         </div>
       </section>
+
 
       <footer className="border-t border-border/60 py-8 text-center text-sm text-muted-foreground">
         © {new Date().getFullYear()} Zircon CAD CAM Center. جميع الحقوق محفوظة.
