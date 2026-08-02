@@ -1593,8 +1593,28 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
       .update({ notes_images: [...prev, { url, name }] as any }).eq("id", c.id);
   }
 
+  /** Replace an already-sent case image with the doctor's latest annotated
+   *  version, in place, so the designer/technician always see the newest edit.
+   *  Existing team comments stay attached by re-pointing them at the new URL. */
+  async function replaceImageInCase(oldUrl: string, url: string, name: string) {
+    const { data: row } = await supabase.from("slot_cases")
+      .select("notes_images,notes_image_comments").eq("id", c.id).maybeSingle();
+    const prev = Array.isArray((row as any)?.notes_images)
+      ? ((row as any).notes_images as { url: string; name: string }[]) : [];
+    const idx = prev.findIndex(i => i.url === oldUrl);
+    const nextImages = idx >= 0
+      ? prev.map((i, j) => (j === idx ? { url, name } : i))
+      : [...prev, { url, name }];
+    const prevCmts = Array.isArray((row as any)?.notes_image_comments)
+      ? ((row as any).notes_image_comments as { image_url: string }[]) : [];
+    const nextCmts = prevCmts.map(k => (k.image_url === oldUrl ? { ...k, image_url: url } : k));
+    await supabase.from("slot_cases")
+      .update({ notes_images: nextImages as any, notes_image_comments: nextCmts as any })
+      .eq("id", c.id);
+  }
+
   /** Re-send an annotated version of an already-sent case image. */
-  async function sendAnnotatedImage(blob: Blob, name: string) {
+  async function sendAnnotatedImage(blob: Blob, name: string, oldUrl?: string) {
     setBusy(true);
     try {
       const convId = await ensureCaseConvAll(c);
@@ -1604,17 +1624,20 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
       if (!up) { toast.error("تعذر رفع الصورة"); return; }
       await supabase.from("chat_messages").insert({
         conversation_id: convId, sender: "doctor", sender_name: actorName,
-        content: `🖼️ صورة مُعدّلة من الطبيب — الحالة ${c.case_code}`,
+        content: `🖼️ تحديث صورة من الطبيب (آخر تعديل) — الحالة ${c.case_code}`,
         message_type: "file",
         attachment_path: up.url, attachment_name: name,
         attachment_mime: "image/png", attachment_size: file.size,
       });
-      await persistImageToCase(up.url, name);
-      toast.success("✅ تم إرسال الصورة المُعدّلة للمصمم والفني");
+      if (oldUrl) await replaceImageInCase(oldUrl, up.url, name);
+      else await persistImageToCase(up.url, name);
+      toast.success("✅ تم تحديث الصورة عند المصمم والفني بآخر تعديل");
+      onChanged?.();
     } catch (err: any) {
       toast.error(err?.message || "تعذر الإرسال");
     } finally { setBusy(false); }
   }
+
 
   async function send() {
     if (notes.trim().length < 1 && files.length === 0) {
