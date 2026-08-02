@@ -119,6 +119,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [cases, setCases] = useState<Case[]>([]);
   const [filterSlot, setFilterSlot] = useState<number | "all">("all");
+  const [stageFilter, setStageFilter] = useState<CaseStage | "all">("all");
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [view, setView] = useState<"active" | "archive">("active");
