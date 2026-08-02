@@ -1859,7 +1859,7 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
           onSave={async (blob, name) => {
             const target = annotateSent;
             setAnnotateSent(null);
-            await sendAnnotatedImage(blob, name || `${target.name}-معدلة.png`);
+            await sendAnnotatedImage(blob, name || `${target.name}-معدلة.png`, target.url);
           }}
         />
       )}
