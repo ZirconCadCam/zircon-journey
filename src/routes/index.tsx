@@ -1,12 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Sparkles, Stethoscope, Layers, Wrench, Users, Shield } from "lucide-react";
+import { StalledAlertsBadge, useStalledCases } from "@/components/stalled-alerts";
 
 export const Route = createFileRoute("/")({
   component: Landing,
 });
 
 function Landing() {
+  const stalled = useStalledCases();
   return (
+
     <div className="min-h-screen">
       {/* Header */}
       <header className="border-b border-border/60 backdrop-blur-sm bg-background/80 sticky top-0 z-50">
