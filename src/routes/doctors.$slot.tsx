@@ -103,6 +103,7 @@ function DoctorPortal() {
   const { role, fullName, loading: authLoading } = useAuth();
   const [doctor, setDoctor] = useState<Doctor | null>(null);
   const [authed, setAuthed] = useState(false);
+  const [pwRequired, setPwRequired] = useState<boolean | null>(null);
   const [actor, setActor] = useState<Sender>("doctor");
   const [actorName, setActorName] = useState<string>("");
 
@@ -112,6 +113,11 @@ function DoctorPortal() {
       setDoctor(data as Doctor);
     })();
   }, [slot]);
+
+  // Admin-controlled flag: when off, doctors enter their page without a password.
+  useEffect(() => {
+    getAppFlag(DOCTOR_PASSWORD_REQUIRED).then(setPwRequired);
+  }, []);
 
   useEffect(() => {
     if (authLoading) return;
@@ -132,6 +138,7 @@ function DoctorPortal() {
       setAuthed(true);
     }
   }, [authLoading, role, fullName, slot]);
+
 
   if (!doctor) return <div className="min-h-screen grid place-items-center text-muted-foreground">جارِ التحميل...</div>;
   if (!doctor.active) return (
