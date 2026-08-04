@@ -939,6 +939,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_admin_actor: { Args: { p_admin_password?: string }; Returns: boolean }
       list_doctor_secrets: {
         Args: never
         Returns: {
@@ -980,7 +981,7 @@ export type Database = {
         Returns: undefined
       }
       set_app_flag: {
-        Args: { p_key: string; p_value: boolean }
+        Args: { p_admin_password?: string; p_key: string; p_value: boolean }
         Returns: undefined
       }
       set_avatar_override: {
