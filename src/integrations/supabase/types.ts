@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_settings: {
+        Row: {
+          bool_value: boolean
+          key: string
+          updated_at: string
+        }
+        Insert: {
+          bool_value?: boolean
+          key: string
+          updated_at?: string
+        }
+        Update: {
+          bool_value?: boolean
+          key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       avatar_overrides: {
         Row: {
           image_url: string
@@ -904,6 +922,7 @@ export type Database = {
         Args: { p_device: string; p_role: string }
         Returns: undefined
       }
+      get_app_flag: { Args: { p_key: string }; Returns: boolean }
       get_primary_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -958,6 +977,10 @@ export type Database = {
           p_slot: number
           p_user_agent: string
         }
+        Returns: undefined
+      }
+      set_app_flag: {
+        Args: { p_key: string; p_value: boolean }
         Returns: undefined
       }
       set_avatar_override: {

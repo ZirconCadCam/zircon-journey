@@ -17,6 +17,8 @@ import { DoctorReportsPanel } from "@/components/doctor-reports-panel";
 import { StageTick, type TickState } from "@/components/stage-tick";
 import { CaseChatButton } from "@/components/case-chat-dialog";
 import { Z } from "@/lib/z-index";
+import { DOCTOR_PASSWORD_REQUIRED, getAppFlag } from "@/lib/app-flags";
+
 import { ShadeBadge } from "@/components/shade-badge";
 import { CaseSearch } from "@/components/case-search";
 import { RoleNotifications } from "@/components/role-notifications";
@@ -103,6 +105,7 @@ function DoctorPortal() {
   const { role, fullName, loading: authLoading } = useAuth();
   const [doctor, setDoctor] = useState<Doctor | null>(null);
   const [authed, setAuthed] = useState(false);
+  const [pwRequired, setPwRequired] = useState<boolean | null>(null);
   const [actor, setActor] = useState<Sender>("doctor");
   const [actorName, setActorName] = useState<string>("");
 
@@ -112,6 +115,11 @@ function DoctorPortal() {
       setDoctor(data as Doctor);
     })();
   }, [slot]);
+
+  // Admin-controlled flag: when off, doctors enter their page without a password.
+  useEffect(() => {
+    getAppFlag(DOCTOR_PASSWORD_REQUIRED).then(setPwRequired);
+  }, []);
 
   useEffect(() => {
     if (authLoading) return;
@@ -133,7 +141,8 @@ function DoctorPortal() {
     }
   }, [authLoading, role, fullName, slot]);
 
-  if (!doctor) return <div className="min-h-screen grid place-items-center text-muted-foreground">جارِ التحميل...</div>;
+
+  if (!doctor || pwRequired === null) return <div className="min-h-screen grid place-items-center text-muted-foreground">جارِ التحميل...</div>;
   if (!doctor.active) return (
     <ShellHeader>
       <div className="container mx-auto px-6 py-20 text-center">
@@ -143,7 +152,8 @@ function DoctorPortal() {
     </ShellHeader>
   );
 
-  if (!authed) return <PasswordGate doctor={doctor} onOk={() => {
+  if (!authed && pwRequired) return <PasswordGate doctor={doctor} onOk={() => {
+
     localStorage.setItem(SESSION_KEY(slot), "1");
     setActor("doctor");
     setActorName(doctor.name);
