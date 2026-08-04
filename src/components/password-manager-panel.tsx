@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { KeyRound, Eye, EyeOff, Save, RefreshCw, Loader2, Stethoscope, UserCog, Copy, Check } from "lucide-react";
+import { KeyRound, Eye, EyeOff, Save, RefreshCw, Loader2, Stethoscope, UserCog, Copy, Check, ShieldOff, ShieldCheck } from "lucide-react";
 import { ROLE_LABEL, type RoleKey } from "@/lib/chat";
+import { DOCTOR_PASSWORD_REQUIRED, getAppFlag, setAppFlag } from "@/lib/app-flags";
 
 // Page-manager roles whose passwords the admin can manage here.
 const STAFF_ROLE_KEYS: Exclude<RoleKey, "doctor">[] = [
@@ -12,6 +13,7 @@ const STAFF_ROLE_KEYS: Exclude<RoleKey, "doctor">[] = [
   "secretary_ibb",
   "admin",
 ];
+
 
 interface StaffSecret {
   role: string;
