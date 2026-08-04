@@ -105,7 +105,9 @@ export function PasswordManagerPanel() {
         <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground mb-3">
           <Stethoscope className="size-4 text-gold" /> الأطباء
         </div>
+        <DoctorLoginToggle />
         {loading ? (
+
           <div className="text-xs text-muted-foreground">جارٍ التحميل…</div>
         ) : (
           <div className="grid sm:grid-cols-2 gap-3">
