@@ -142,7 +142,7 @@ function DoctorPortal() {
   }, [authLoading, role, fullName, slot]);
 
 
-  if (!doctor) return <div className="min-h-screen grid place-items-center text-muted-foreground">جارِ التحميل...</div>;
+  if (!doctor || pwRequired === null) return <div className="min-h-screen grid place-items-center text-muted-foreground">جارِ التحميل...</div>;
   if (!doctor.active) return (
     <ShellHeader>
       <div className="container mx-auto px-6 py-20 text-center">
@@ -152,7 +152,8 @@ function DoctorPortal() {
     </ShellHeader>
   );
 
-  if (!authed) return <PasswordGate doctor={doctor} onOk={() => {
+  if (!authed && pwRequired) return <PasswordGate doctor={doctor} onOk={() => {
+
     localStorage.setItem(SESSION_KEY(slot), "1");
     setActor("doctor");
     setActorName(doctor.name);
