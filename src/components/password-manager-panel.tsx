@@ -139,7 +139,68 @@ export function PasswordManagerPanel() {
   );
 }
 
+function DoctorLoginToggle() {
+  const [required, setRequired] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    getAppFlag(DOCTOR_PASSWORD_REQUIRED).then((v) => {
+      setRequired(v);
+      setLoading(false);
+    });
+  }, []);
+
+  async function toggle() {
+    const next = !required;
+    if (
+      !confirm(
+        next
+          ? "تفعيل طلب كلمة المرور لدخول صفحات الأطباء؟"
+          : "إيقاف طلب كلمة المرور؟ سيتمكن أي شخص من فتح صفحة الطبيب بدون كلمة مرور.",
+      )
+    )
+      return;
+    setSaving(true);
+    const err = await setAppFlag(DOCTOR_PASSWORD_REQUIRED, next);
+    setSaving(false);
+    if (err) { toast.error(err); return; }
+    setRequired(next);
+    toast.success(next ? "تم تفعيل طلب كلمة المرور" : "تم إيقاف طلب كلمة المرور");
+  }
+
+  return (
+    <div className="mb-4 rounded-xl border border-border bg-muted/20 p-3 flex items-start justify-between gap-3">
+      <div className="flex items-start gap-2.5 min-w-0">
+        <div className={`size-9 rounded-lg grid place-items-center shrink-0 ${required ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"}`}>
+          {required ? <ShieldCheck className="size-4.5" /> : <ShieldOff className="size-4.5" />}
+        </div>
+        <div className="min-w-0">
+          <div className="text-sm font-bold">تسجيل الدخول بكلمة المرور لصفحة الطبيب</div>
+          <div className="text-[11px] text-muted-foreground mt-0.5">
+            {loading
+              ? "جارٍ التحميل…"
+              : required
+                ? "مُفعّل: يُطلب من الطبيب إدخال كلمة المرور للدخول إلى صفحته."
+                : "موقوف: يدخل الطبيب إلى صفحته مباشرة بدون كلمة مرور."}
+          </div>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={toggle}
+        disabled={loading || saving}
+        className={`relative w-11 h-6 rounded-full transition shrink-0 disabled:opacity-50 ${required ? "gradient-gold shadow-gold" : "bg-muted"}`}
+        aria-label="تفعيل أو إيقاف كلمة المرور"
+      >
+        <span className={`absolute top-0.5 size-5 rounded-full bg-background shadow transition ${required ? "right-0.5" : "right-[22px]"}`} />
+      </button>
+    </div>
+  );
+}
+
 function PasswordRow({
+
   title,
   subtitle,
   value,
