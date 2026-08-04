@@ -26,8 +26,9 @@ export async function setAppFlag(
   const { error } = await supabase.rpc("set_app_flag", {
     p_key: key,
     p_value: value,
-    p_admin_password: adminPassword ?? null,
+    ...(adminPassword ? { p_admin_password: adminPassword } : {}),
   });
   return error ? error.message : null;
 }
+
 
