@@ -13,7 +13,21 @@ export async function getAppFlag(key: string, fallback = true): Promise<boolean>
   return Boolean((data as { bool_value: boolean }).bool_value);
 }
 
-export async function setAppFlag(key: string, value: boolean): Promise<string | null> {
-  const { error } = await supabase.rpc("set_app_flag", { p_key: key, p_value: value });
+/**
+ * Change a boolean app flag. Restricted to the administration:
+ * either a signed-in user with the admin role, or a caller that proves
+ * knowledge of the admin password. Any other caller is rejected server-side.
+ */
+export async function setAppFlag(
+  key: string,
+  value: boolean,
+  adminPassword?: string,
+): Promise<string | null> {
+  const { error } = await supabase.rpc("set_app_flag", {
+    p_key: key,
+    p_value: value,
+    p_admin_password: adminPassword ?? null,
+  });
   return error ? error.message : null;
 }
+
