@@ -17,6 +17,8 @@ import { DoctorReportsPanel } from "@/components/doctor-reports-panel";
 import { StageTick, type TickState } from "@/components/stage-tick";
 import { CaseChatButton } from "@/components/case-chat-dialog";
 import { Z } from "@/lib/z-index";
+import { DOCTOR_PASSWORD_REQUIRED, getAppFlag } from "@/lib/app-flags";
+
 import { ShadeBadge } from "@/components/shade-badge";
 import { CaseSearch } from "@/components/case-search";
 import { RoleNotifications } from "@/components/role-notifications";
