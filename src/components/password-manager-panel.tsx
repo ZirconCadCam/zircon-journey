@@ -161,13 +161,18 @@ function DoctorLoginToggle() {
       )
     )
       return;
+    // Server-side permission check: only the administration may flip this flag.
+    // Signed-in admins pass automatically; otherwise the admin password is required.
+    const pw = prompt("لتأكيد الصلاحية، أدخل كلمة مرور الإدارة:") ?? "";
+    if (!pw.trim()) return;
     setSaving(true);
-    const err = await setAppFlag(DOCTOR_PASSWORD_REQUIRED, next);
+    const err = await setAppFlag(DOCTOR_PASSWORD_REQUIRED, next, pw.trim());
     setSaving(false);
     if (err) { toast.error(err); return; }
     setRequired(next);
     toast.success(next ? "تم تفعيل طلب كلمة المرور" : "تم إيقاف طلب كلمة المرور");
   }
+
 
   return (
     <div className="mb-4 rounded-xl border border-border bg-muted/20 p-3 flex items-start justify-between gap-3">
