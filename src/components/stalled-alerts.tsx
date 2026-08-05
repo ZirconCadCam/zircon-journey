@@ -76,6 +76,61 @@ function fmtDelay(h: number) {
   return r ? `${d} يوم و${r} ساعة` : `${d} يوم`;
 }
 
+/** شارة تنبيه حمراء بعدّاد للحالات المتوقفة عند طبيب معيّن. */
+export function StalledDoctorBadge({ items, label }: { items: StalledCase[]; label: string }) {
+  const [open, setOpen] = useState(false);
+  if (!items.length) return null;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={`حالات متوقفة — ${label}`}
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          className="relative inline-flex items-center gap-1 rounded-full border border-destructive/50 bg-destructive/15 px-2 py-0.5 text-[10px] font-extrabold text-destructive"
+        >
+          <AlertTriangle className="size-3" />
+          {items.length}
+          <span className="absolute inset-0 animate-ping rounded-full border border-destructive/40" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="center"
+        className="w-72 p-0"
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+      >
+        <div className="flex items-center justify-between border-b border-border px-3 py-2">
+          <div className="text-xs font-bold">حالات بانتظار إجراء الطبيب — {label}</div>
+          <button type="button" onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground">
+            <X className="size-3.5" />
+          </button>
+        </div>
+        <div className="max-h-64 divide-y divide-border/60 overflow-y-auto">
+          {items.map((c) => (
+            <Link
+              key={c.id}
+              to="/cases/$id"
+              params={{ id: c.id }}
+              onClick={() => setOpen(false)}
+              className="block px-3 py-2 text-right hover:bg-muted/50"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-bold">{c.case_code}</span>
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-destructive">
+                  <Clock className="size-3" /> {fmtDelay(c.hours)}
+                </span>
+              </div>
+              <div className="mt-0.5 text-[11px] text-muted-foreground">{c.patient_name}</div>
+              <div className="text-[11px] text-gold">{c.stageLabel}</div>
+            </Link>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 /** أيقونة التنبيهات لدور واحد. */
 export function StalledAlertsBadge({
   role,
