@@ -6,6 +6,7 @@ import { BRANCH_LABELS } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { DoctorAvatar } from "@/components/doctor-avatar";
 import { getDoctorAvatar } from "@/lib/doctor-avatars";
+import { StalledDoctorBadge, useStalledCases, type StalledCase } from "@/components/stalled-alerts";
 
 /**
  * The slot workflow authenticates admins via a localStorage flag set on the
@@ -40,6 +41,7 @@ interface Doctor {
 function DoctorsGrid() {
   const nav = useNavigate();
   const isAdmin = useIsSlotAdmin();
+  const stalled = useStalledCases();
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [filter, setFilter] = useState<"all" | "sanaa" | "ibb">("all");
   const [q, setQ] = useState("");
@@ -116,7 +118,15 @@ function DoctorsGrid() {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
-          {visible.map(d => <DoctorTile key={d.slot} d={d} isAdmin={isAdmin} onEdit={() => setEditing(d)} />)}
+          {visible.map(d => (
+            <DoctorTile
+              key={d.slot}
+              d={d}
+              isAdmin={isAdmin}
+              stalled={stalled.filter(s => s.owner === "doctor" && s.doctor_slot === d.slot)}
+              onEdit={() => setEditing(d)}
+            />
+          ))}
         </div>
       </main>
 
@@ -134,7 +144,7 @@ function DoctorsGrid() {
   );
 }
 
-function DoctorTile({ d, isAdmin, onEdit }: { d: Doctor; isAdmin: boolean; onEdit: () => void }) {
+function DoctorTile({ d, isAdmin, stalled, onEdit }: { d: Doctor; isAdmin: boolean; stalled: StalledCase[]; onEdit: () => void }) {
   const initial = d.name.replace(/^د\.\s*/, "").charAt(0);
   return (
     <div className="relative group">
@@ -158,11 +168,18 @@ function DoctorTile({ d, isAdmin, onEdit }: { d: Doctor; isAdmin: boolean; onEdi
             )}
           </div>
         )}
-        <div className="font-bold text-sm leading-tight min-h-[2.5rem]">{d.name}</div>
+        <div className="font-bold text-sm leading-tight min-h-[2.5rem] flex items-center justify-center gap-1.5">
+          <span>{d.name}</span>
+        </div>
         <div className="text-[10px] text-muted-foreground mt-1">
           {d.branch ? BRANCH_LABELS[d.branch] : "—"} • خانة #{d.slot}
         </div>
       </Link>
+      {stalled.length > 0 && (
+        <div className="absolute top-2 right-2 z-10">
+          <StalledDoctorBadge items={stalled} label={d.name} />
+        </div>
+      )}
       {isAdmin && (
         <button onClick={onEdit}
           className="absolute top-2 left-2 size-8 rounded-full bg-background border border-border grid place-items-center opacity-0 group-hover:opacity-100 transition hover:border-gold">
