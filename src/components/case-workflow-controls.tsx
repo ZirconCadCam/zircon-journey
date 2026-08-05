@@ -277,7 +277,17 @@ function DesignerControls({ c, actorName, doctorName, target, blockedByPending }
         design_html_path: up.url,
         design_html_name: f.name,
       }).eq("id", c.id);
+      // Auto-forward the HTML design file to the clinic's Telegram group.
+      const { autoSendFileToTelegram } = await import("@/lib/telegram-auto");
+      const { deriveStageKey, getStage } = await import("@/lib/case-stages");
+      autoSendFileToTelegram({
+        kind: "html", from: `المصمم (${actorName})`, caseCode: c.case_code,
+        patientName: c.patient_name, doctorName, caseId: c.id,
+        stageLabel: getStage(deriveStageKey({ ...(c as any), design_html_sent: true })).label,
+        url: up.url, filename: f.name,
+      });
       toast.success("✅ تم رفع ملف HTML وإظهاره في محادثة الطبيب");
+
     } catch (err: any) { toast.error(err.message || "فشل رفع ملف HTML"); }
     finally { setBusyHtml(false); }
   }
