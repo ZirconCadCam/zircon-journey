@@ -93,6 +93,8 @@ interface Case {
   revision_design_file_path?: string | null;
   revision_design_file_name?: string | null;
   revision_design_done?: boolean | null;
+  doctor_decision?: string | null;
+  revision_notes?: string | null;
   tech_exec_notes?: string | null;
   shade_confirmed_doctor?: boolean | null;
   shade_confirmed_designer?: boolean | null;
@@ -338,10 +340,17 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     return m;
   }, [visibleForActor]);
 
+  /** الحالات التي طلب الطبيب فيها تعديلاً ولم تُعتمد بعد. */
+  const needsRevision = useMemo(
+    () => visibleForActor.filter(c => c.doctor_decision === "revision"),
+    [visibleForActor],
+  );
+
   const displayed = useMemo(() => {
     if (stageFilter === "all") return visibleForActor;
+    if (stageFilter === "revision") return needsRevision;
     return visibleForActor.filter(c => deriveStageKey(c) === stageFilter);
-  }, [visibleForActor, stageFilter]);
+  }, [visibleForActor, stageFilter, needsRevision]);
 
 
 
@@ -1234,6 +1243,12 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                 </button>
               );
             })}
+            <button
+              onClick={() => setStageFilter(stageFilter === "revision" ? "all" : "revision")}
+              disabled={needsRevision.length === 0 && stageFilter !== "revision"}
+              className={`px-3 py-1.5 rounded-full text-[11px] font-bold border transition disabled:opacity-40 disabled:cursor-not-allowed ${stageFilter === "revision" ? "bg-destructive text-destructive-foreground border-transparent shadow-luxury" : "border-destructive/50 text-destructive bg-background hover:border-destructive"}`}>
+              يلزم تعديل <span className="opacity-80">({needsRevision.length})</span>
+            </button>
           </div>
         </div>
 
