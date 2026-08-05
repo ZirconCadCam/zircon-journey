@@ -338,10 +338,17 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     return m;
   }, [visibleForActor]);
 
+  /** الحالات التي طلب الطبيب فيها تعديلاً ولم تُعتمد بعد. */
+  const needsRevision = useMemo(
+    () => visibleForActor.filter(c => c.doctor_decision === "revision"),
+    [visibleForActor],
+  );
+
   const displayed = useMemo(() => {
     if (stageFilter === "all") return visibleForActor;
+    if (stageFilter === "revision") return needsRevision;
     return visibleForActor.filter(c => deriveStageKey(c) === stageFilter);
-  }, [visibleForActor, stageFilter]);
+  }, [visibleForActor, stageFilter, needsRevision]);
 
 
 
