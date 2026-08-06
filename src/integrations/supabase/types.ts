@@ -615,8 +615,14 @@ export type Database = {
       }
       slot_cases: {
         Row: {
+          after_photo_name: string | null
+          after_photo_path: string | null
+          after_photo_sent_at: string | null
           archived: boolean
           audit_log: Json
+          before_photo_name: string | null
+          before_photo_path: string | null
+          before_photo_sent_at: string | null
           case_code: string
           case_type: string | null
           created_at: string
@@ -691,8 +697,14 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          after_photo_name?: string | null
+          after_photo_path?: string | null
+          after_photo_sent_at?: string | null
           archived?: boolean
           audit_log?: Json
+          before_photo_name?: string | null
+          before_photo_path?: string | null
+          before_photo_sent_at?: string | null
           case_code?: string
           case_type?: string | null
           created_at?: string
@@ -767,8 +779,14 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          after_photo_name?: string | null
+          after_photo_path?: string | null
+          after_photo_sent_at?: string | null
           archived?: boolean
           audit_log?: Json
+          before_photo_name?: string | null
+          before_photo_path?: string | null
+          before_photo_sent_at?: string | null
           case_code?: string
           case_type?: string | null
           created_at?: string
