@@ -18,6 +18,7 @@ import { addImageComment, postImageCommentToChat, postImageVoiceToChat, type Not
 import { MessageSquare, Mic, Square, Trash2 as TrashIcon, BellRing, Sparkles, CheckCheck } from "lucide-react";
 import { caseSignature, loadSeen, saveSeen, hasBaseline, type SeenMap } from "@/lib/designer-alerts";
 import { playPhoneRing, playSystemChime, systemNotify, ensureNotifyPermission } from "@/lib/notify";
+import { DesignerNotifyCenter } from "@/components/designer-notify-center";
 
 /** Inject hex overrides for our oklch CSS variables into html2canvas's cloned doc. */
 const H2C_ONCLONE = (doc: Document) => {
