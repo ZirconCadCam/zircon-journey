@@ -1293,7 +1293,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
               const busy = busyId === c.id;
               const unseenKind = actor === "designer" ? unseenMap.get(c.id) : undefined;
               return (
-                <li key={c.id} className={`relative rounded-2xl bg-card border p-5 shadow-luxury hover:border-gold/60 transition ${unseenKind ? "border-gold ring-2 ring-gold/40" : c.pinned && view === "archive" ? "border-gold ring-1 ring-gold/40" : "border-border"}`}>
+                <li key={c.id} id={`case-${c.id}`} className={`relative rounded-2xl bg-card border p-5 shadow-luxury hover:border-gold/60 transition ${unseenKind ? "border-gold ring-2 ring-gold/40" : c.pinned && view === "archive" ? "border-gold ring-1 ring-gold/40" : "border-border"}`}>
                   {unseenKind && (
                     <button
                       onClick={() => markSeen([c.id])}
