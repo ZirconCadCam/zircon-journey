@@ -1226,6 +1226,9 @@ function DoctorControls({ c, actorName, doctorName }: {
         <DoctorNotesComposer c={c} actorName={actorName} doctorName={doctorName} />
       )}
 
+      <PatientPhotoAlerts c={c as any} actorName={actorName} doctorName={doctorName} />
+
+
 
       {reviewReady && !decision && !confirmApprove && (
         <div className="space-y-2">
