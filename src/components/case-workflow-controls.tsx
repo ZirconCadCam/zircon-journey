@@ -13,6 +13,8 @@ import { CaseFileActivityLog } from "@/components/case-file-activity-log";
 import { ShadeConfirm, ShadePicker, CaseShadeConfirm } from "@/components/shade-confirm";
 import { ImageAnnotator } from "@/components/image-annotator";
 import { ImageLightbox } from "@/components/image-lightbox";
+import { PatientPhotoAlerts } from "@/components/patient-photo-alerts";
+
 
 export interface WorkflowCase {
   id: string;
