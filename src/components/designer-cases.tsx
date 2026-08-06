@@ -290,6 +290,22 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     toast.success("تمّت مشاهدة كل تحديثات الأطباء");
   }, [markSeen, activeCases]);
 
+  /** Jump to a case from the notification center (switches tab + scrolls). */
+  const focusCase = useCallback((caseId: string, tab: "new" | "revision" | "all") => {
+    setFilterSlot("all");
+    setView("active");
+    setStageFilter(tab === "all" ? "all" : (tab as CaseStage | "all"));
+    window.setTimeout(() => {
+      const el = document.getElementById(`case-${caseId}`);
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("ring-4", "ring-gold");
+      window.setTimeout(() => el.classList.remove("ring-4", "ring-gold"), 2500);
+    }, 180);
+  }, []);
+
+
+
 
   // Compute the "pending file" gate: if this actor already checked a case
   // but didn't yet send the .rar file, block ticking new ones.
