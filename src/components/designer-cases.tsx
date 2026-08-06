@@ -18,6 +18,7 @@ import { addImageComment, postImageCommentToChat, postImageVoiceToChat, type Not
 import { MessageSquare, Mic, Square, Trash2 as TrashIcon, BellRing, Sparkles, CheckCheck } from "lucide-react";
 import { caseSignature, loadSeen, saveSeen, hasBaseline, type SeenMap } from "@/lib/designer-alerts";
 import { playPhoneRing, playSystemChime, systemNotify, ensureNotifyPermission } from "@/lib/notify";
+import { DesignerNotifyCenter } from "@/components/designer-notify-center";
 
 /** Inject hex overrides for our oklch CSS variables into html2canvas's cloned doc. */
 const H2C_ONCLONE = (doc: Document) => {
@@ -288,6 +289,22 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     markSeen(activeCases.map((c) => c.id));
     toast.success("تمّت مشاهدة كل تحديثات الأطباء");
   }, [markSeen, activeCases]);
+
+  /** Jump to a case from the notification center (switches tab + scrolls). */
+  const focusCase = useCallback((caseId: string, tab: "new" | "revision" | "all") => {
+    setFilterSlot("all");
+    setView("active");
+    setStageFilter(tab === "all" ? "all" : (tab as CaseStage | "all"));
+    window.setTimeout(() => {
+      const el = document.getElementById(`case-${caseId}`);
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("ring-4", "ring-gold");
+      window.setTimeout(() => el.classList.remove("ring-4", "ring-gold"), 2500);
+    }, 180);
+  }, []);
+
+
 
 
   // Compute the "pending file" gate: if this actor already checked a case
@@ -1194,6 +1211,17 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
           </div>
 
           <div className="flex items-center gap-2">
+            {actor === "designer" && (
+              <DesignerNotifyCenter
+                cases={cases}
+                doctorName={(slot) => doctorMap.get(slot)?.name ?? `Slot ${slot}`}
+                unseenMap={unseenMap}
+                textRevisions={textRevisions}
+                onMarkSeen={markSeen}
+                onMarkAllSeen={markAllSeen}
+                onOpenCase={focusCase}
+              />
+            )}
             <button onClick={manualRefresh} disabled={refreshing}
               title="تحديث القائمة"
               className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-bold hover:border-gold transition disabled:opacity-60">
@@ -1265,7 +1293,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
               const busy = busyId === c.id;
               const unseenKind = actor === "designer" ? unseenMap.get(c.id) : undefined;
               return (
-                <li key={c.id} className={`relative rounded-2xl bg-card border p-5 shadow-luxury hover:border-gold/60 transition ${unseenKind ? "border-gold ring-2 ring-gold/40" : c.pinned && view === "archive" ? "border-gold ring-1 ring-gold/40" : "border-border"}`}>
+                <li key={c.id} id={`case-${c.id}`} className={`relative rounded-2xl bg-card border p-5 shadow-luxury hover:border-gold/60 transition ${unseenKind ? "border-gold ring-2 ring-gold/40" : c.pinned && view === "archive" ? "border-gold ring-1 ring-gold/40" : "border-border"}`}>
                   {unseenKind && (
                     <button
                       onClick={() => markSeen([c.id])}
