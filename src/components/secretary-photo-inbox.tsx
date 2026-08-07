@@ -2,13 +2,16 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ImageLightbox } from "@/components/image-lightbox";
 import { DoctorAvatar } from "@/components/doctor-avatar";
-import { Camera, Sparkles, Inbox, Loader2, Download, RefreshCw } from "lucide-react";
+import { getStage, deriveStageKey } from "@/lib/case-stages";
+import { Camera, Sparkles, Inbox, Loader2, Download, RefreshCw, Phone, Hash } from "lucide-react";
 import type { RoleKey } from "@/lib/chat";
 
 interface PhotoRow {
   id: string;
   case_code: string;
   patient_name: string;
+  patient_phone?: string | null;
+  tooth_number?: string | null;
   doctor_slot: number;
   before_photo_path: string | null;
   before_photo_name: string | null;
@@ -16,6 +19,7 @@ interface PhotoRow {
   after_photo_path: string | null;
   after_photo_name: string | null;
   after_photo_sent_at: string | null;
+  [k: string]: any;
 }
 
 type Phase = "before" | "after";
@@ -28,6 +32,10 @@ interface Item {
   at: string;
   caseCode: string;
   patient: string;
+  phone: string | null;
+  tooth: string | null;
+  stageLabel: string;
+  stagePercent: number;
   doctorSlot: number;
 }
 
@@ -35,6 +43,7 @@ const PHASE_LABEL: Record<Phase, string> = {
   before: "قبل التجميل",
   after: "بعد التجميل",
 };
+
 
 /**
  * Secretary-only inbox that gathers every "before"/"after" patient photo sent by
