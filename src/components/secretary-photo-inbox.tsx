@@ -192,12 +192,31 @@ export function SecretaryPhotoInbox({ role }: { role: RoleKey }) {
                   )}
                 </button>
                 <div className="p-3 space-y-1.5">
-                  <div className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold text-white ${i.phase === "before" ? "bg-sky-600" : "bg-emerald-600"}`}>
-                    {i.phase === "before" ? <Camera className="size-3" /> : <Sparkles className="size-3" />}
-                    {PHASE_LABEL[i.phase]}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold text-white ${i.phase === "before" ? "bg-sky-600" : "bg-emerald-600"}`}>
+                      {i.phase === "before" ? <Camera className="size-3" /> : <Sparkles className="size-3" />}
+                      {PHASE_LABEL[i.phase]}
+                    </span>
+                    <span className="inline-flex items-center rounded-full border border-gold/60 bg-gold/10 px-2 py-0.5 text-[10px] font-bold text-gold-foreground/90">
+                      {i.stageLabel} · {i.stagePercent}%
+                    </span>
                   </div>
-                  <div className="text-xs font-bold truncate">{i.patient}</div>
-                  <div className="text-[11px] text-muted-foreground font-mono">{i.caseCode}</div>
+                  <div className="text-sm font-extrabold truncate">{i.patient}</div>
+                  <div className="flex items-center gap-2 flex-wrap text-[11px] text-muted-foreground">
+                    <span className="inline-flex items-center gap-1 font-mono">
+                      <Hash className="size-3" />{i.caseCode}
+                    </span>
+                    {i.phone && (
+                      <span className="inline-flex items-center gap-1 font-mono" dir="ltr">
+                        <Phone className="size-3" />{i.phone}
+                      </span>
+                    )}
+                    {i.tooth && <span className="font-mono">FDI {i.tooth}</span>}
+                  </div>
+                  <div className="h-1 rounded-full bg-muted overflow-hidden">
+                    <div className="h-full gradient-gold" style={{ width: `${i.stagePercent}%` }} />
+                  </div>
+
                   <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
                     <DoctorAvatar name={doctors[i.doctorSlot] ?? ""} className="size-5" rounded="full" />
                     <span className="truncate">{doctors[i.doctorSlot] ?? "طبيب"}</span>
