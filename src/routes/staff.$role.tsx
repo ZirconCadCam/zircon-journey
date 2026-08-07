@@ -392,12 +392,19 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
                 <FileText className="size-4" /> الكشوفات
               </button>
             )}
+            {(role === "secretary_sanaa" || role === "secretary_ibb") && (
+              <button onClick={() => setTab("photos")}
+                className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "photos" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
+                <Camera className="size-4" /> صور المرضى
+              </button>
+            )}
             {role === "admin" && (
               <button onClick={() => setTab("settings")}
                 className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "settings" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
                 <Settings className="size-4" /> الإعدادات
               </button>
             )}
+
             <button onClick={() => setTab("notify")}
               className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "notify" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
               <Bell className="size-4" /> الإشعارات
