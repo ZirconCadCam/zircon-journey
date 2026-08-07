@@ -69,7 +69,7 @@ export function SecretaryPhotoInbox({ role }: { role: RoleKey }) {
 
     if (slots.length === 0) { setRows([]); setLoading(false); return; }
     const { data } = await supabase.from("slot_cases")
-      .select("id,case_code,patient_name,doctor_slot,before_photo_path,before_photo_name,before_photo_sent_at,after_photo_path,after_photo_name,after_photo_sent_at")
+      .select("*")
       .in("doctor_slot", slots)
       .or("before_photo_path.not.is.null,after_photo_path.not.is.null")
       .order("updated_at", { ascending: false })
@@ -91,20 +91,33 @@ export function SecretaryPhotoInbox({ role }: { role: RoleKey }) {
   const items = useMemo<Item[]>(() => {
     const out: Item[] = [];
     for (const r of rows) {
+      // Every photo stays bound to its own case row, so the patient identity and
+      // the live workflow stage are always the case's real ones.
+      const stage = getStage(deriveStageKey(r as any));
+      const base = {
+        caseCode: r.case_code,
+        patient: r.patient_name,
+        phone: r.patient_phone ?? null,
+        tooth: r.tooth_number ?? null,
+        stageLabel: stage.label,
+        stagePercent: stage.percent,
+        doctorSlot: r.doctor_slot,
+      };
       if (r.before_photo_path) out.push({
         key: `${r.id}-before`, phase: "before", path: r.before_photo_path,
         name: r.before_photo_name || "صورة قبل", at: r.before_photo_sent_at || "",
-        caseCode: r.case_code, patient: r.patient_name, doctorSlot: r.doctor_slot,
+        ...base,
       });
       if (r.after_photo_path) out.push({
         key: `${r.id}-after`, phase: "after", path: r.after_photo_path,
         name: r.after_photo_name || "صورة بعد", at: r.after_photo_sent_at || "",
-        caseCode: r.case_code, patient: r.patient_name, doctorSlot: r.doctor_slot,
+        ...base,
       });
     }
     out.sort((a, b) => (b.at || "").localeCompare(a.at || ""));
     return filter === "all" ? out : out.filter(i => i.phase === filter);
   }, [rows, filter]);
+
 
   useEffect(() => {
     let alive = true;
