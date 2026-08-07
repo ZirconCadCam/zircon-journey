@@ -2,13 +2,16 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ImageLightbox } from "@/components/image-lightbox";
 import { DoctorAvatar } from "@/components/doctor-avatar";
-import { Camera, Sparkles, Inbox, Loader2, Download, RefreshCw } from "lucide-react";
+import { getStage, deriveStageKey } from "@/lib/case-stages";
+import { Camera, Sparkles, Inbox, Loader2, Download, RefreshCw, Phone, Hash } from "lucide-react";
 import type { RoleKey } from "@/lib/chat";
 
 interface PhotoRow {
   id: string;
   case_code: string;
   patient_name: string;
+  patient_phone?: string | null;
+  tooth_number?: string | null;
   doctor_slot: number;
   before_photo_path: string | null;
   before_photo_name: string | null;
@@ -16,6 +19,7 @@ interface PhotoRow {
   after_photo_path: string | null;
   after_photo_name: string | null;
   after_photo_sent_at: string | null;
+  [k: string]: any;
 }
 
 type Phase = "before" | "after";
@@ -28,6 +32,10 @@ interface Item {
   at: string;
   caseCode: string;
   patient: string;
+  phone: string | null;
+  tooth: string | null;
+  stageLabel: string;
+  stagePercent: number;
   doctorSlot: number;
 }
 
@@ -35,6 +43,7 @@ const PHASE_LABEL: Record<Phase, string> = {
   before: "قبل التجميل",
   after: "بعد التجميل",
 };
+
 
 /**
  * Secretary-only inbox that gathers every "before"/"after" patient photo sent by
@@ -60,7 +69,7 @@ export function SecretaryPhotoInbox({ role }: { role: RoleKey }) {
 
     if (slots.length === 0) { setRows([]); setLoading(false); return; }
     const { data } = await supabase.from("slot_cases")
-      .select("id,case_code,patient_name,doctor_slot,before_photo_path,before_photo_name,before_photo_sent_at,after_photo_path,after_photo_name,after_photo_sent_at")
+      .select("*")
       .in("doctor_slot", slots)
       .or("before_photo_path.not.is.null,after_photo_path.not.is.null")
       .order("updated_at", { ascending: false })
@@ -82,20 +91,33 @@ export function SecretaryPhotoInbox({ role }: { role: RoleKey }) {
   const items = useMemo<Item[]>(() => {
     const out: Item[] = [];
     for (const r of rows) {
+      // Every photo stays bound to its own case row, so the patient identity and
+      // the live workflow stage are always the case's real ones.
+      const stage = getStage(deriveStageKey(r as any));
+      const base = {
+        caseCode: r.case_code,
+        patient: r.patient_name,
+        phone: r.patient_phone ?? null,
+        tooth: r.tooth_number ?? null,
+        stageLabel: stage.label,
+        stagePercent: stage.percent,
+        doctorSlot: r.doctor_slot,
+      };
       if (r.before_photo_path) out.push({
         key: `${r.id}-before`, phase: "before", path: r.before_photo_path,
         name: r.before_photo_name || "صورة قبل", at: r.before_photo_sent_at || "",
-        caseCode: r.case_code, patient: r.patient_name, doctorSlot: r.doctor_slot,
+        ...base,
       });
       if (r.after_photo_path) out.push({
         key: `${r.id}-after`, phase: "after", path: r.after_photo_path,
         name: r.after_photo_name || "صورة بعد", at: r.after_photo_sent_at || "",
-        caseCode: r.case_code, patient: r.patient_name, doctorSlot: r.doctor_slot,
+        ...base,
       });
     }
     out.sort((a, b) => (b.at || "").localeCompare(a.at || ""));
     return filter === "all" ? out : out.filter(i => i.phase === filter);
   }, [rows, filter]);
+
 
   useEffect(() => {
     let alive = true;
@@ -170,12 +192,31 @@ export function SecretaryPhotoInbox({ role }: { role: RoleKey }) {
                   )}
                 </button>
                 <div className="p-3 space-y-1.5">
-                  <div className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold text-white ${i.phase === "before" ? "bg-sky-600" : "bg-emerald-600"}`}>
-                    {i.phase === "before" ? <Camera className="size-3" /> : <Sparkles className="size-3" />}
-                    {PHASE_LABEL[i.phase]}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold text-white ${i.phase === "before" ? "bg-sky-600" : "bg-emerald-600"}`}>
+                      {i.phase === "before" ? <Camera className="size-3" /> : <Sparkles className="size-3" />}
+                      {PHASE_LABEL[i.phase]}
+                    </span>
+                    <span className="inline-flex items-center rounded-full border border-gold/60 bg-gold/10 px-2 py-0.5 text-[10px] font-bold text-gold-foreground/90">
+                      {i.stageLabel} · {i.stagePercent}%
+                    </span>
                   </div>
-                  <div className="text-xs font-bold truncate">{i.patient}</div>
-                  <div className="text-[11px] text-muted-foreground font-mono">{i.caseCode}</div>
+                  <div className="text-sm font-extrabold truncate">{i.patient}</div>
+                  <div className="flex items-center gap-2 flex-wrap text-[11px] text-muted-foreground">
+                    <span className="inline-flex items-center gap-1 font-mono">
+                      <Hash className="size-3" />{i.caseCode}
+                    </span>
+                    {i.phone && (
+                      <span className="inline-flex items-center gap-1 font-mono" dir="ltr">
+                        <Phone className="size-3" />{i.phone}
+                      </span>
+                    )}
+                    {i.tooth && <span className="font-mono">FDI {i.tooth}</span>}
+                  </div>
+                  <div className="h-1 rounded-full bg-muted overflow-hidden">
+                    <div className="h-full gradient-gold" style={{ width: `${i.stagePercent}%` }} />
+                  </div>
+
                   <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
                     <DoctorAvatar name={doctors[i.doctorSlot] ?? ""} className="size-5" rounded="full" />
                     <span className="truncate">{doctors[i.doctorSlot] ?? "طبيب"}</span>
