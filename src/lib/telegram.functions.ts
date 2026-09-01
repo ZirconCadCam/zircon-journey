@@ -28,19 +28,19 @@ export const sendCaseToTelegram = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
     const TELEGRAM_API_KEY = process.env.TELEGRAM_API_KEY;
-    // Archive group "مركز زركون CadCam لتجميل الاسنان".
-    // The verified destination is the supergroup below. A TELEGRAM_CHAT_ID
-    // override is honoured ONLY when it is a valid group/channel id
-    // (e.g. -100xxxxxxxxxx). An invalid value such as the bot's own id causes
-    // Telegram's "Forbidden: bot can't send messages to the bot" 403, so we
-    // ignore it and fall back to the known-good group id.
+    // Destination group. TELEGRAM_CHAT_ID may be a numeric group/channel id
+    // (e.g. -1001234567890) or a public @username. Anything else (such as a
+    // bot token pasted by mistake) is ignored and we fall back to the known
+    // clinic group id.
     const DEFAULT_CHAT_ID = "-1003242061826";
     const envChat = (process.env.TELEGRAM_CHAT_ID || "").trim();
-    const chatId = /^-100\d{6,}$/.test(envChat) ? envChat : DEFAULT_CHAT_ID;
+    const isValidChat = /^-?\d{5,}$/.test(envChat) || /^@[A-Za-z0-9_]{4,}$/.test(envChat);
+    const chatId = isValidChat ? envChat : DEFAULT_CHAT_ID;
 
     if (!LOVABLE_API_KEY || !TELEGRAM_API_KEY) {
       throw new Error("تكامل تلجرام غير مُهيّأ.");
     }
+
 
 
     const headers = {
@@ -64,10 +64,13 @@ export const sendCaseToTelegram = createServerFn({ method: "POST" })
     });
     const msgJson: any = await msgRes.json().catch(() => ({}));
     if (!msgRes.ok || !msgJson?.ok) {
-      throw new Error(
-        `فشل إرسال بيانات الحالة [${msgRes.status}]: ${msgJson?.description ?? "خطأ"}`,
-      );
+      const desc = String(msgJson?.description ?? `HTTP ${msgRes.status}`);
+      const hint = /chat not found|bot is not a member|kicked|Forbidden/i.test(desc)
+        ? " — تأكّد من إضافة البوت إلى الجروب كمشرف وضبط معرّف الجروب الصحيح (TELEGRAM_CHAT_ID)."
+        : "";
+      throw new Error(`فشل إرسال بيانات الحالة [${msgRes.status}]: ${desc}${hint}`);
     }
+
 
     // 2) Each file as a document.
     //

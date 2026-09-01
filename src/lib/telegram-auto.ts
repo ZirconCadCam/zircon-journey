@@ -18,12 +18,27 @@ export function autoSendFilesToTelegram(caption: string, files: AutoTelegramFile
   void (async () => {
     try {
       const { sendCaseToTelegram } = await import("@/lib/telegram.functions");
-      await sendCaseToTelegram({ data: { caption: caption.slice(0, 3900), documents } });
-    } catch (e) {
+      const res: any = await sendCaseToTelegram({ data: { caption: caption.slice(0, 3900), documents } });
+      const failed = (res?.sent ?? []).filter((s: any) => !s.ok);
+      if (failed.length) {
+        const { toast } = await import("sonner");
+        toast.warning(
+          `تعذّر إرسال ${failed.length} ملف إلى تلجرام: ${failed
+            .map((f: any) => `${f.filename}${f.error ? ` (${f.error})` : ""}`)
+            .join("، ")}`,
+          { duration: 8000 },
+        );
+      }
+    } catch (e: any) {
       console.warn("[telegram-auto] الإرسال التلقائي إلى تلجرام لم ينجح", e);
+      try {
+        const { toast } = await import("sonner");
+        toast.warning(`الإرسال التلقائي إلى تلجرام لم ينجح: ${e?.message ?? "خطأ"}`, { duration: 8000 });
+      } catch { /* ignore */ }
     }
   })();
 }
+
 
 export interface CaseCaptionInfo {
   /** Short headline, e.g. "ملف تصميم RAR" */
