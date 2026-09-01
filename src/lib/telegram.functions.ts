@@ -64,10 +64,13 @@ export const sendCaseToTelegram = createServerFn({ method: "POST" })
     });
     const msgJson: any = await msgRes.json().catch(() => ({}));
     if (!msgRes.ok || !msgJson?.ok) {
-      throw new Error(
-        `فشل إرسال بيانات الحالة [${msgRes.status}]: ${msgJson?.description ?? "خطأ"}`,
-      );
+      const desc = String(msgJson?.description ?? `HTTP ${msgRes.status}`);
+      const hint = /chat not found|bot is not a member|kicked|Forbidden/i.test(desc)
+        ? " — تأكّد من إضافة البوت إلى الجروب كمشرف وضبط معرّف الجروب الصحيح (TELEGRAM_CHAT_ID)."
+        : "";
+      throw new Error(`فشل إرسال بيانات الحالة [${msgRes.status}]: ${desc}${hint}`);
     }
+
 
     // 2) Each file as a document.
     //
