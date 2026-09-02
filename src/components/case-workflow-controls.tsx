@@ -1108,8 +1108,12 @@ function DoctorControls({ c, actorName, doctorName }: {
       .update({
         doctor_decision: "revision",
         revision_notes: trimmed,
+        // Open a brand-new revision round: clear the previous designer
+        // response so a new modified file can be uploaded and reviewed.
         revision_design_done: false,
         revision_approved_by_tech: false,
+        revision_design_file_path: null,
+        revision_design_file_name: null,
         temporary_delivered: true,
         shade: nextShade || null,
         shade_confirmed_doctor: true,
