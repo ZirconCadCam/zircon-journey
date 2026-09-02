@@ -421,6 +421,8 @@ function DesignerRevisionSection({ c, actorName, doctorName }: {
 }) {
   const [busy, setBusy] = useState(false);
   const [textMode, setTextMode] = useState(false);
+  const [htmlSent, setHtmlSent] = useState(false);
+  const htmlRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState("");
   const [docFiles, setDocFiles] = useState<DoctorRevisionFile[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
