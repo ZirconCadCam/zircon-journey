@@ -615,6 +615,7 @@ interface SlotCase {
   pinned: boolean; archived: boolean; final_archived?: boolean | null;
   design_done: boolean | null; design_file_sent: boolean | null;
   fabrication_done: boolean | null; fabrication_file_sent: boolean | null;
+  doctor_decision?: string | null;
   created_at: string; updated_at: string;
 }
 
