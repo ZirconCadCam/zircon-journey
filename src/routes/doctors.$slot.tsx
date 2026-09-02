@@ -713,6 +713,11 @@ function CasesPanel({ doctor, me, myName }: { doctor: Doctor; me: RoleKey; myNam
             </button>
           );
         })}
+        <button type="button" onClick={() => setStageFilter(stageFilter === "revision" ? "all" : "revision")}
+          disabled={revisionCount === 0 && stageFilter !== "revision"}
+          className={`px-3 py-1.5 rounded-full text-[11px] font-bold border transition disabled:opacity-40 disabled:cursor-not-allowed ${stageFilter === "revision" ? "bg-destructive text-destructive-foreground border-transparent shadow-luxury" : "border-destructive/50 text-destructive bg-background hover:border-destructive"}`}>
+          يلزم تعديل <span className="opacity-80">({revisionCount})</span>
+        </button>
       </div>
 
       {visible.length === 0 ? (
