@@ -668,9 +668,12 @@ function CasesPanel({ doctor, me, myName }: { doctor: Doctor; me: RoleKey; myNam
 
   // Doctor page shows only active cases. Archiving lives in the technician + admin pages.
   const activeCases = cases.filter(c => !c.archived && !c.final_archived);
+  const revisionCount = activeCases.filter(c => c.doctor_decision === "revision").length;
   const visible = stageFilter === "all"
     ? activeCases
-    : activeCases.filter(c => getStage(deriveStageKey(c)).key === stageFilter);
+    : stageFilter === "revision"
+      ? activeCases.filter(c => c.doctor_decision === "revision")
+      : activeCases.filter(c => getStage(deriveStageKey(c)).key === stageFilter);
   const stageCounts = new Map<CaseStage, number>();
   for (const c of activeCases) {
     const key = getStage(deriveStageKey(c)).key;
