@@ -615,6 +615,7 @@ interface SlotCase {
   pinned: boolean; archived: boolean; final_archived?: boolean | null;
   design_done: boolean | null; design_file_sent: boolean | null;
   fabrication_done: boolean | null; fabrication_file_sent: boolean | null;
+  doctor_decision?: string | null;
   created_at: string; updated_at: string;
 }
 
@@ -622,6 +623,7 @@ function CasesPanel({ doctor, me, myName }: { doctor: Doctor; me: RoleKey; myNam
   const [cases, setCases] = useState<SlotCase[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<SlotCase | null>(null);
+  const [stageFilter, setStageFilter] = useState<CaseStage | "all">("all");
 
   const load = useCallback(async () => {
     const { data } = await supabase.from("slot_cases").select("*")
@@ -666,18 +668,56 @@ function CasesPanel({ doctor, me, myName }: { doctor: Doctor; me: RoleKey; myNam
   if (loading) return <div className="p-12 text-center text-muted-foreground text-sm">جارِ تحميل الحالات...</div>;
 
   // Doctor page shows only active cases. Archiving lives in the technician + admin pages.
-  const visible = cases.filter(c => !c.archived && !c.final_archived);
+  const activeCases = cases.filter(c => !c.archived && !c.final_archived);
+  const revisionCount = activeCases.filter(c => c.doctor_decision === "revision").length;
+  const visible = stageFilter === "all"
+    ? activeCases
+    : stageFilter === "revision"
+      ? activeCases.filter(c => c.doctor_decision === "revision")
+      : activeCases.filter(c => getStage(deriveStageKey(c)).key === stageFilter);
+  const stageCounts = new Map<CaseStage, number>();
+  for (const c of activeCases) {
+    const key = getStage(deriveStageKey(c)).key;
+    stageCounts.set(key, (stageCounts.get(key) ?? 0) + 1);
+  }
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="text-xs text-muted-foreground">
           عدد الحالات النشطة: <span className="font-bold text-foreground">{visible.length}</span>
+          {stageFilter !== "all" && <span> من أصل {activeCases.length}</span>}
         </div>
         <Link to="/doctors/$slot/new-case" params={{ slot: String(doctor.slot) }}
           className="inline-flex items-center gap-2 rounded-xl gradient-brown px-4 py-2 text-sm font-bold shadow-luxury">
           <Plus className="size-4" /> حالة جديدة
         </Link>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-muted/20 p-2">
+        <span className="text-[11px] font-bold text-muted-foreground inline-flex items-center gap-1.5">
+          <ClipboardList className="size-3.5" /> تصفية حسب المستوى:
+        </span>
+        <button type="button" onClick={() => setStageFilter("all")}
+          className={`px-3 py-1.5 rounded-full text-[11px] font-bold border transition ${stageFilter === "all" ? "gradient-gold text-gold-foreground border-transparent shadow-gold" : "border-border bg-background hover:border-gold"}`}>
+          الكل <span className="opacity-80">({activeCases.length})</span>
+        </button>
+        {STAGES.map(stage => {
+          const count = stageCounts.get(stage.key) ?? 0;
+          const selected = stageFilter === stage.key;
+          return (
+            <button key={stage.key} type="button" onClick={() => setStageFilter(selected ? "all" : stage.key)}
+              disabled={count === 0 && !selected}
+              className={`px-3 py-1.5 rounded-full text-[11px] font-bold border transition disabled:opacity-40 disabled:cursor-not-allowed ${selected ? "gradient-gold text-gold-foreground border-transparent shadow-gold" : "border-border bg-background hover:border-gold"}`}>
+              {stage.label} <span className="opacity-80">({count})</span>
+            </button>
+          );
+        })}
+        <button type="button" onClick={() => setStageFilter(stageFilter === "revision" ? "all" : "revision")}
+          disabled={revisionCount === 0 && stageFilter !== "revision"}
+          className={`px-3 py-1.5 rounded-full text-[11px] font-bold border transition disabled:opacity-40 disabled:cursor-not-allowed ${stageFilter === "revision" ? "bg-destructive text-destructive-foreground border-transparent shadow-luxury" : "border-destructive/50 text-destructive bg-background hover:border-destructive"}`}>
+          يلزم تعديل <span className="opacity-80">({revisionCount})</span>
+        </button>
       </div>
 
       {visible.length === 0 ? (

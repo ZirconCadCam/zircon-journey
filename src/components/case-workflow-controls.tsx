@@ -421,6 +421,8 @@ function DesignerRevisionSection({ c, actorName, doctorName }: {
 }) {
   const [busy, setBusy] = useState(false);
   const [textMode, setTextMode] = useState(false);
+  const [htmlSent, setHtmlSent] = useState(false);
+  const htmlRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState("");
   const [docFiles, setDocFiles] = useState<DoctorRevisionFile[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -505,6 +507,50 @@ function DesignerRevisionSection({ c, actorName, doctorName }: {
     finally { setBusy(false); }
   }
 
+  /** Optional HTML report the designer may attach with every revision file. */
+  async function uploadRevisionHtml(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (e.target) e.target.value = "";
+    if (!f) return;
+    if (!HTML_RE.test(f.name)) { toast.error("الملف يجب أن يكون .html"); return; }
+    setBusy(true);
+    try {
+      const up = await uploadAttachment(f, c, "revision-html");
+      if (!up) return;
+      const conv = await ensureConv(c, "designer", "technician", doctorName);
+      if (conv) await supabase.from("chat_messages").insert({
+        conversation_id: conv, sender: "designer", sender_name: actorName,
+        content: `🧾 ملف HTML مرفق مع التعديل — الحالة ${c.case_code} (${c.patient_name})`,
+        message_type: "file",
+        attachment_path: up.url, attachment_name: f.name,
+        attachment_mime: f.type || "text/html", attachment_size: f.size,
+      });
+      const dconv = await ensureConv(c, "designer", "doctor", doctorName);
+      if (dconv) await supabase.from("chat_messages").insert({
+        conversation_id: dconv, sender: "designer", sender_name: actorName,
+        content: `🧾 ملف HTML مرفق مع التعديل — الحالة ${c.case_code}`,
+        message_type: "file",
+        attachment_path: up.url, attachment_name: f.name,
+        attachment_mime: f.type || "text/html", attachment_size: f.size,
+      });
+      await supabase.from("slot_cases").update({
+        design_html_path: up.url,
+        design_html_name: f.name,
+        design_html_sent: true,
+      }).eq("id", c.id);
+      const { autoSendFileToTelegram } = await import("@/lib/telegram-auto");
+      autoSendFileToTelegram({
+        kind: "html", from: `المصمم (${actorName}) — تعديل`, caseCode: c.case_code,
+        patientName: c.patient_name, doctorName, caseId: c.id,
+        stageLabel: "تعديل التصميم",
+        url: up.url, filename: f.name,
+      });
+      setHtmlSent(true);
+      toast.success("تم إرسال ملف HTML مع التعديل");
+    } catch (err: any) { toast.error(err.message || "فشل إرسال ملف HTML"); }
+    finally { setBusy(false); }
+  }
+
   // Send the revision as plain text — produces the exact same workflow result
   // as sending the modified .rar (notifies tech + doctor, marks done).
   async function sendRevisionText() {
@@ -571,6 +617,13 @@ function DesignerRevisionSection({ c, actorName, doctorName }: {
           <input ref={fileRef} type="file"
             accept=".rar,.RAR,application/vnd.rar,application/x-rar-compressed,application/octet-stream" className="hidden"
             onChange={uploadRevision} disabled={busy || done} />
+        </label>
+        <label className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold cursor-pointer transition border
+          ${htmlSent ? "border-sky-500 bg-sky-50 text-sky-700" : "border-border bg-card hover:border-gold"}`}>
+          {busy ? <Loader2 className="size-3.5 animate-spin" /> : <FileCode className="size-3.5" />}
+          {htmlSent ? "تم إرفاق HTML" : "إرفاق ملف HTML مع التعديل"}
+          <input ref={htmlRef} type="file" accept=".html,.htm,text/html" className="hidden"
+            onChange={uploadRevisionHtml} disabled={busy} />
         </label>
         {!done && (
           <button type="button" onClick={() => setTextMode(o => !o)} disabled={busy}
@@ -1108,8 +1161,16 @@ function DoctorControls({ c, actorName, doctorName }: {
       .update({
         doctor_decision: "revision",
         revision_notes: trimmed,
+        // Open a brand-new revision round: clear the previous designer
+        // response so a new modified file can be uploaded and reviewed.
         revision_design_done: false,
         revision_approved_by_tech: false,
+        revision_design_file_path: null,
+        revision_design_file_name: null,
+        // The HTML attachment belongs to the current revision round too.
+        design_html_sent: false,
+        design_html_path: null,
+        design_html_name: null,
         temporary_delivered: true,
         shade: nextShade || null,
         shade_confirmed_doctor: true,
@@ -1203,7 +1264,10 @@ function DoctorControls({ c, actorName, doctorName }: {
     setBusy(false);
   }
 
-  const hasAction = (reviewReady && !decision) || (permReady && !installed);
+  // The doctor's decision panel stays open for as many revision rounds as
+  // needed — it only closes once the permanent is carved / installed / archived.
+  const canDecide = reviewReady && !permReady && !installed && !archived;
+  const hasAction = canDecide || (permReady && !installed);
   const stageHint =
     archived || installed ? "تمت أرشفة الحالة نهائياً ✅" :
     permReady ? "تم نحت الأسنان الدائمة — أكد التركيب عند الانتهاء" :
@@ -1232,9 +1296,11 @@ function DoctorControls({ c, actorName, doctorName }: {
 
 
 
-      {reviewReady && !decision && !confirmApprove && (
+      {canDecide && !confirmApprove && (
         <div className="space-y-2">
-          <div className="text-xs font-bold text-foreground">قرار الطبيب بعد المراجعة:</div>
+          <div className="text-xs font-bold text-foreground">
+            {decision ? "قرارك متاح دائماً — يمكنك طلب تعديل آخر أو الاعتماد النهائي:" : "قرار الطبيب بعد المراجعة:"}
+          </div>
           <div className="flex items-center gap-2 flex-wrap">
             <button onClick={() => setConfirmApprove(true)} disabled={busy}
               className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 text-white px-3 py-2 text-xs font-bold shadow">
@@ -1242,13 +1308,13 @@ function DoctorControls({ c, actorName, doctorName }: {
             </button>
             <button onClick={() => { setRevShade(c.shade ?? ""); setRevShadeConfirmed(false); setRevOpen(true); }} disabled={busy}
               className="inline-flex items-center gap-2 rounded-lg bg-amber-600 text-white px-3 py-2 text-xs font-bold shadow">
-              <Pencil className="size-3.5" /> يلزم تعديل
+              <Pencil className="size-3.5" /> {decision === "revision" ? "طلب تعديل آخر" : "يلزم تعديل"}
             </button>
           </div>
         </div>
       )}
 
-      {reviewReady && !decision && confirmApprove && (
+      {canDecide && confirmApprove && (
         <div className="rounded-lg border border-emerald-500/60 bg-emerald-50/70 p-3 space-y-2 animate-in fade-in zoom-in-95">
           <div className="text-xs font-bold text-emerald-900">
             هل أنت متأكد أن التصميم لا يتطلب تعديل؟
