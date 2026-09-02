@@ -505,6 +505,50 @@ function DesignerRevisionSection({ c, actorName, doctorName }: {
     finally { setBusy(false); }
   }
 
+  /** Optional HTML report the designer may attach with every revision file. */
+  async function uploadRevisionHtml(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (e.target) e.target.value = "";
+    if (!f) return;
+    if (!HTML_RE.test(f.name)) { toast.error("الملف يجب أن يكون .html"); return; }
+    setBusy(true);
+    try {
+      const up = await uploadAttachment(f, c, "revision-html");
+      if (!up) return;
+      const conv = await ensureConv(c, "designer", "technician", doctorName);
+      if (conv) await supabase.from("chat_messages").insert({
+        conversation_id: conv, sender: "designer", sender_name: actorName,
+        content: `🧾 ملف HTML مرفق مع التعديل — الحالة ${c.case_code} (${c.patient_name})`,
+        message_type: "file",
+        attachment_path: up.url, attachment_name: f.name,
+        attachment_mime: f.type || "text/html", attachment_size: f.size,
+      });
+      const dconv = await ensureConv(c, "designer", "doctor", doctorName);
+      if (dconv) await supabase.from("chat_messages").insert({
+        conversation_id: dconv, sender: "designer", sender_name: actorName,
+        content: `🧾 ملف HTML مرفق مع التعديل — الحالة ${c.case_code}`,
+        message_type: "file",
+        attachment_path: up.url, attachment_name: f.name,
+        attachment_mime: f.type || "text/html", attachment_size: f.size,
+      });
+      await supabase.from("slot_cases").update({
+        design_html_path: up.url,
+        design_html_name: f.name,
+        design_html_sent: true,
+      }).eq("id", c.id);
+      const { autoSendFileToTelegram } = await import("@/lib/telegram-auto");
+      autoSendFileToTelegram({
+        kind: "html", from: `المصمم (${actorName}) — تعديل`, caseCode: c.case_code,
+        patientName: c.patient_name, doctorName, caseId: c.id,
+        stageLabel: "تعديل التصميم",
+        url: up.url, filename: f.name,
+      });
+      setHtmlSent(true);
+      toast.success("تم إرسال ملف HTML مع التعديل");
+    } catch (err: any) { toast.error(err.message || "فشل إرسال ملف HTML"); }
+    finally { setBusy(false); }
+  }
+
   // Send the revision as plain text — produces the exact same workflow result
   // as sending the modified .rar (notifies tech + doctor, marks done).
   async function sendRevisionText() {
