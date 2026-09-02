@@ -1167,6 +1167,10 @@ function DoctorControls({ c, actorName, doctorName }: {
         revision_approved_by_tech: false,
         revision_design_file_path: null,
         revision_design_file_name: null,
+        // The HTML attachment belongs to the current revision round too.
+        design_html_sent: false,
+        design_html_path: null,
+        design_html_name: null,
         temporary_delivered: true,
         shade: nextShade || null,
         shade_confirmed_doctor: true,
