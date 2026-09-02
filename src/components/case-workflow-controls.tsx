@@ -618,6 +618,13 @@ function DesignerRevisionSection({ c, actorName, doctorName }: {
             accept=".rar,.RAR,application/vnd.rar,application/x-rar-compressed,application/octet-stream" className="hidden"
             onChange={uploadRevision} disabled={busy || done} />
         </label>
+        <label className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold cursor-pointer transition border
+          ${htmlSent ? "border-sky-500 bg-sky-50 text-sky-700" : "border-border bg-card hover:border-gold"}`}>
+          {busy ? <Loader2 className="size-3.5 animate-spin" /> : <FileCode className="size-3.5" />}
+          {htmlSent ? "تم إرفاق HTML" : "إرفاق ملف HTML مع التعديل"}
+          <input ref={htmlRef} type="file" accept=".html,.htm,text/html" className="hidden"
+            onChange={uploadRevisionHtml} disabled={busy} />
+        </label>
         {!done && (
           <button type="button" onClick={() => setTextMode(o => !o)} disabled={busy}
             className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold transition border
