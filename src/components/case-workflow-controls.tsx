@@ -1207,7 +1207,10 @@ function DoctorControls({ c, actorName, doctorName }: {
     setBusy(false);
   }
 
-  const hasAction = (reviewReady && !decision) || (permReady && !installed);
+  // The doctor's decision panel stays open for as many revision rounds as
+  // needed — it only closes once the permanent is carved / installed / archived.
+  const canDecide = reviewReady && !permReady && !installed && !archived;
+  const hasAction = canDecide || (permReady && !installed);
   const stageHint =
     archived || installed ? "تمت أرشفة الحالة نهائياً ✅" :
     permReady ? "تم نحت الأسنان الدائمة — أكد التركيب عند الانتهاء" :
