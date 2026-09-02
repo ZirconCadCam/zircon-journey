@@ -1239,9 +1239,11 @@ function DoctorControls({ c, actorName, doctorName }: {
 
 
 
-      {reviewReady && !decision && !confirmApprove && (
+      {canDecide && !confirmApprove && (
         <div className="space-y-2">
-          <div className="text-xs font-bold text-foreground">قرار الطبيب بعد المراجعة:</div>
+          <div className="text-xs font-bold text-foreground">
+            {decision ? "قرارك متاح دائماً — يمكنك طلب تعديل آخر أو الاعتماد النهائي:" : "قرار الطبيب بعد المراجعة:"}
+          </div>
           <div className="flex items-center gap-2 flex-wrap">
             <button onClick={() => setConfirmApprove(true)} disabled={busy}
               className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 text-white px-3 py-2 text-xs font-bold shadow">
@@ -1249,13 +1251,13 @@ function DoctorControls({ c, actorName, doctorName }: {
             </button>
             <button onClick={() => { setRevShade(c.shade ?? ""); setRevShadeConfirmed(false); setRevOpen(true); }} disabled={busy}
               className="inline-flex items-center gap-2 rounded-lg bg-amber-600 text-white px-3 py-2 text-xs font-bold shadow">
-              <Pencil className="size-3.5" /> يلزم تعديل
+              <Pencil className="size-3.5" /> {decision === "revision" ? "طلب تعديل آخر" : "يلزم تعديل"}
             </button>
           </div>
         </div>
       )}
 
-      {reviewReady && !decision && confirmApprove && (
+      {canDecide && confirmApprove && (
         <div className="rounded-lg border border-emerald-500/60 bg-emerald-50/70 p-3 space-y-2 animate-in fade-in zoom-in-95">
           <div className="text-xs font-bold text-emerald-900">
             هل أنت متأكد أن التصميم لا يتطلب تعديل؟
