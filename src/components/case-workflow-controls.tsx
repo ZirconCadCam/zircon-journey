@@ -1187,6 +1187,14 @@ function DoctorControls({ c, actorName, doctorName }: {
         review_read_at: new Date().toISOString(),
       }).eq("id", c.id);
     if (!error) {
+      {
+        const { openRevisionRound } = await import("@/lib/revision-rounds");
+        await openRevisionRound({
+          caseId: c.id, caseCode: c.case_code, patientName: c.patient_name,
+          doctorSlot: (c as any).doctor_slot ?? null, doctorName,
+          notes: trimmed, shade: nextShade || null,
+        });
+      }
       await appendAudit(c, {
         actor: actorName || "الطبيب",
         action: shadeChanged ? `طلب تعديل التصميم (تغيير اللون إلى ${nextShade || "—"})` : "طلب تعديل التصميم",
