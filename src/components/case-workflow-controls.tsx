@@ -542,6 +542,10 @@ function DesignerRevisionSection({ c, actorName, doctorName }: {
         design_html_name: f.name,
         design_html_sent: true,
       }).eq("id", c.id);
+      {
+        const { attachToLatestRound } = await import("@/lib/revision-rounds");
+        await attachToLatestRound(c.id, { html_path: up.url, html_name: f.name });
+      }
       const { autoSendFileToTelegram } = await import("@/lib/telegram-auto");
       autoSendFileToTelegram({
         kind: "html", from: `المصمم (${actorName}) — تعديل`, caseCode: c.case_code,
