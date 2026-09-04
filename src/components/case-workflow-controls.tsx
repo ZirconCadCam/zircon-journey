@@ -494,6 +494,10 @@ function DesignerRevisionSection({ c, actorName, doctorName }: {
         revision_design_file_name: f.name,
         revision_design_done: true,
       }).eq("id", c.id);
+      {
+        const { attachToLatestRound } = await import("@/lib/revision-rounds");
+        await attachToLatestRound(c.id, { rar_path: up.url, rar_name: f.name });
+      }
       const { autoSendFileToTelegram } = await import("@/lib/telegram-auto");
       const { deriveStageKey, getStage } = await import("@/lib/case-stages");
       autoSendFileToTelegram({
@@ -538,6 +542,10 @@ function DesignerRevisionSection({ c, actorName, doctorName }: {
         design_html_name: f.name,
         design_html_sent: true,
       }).eq("id", c.id);
+      {
+        const { attachToLatestRound } = await import("@/lib/revision-rounds");
+        await attachToLatestRound(c.id, { html_path: up.url, html_name: f.name });
+      }
       const { autoSendFileToTelegram } = await import("@/lib/telegram-auto");
       autoSendFileToTelegram({
         kind: "html", from: `المصمم (${actorName}) — تعديل`, caseCode: c.case_code,
@@ -1179,6 +1187,14 @@ function DoctorControls({ c, actorName, doctorName }: {
         review_read_at: new Date().toISOString(),
       }).eq("id", c.id);
     if (!error) {
+      {
+        const { openRevisionRound } = await import("@/lib/revision-rounds");
+        await openRevisionRound({
+          caseId: c.id, caseCode: c.case_code, patientName: c.patient_name,
+          doctorSlot: (c as any).doctor_slot ?? null, doctorName,
+          notes: trimmed, shade: nextShade || null,
+        });
+      }
       await appendAudit(c, {
         actor: actorName || "الطبيب",
         action: shadeChanged ? `طلب تعديل التصميم (تغيير اللون إلى ${nextShade || "—"})` : "طلب تعديل التصميم",
