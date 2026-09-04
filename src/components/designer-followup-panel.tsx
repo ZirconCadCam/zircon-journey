@@ -19,7 +19,7 @@ function fmt(ts?: string | null) {
  * Designer "متابعة" tab: every revision round for every case, with the
  * attached HTML / design file of each round and a direct link to the case.
  */
-export function DesignerFollowupPanel() {
+export function DesignerFollowupPanel({ doctorSlot }: { doctorSlot?: number } = {}) {
   const [rows, setRows] = useState<RevisionRound[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
@@ -27,10 +27,13 @@ export function DesignerFollowupPanel() {
 
   async function load() {
     setLoading(true);
-    try { setRows(await listRevisionRounds()); }
+    try {
+      const all = await listRevisionRounds();
+      setRows(doctorSlot == null ? all : all.filter(r => r.doctor_slot === doctorSlot));
+    }
     finally { setLoading(false); }
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [doctorSlot]);
 
   const groups = useMemo(() => {
     const term = q.trim().toLowerCase();
