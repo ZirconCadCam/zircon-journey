@@ -494,6 +494,10 @@ function DesignerRevisionSection({ c, actorName, doctorName }: {
         revision_design_file_name: f.name,
         revision_design_done: true,
       }).eq("id", c.id);
+      {
+        const { attachToLatestRound } = await import("@/lib/revision-rounds");
+        await attachToLatestRound(c.id, { rar_path: up.url, rar_name: f.name });
+      }
       const { autoSendFileToTelegram } = await import("@/lib/telegram-auto");
       const { deriveStageKey, getStage } = await import("@/lib/case-stages");
       autoSendFileToTelegram({
