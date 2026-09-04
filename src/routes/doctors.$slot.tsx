@@ -8,8 +8,9 @@ import {
   Sparkles, ArrowRight, Upload, FileText, Download, Archive,
   Trash2, Share2, MessageSquare, Files as FilesIcon, ArchiveRestore, Copy, Check, Search, Plus,
   ClipboardList, MoreHorizontal, Pencil, Pin, PinOff, Send, X, Loader2,
-  Palette, Shield, Building2, FileSpreadsheet, Bell,
+  Palette, Shield, Building2, FileSpreadsheet, Bell, RefreshCw,
 } from "lucide-react";
+import { DesignerFollowupPanel } from "@/components/designer-followup-panel";
 import { toast } from "sonner";
 import { STAGES, getStage, deriveStageKey, notifyRoleAboutCase, localNotify, type CaseStage } from "@/lib/case-stages";
 import { CaseWorkflowControls } from "@/components/case-workflow-controls";
