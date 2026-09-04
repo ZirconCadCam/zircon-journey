@@ -227,7 +227,7 @@ function PasswordGate({ doctor, onOk }: { doctor: Doctor; onOk: () => void }) {
 
 function Portal({ doctor, actor, actorName, onLogout }: { doctor: Doctor; actor: Sender; actorName: string; onLogout: () => void }) {
   const { branch } = useAuth();
-  const [tab, setTab] = useState<"cases" | "files" | "reports" | "search" | "notify">("cases");
+  const [tab, setTab] = useState<"cases" | "files" | "reports" | "search" | "notify" | "followup">("cases");
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
@@ -279,6 +279,7 @@ function Portal({ doctor, actor, actorName, onLogout }: { doctor: Doctor; actor:
           <TabBtn active={tab==="search"} onClick={()=>setTab("search")} icon={<Search className="size-4" />} label="بحث" />
           <TabBtn active={tab==="files"} onClick={()=>setTab("files")} icon={<FilesIcon className="size-4" />} label="الملفات" />
           <TabBtn active={tab==="reports"} onClick={()=>setTab("reports")} icon={<FileSpreadsheet className="size-4" />} label="الكشوفات" />
+          <TabBtn active={tab==="followup"} onClick={()=>setTab("followup")} icon={<RefreshCw className="size-4" />} label="متابعة" />
           <TabBtn active={tab==="notify"} onClick={()=>setTab("notify")} icon={<Bell className="size-4" />} label="الإشعارات" />
         </div>
 
@@ -287,6 +288,7 @@ function Portal({ doctor, actor, actorName, onLogout }: { doctor: Doctor; actor:
           {tab === "search" && <CaseSearch actor={chatRole as any} restrictSlot={doctor.slot} />}
           {tab === "files" && <FilesPanel doctor={doctor} actor={actor} />}
           {tab === "reports" && <DoctorReportsPanel doctor={doctor} />}
+          {tab === "followup" && <DesignerFollowupPanel doctorSlot={doctor.slot} />}
           {tab === "notify" && <NotificationSettings />}
         </div>
 
