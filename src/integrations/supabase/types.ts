@@ -129,6 +129,63 @@ export type Database = {
           },
         ]
       }
+      case_revision_rounds: {
+        Row: {
+          case_code: string | null
+          case_id: string
+          doctor_name: string | null
+          doctor_notes: string | null
+          doctor_slot: number | null
+          html_name: string | null
+          html_path: string | null
+          html_sent_at: string | null
+          id: string
+          patient_name: string | null
+          rar_name: string | null
+          rar_path: string | null
+          rar_sent_at: string | null
+          requested_at: string
+          round: number
+          shade: string | null
+        }
+        Insert: {
+          case_code?: string | null
+          case_id: string
+          doctor_name?: string | null
+          doctor_notes?: string | null
+          doctor_slot?: number | null
+          html_name?: string | null
+          html_path?: string | null
+          html_sent_at?: string | null
+          id?: string
+          patient_name?: string | null
+          rar_name?: string | null
+          rar_path?: string | null
+          rar_sent_at?: string | null
+          requested_at?: string
+          round?: number
+          shade?: string | null
+        }
+        Update: {
+          case_code?: string | null
+          case_id?: string
+          doctor_name?: string | null
+          doctor_notes?: string | null
+          doctor_slot?: number | null
+          html_name?: string | null
+          html_path?: string | null
+          html_sent_at?: string | null
+          id?: string
+          patient_name?: string | null
+          rar_name?: string | null
+          rar_path?: string | null
+          rar_sent_at?: string | null
+          requested_at?: string
+          round?: number
+          shade?: string | null
+        }
+        Relationships: []
+      }
       cases: {
         Row: {
           branch: Database["public"]["Enums"]["branch"]
