@@ -17,7 +17,8 @@ import { SecretaryPhotoInbox } from "@/components/secretary-photo-inbox";
 import { ROLE_LABEL, STAFF_PASSWORDS, type RoleKey } from "@/lib/chat";
 import { saveStaffSession, hasValidStaffSession, clearStaffSession } from "@/lib/staff-session";
 import { getStage, deriveStageKey } from "@/lib/case-stages";
-import { Sparkles, ArrowRight, Lock, Stethoscope, MessageSquare, ClipboardList, Settings, Archive, FileArchive, FileText, Search, Bell, Camera } from "lucide-react";
+import { Sparkles, ArrowRight, Lock, Stethoscope, MessageSquare, ClipboardList, Settings, Archive, FileArchive, FileText, Search, Bell, Camera, RefreshCw } from "lucide-react";
+import { DesignerFollowupPanel } from "@/components/designer-followup-panel";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/staff/$role")({
@@ -230,7 +231,7 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
   const [unread, setUnread] = useState<Record<number, number>>({});
   // Default tab: roles with a case list land on "cases"; admin stays on "chat".
   const initialTab: "chat" | "cases" | "settings" = role === "admin" ? "chat" : "cases";
-  const [tab, setTab] = useState<"chat" | "cases" | "settings" | "archive" | "designfiles" | "reports" | "search" | "notify" | "photos">(initialTab);
+  const [tab, setTab] = useState<"chat" | "cases" | "settings" | "archive" | "designfiles" | "reports" | "search" | "notify" | "photos" | "followup">(initialTab);
 
   useEffect(() => {
     (async () => {
@@ -368,6 +369,10 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
                   className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "reports" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
                   <FileText className="size-4" /> الكشوفات
                 </button>
+                <button onClick={() => setTab("followup")}
+                  className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "followup" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
+                  <RefreshCw className="size-4" /> متابعة
+                </button>
               </>
             )}
             {role === "technician" && (
@@ -423,6 +428,8 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
           ) : tab === "settings" && role === "admin" ? (
 
             <AdminSettingsPanel />
+          ) : role === "designer" && tab === "followup" ? (
+            <DesignerFollowupPanel />
           ) : role === "designer" && tab === "archive" ? (
             <DesignerArchive />
           ) : role === "designer" && tab === "designfiles" ? (
