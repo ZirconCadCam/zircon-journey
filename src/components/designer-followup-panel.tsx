@@ -38,7 +38,12 @@ export function DesignerFollowupPanel({ doctorSlot, scope }: { doctorSlot?: numb
     }
     finally { setLoading(false); }
   }
-  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [doctorSlot]);
+  useEffect(() => {
+    load();
+    // opening the tab counts as "seen" — the badge resets for next time
+    markRoundsSeen(scope ?? (doctorSlot != null ? `doctor${doctorSlot}` : "designer"));
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [doctorSlot, scope]);
 
   const groups = useMemo(() => {
     const term = q.trim().toLowerCase();
