@@ -231,6 +231,7 @@ function Portal({ doctor, actor, actorName, onLogout }: { doctor: Doctor; actor:
   const { branch } = useAuth();
   const [tab, setTab] = useState<"cases" | "files" | "reports" | "search" | "notify" | "followup">("cases");
   const [unread, setUnread] = useState(0);
+  const { count: newRounds, clear: clearRounds } = useNewRevisionRounds(`doctor${doctor.slot}`, doctor.slot);
 
   useEffect(() => {
     if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
