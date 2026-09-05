@@ -11,6 +11,7 @@ import {
   Palette, Shield, Building2, FileSpreadsheet, Bell, RefreshCw,
 } from "lucide-react";
 import { DesignerFollowupPanel } from "@/components/designer-followup-panel";
+import { useNewRevisionRounds } from "@/lib/revision-round-alerts";
 import { toast } from "sonner";
 import { STAGES, getStage, deriveStageKey, notifyRoleAboutCase, localNotify, type CaseStage } from "@/lib/case-stages";
 import { CaseWorkflowControls } from "@/components/case-workflow-controls";
@@ -280,7 +281,7 @@ function Portal({ doctor, actor, actorName, onLogout }: { doctor: Doctor; actor:
           <TabBtn active={tab==="search"} onClick={()=>setTab("search")} icon={<Search className="size-4" />} label="بحث" />
           <TabBtn active={tab==="files"} onClick={()=>setTab("files")} icon={<FilesIcon className="size-4" />} label="الملفات" />
           <TabBtn active={tab==="reports"} onClick={()=>setTab("reports")} icon={<FileSpreadsheet className="size-4" />} label="الكشوفات" />
-          <TabBtn active={tab==="followup"} onClick={()=>setTab("followup")} icon={<RefreshCw className="size-4" />} label="متابعة" />
+          <TabBtn active={tab==="followup"} onClick={()=>{ setTab("followup"); clearRounds(); }} icon={<RefreshCw className="size-4" />} label="متابعة" badge={newRounds} />
           <TabBtn active={tab==="notify"} onClick={()=>setTab("notify")} icon={<Bell className="size-4" />} label="الإشعارات" />
         </div>
 
