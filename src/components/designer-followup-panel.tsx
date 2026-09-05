@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   RefreshCw, Loader2, FileArchive, FileCode2, ExternalLink, Search, Clock, CheckCircle2, AlertTriangle,
   Eye, EyeOff,
 } from "lucide-react";
 import { listRevisionRounds, type RevisionRound } from "@/lib/revision-rounds";
+import { getRoundsSeenAt, markRoundsSeen } from "@/lib/revision-round-alerts";
 import { InAppFileViewer } from "@/components/in-app-file-viewer";
 import { getSignedUrl } from "@/lib/chat";
 import { toast } from "sonner";
