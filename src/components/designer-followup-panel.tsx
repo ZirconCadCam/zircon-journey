@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   RefreshCw, Loader2, FileArchive, FileCode2, ExternalLink, Search, Clock, CheckCircle2, AlertTriangle,
+  Eye, EyeOff,
 } from "lucide-react";
 import { listRevisionRounds, type RevisionRound } from "@/lib/revision-rounds";
 import { InAppFileViewer } from "@/components/in-app-file-viewer";
@@ -24,6 +25,8 @@ export function DesignerFollowupPanel({ doctorSlot }: { doctorSlot?: number } = 
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [viewer, setViewer] = useState<{ url: string; name: string; mime?: string } | null>(null);
+  const [previews, setPreviews] = useState<Record<string, string>>({});
+  const [previewBusy, setPreviewBusy] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -58,6 +61,23 @@ export function DesignerFollowupPanel({ doctorSlot }: { doctorSlot?: number } = 
     const url = /^https?:\/\//i.test(path) ? path : (await getSignedUrl(path, 3600));
     if (!url) { toast.error("تعذر فتح الملف"); return; }
     setViewer({ url, name, mime });
+  }
+
+  /** Toggle an inline HTML preview for a round — no manual download needed. */
+  async function togglePreview(roundId: string, path: string) {
+    if (previews[roundId]) {
+      setPreviews(p => { const n = { ...p }; delete n[roundId]; return n; });
+      return;
+    }
+    setPreviewBusy(roundId);
+    try {
+      const url = /^https?:\/\//i.test(path) ? path : (await getSignedUrl(path, 3600));
+      if (!url) { toast.error("تعذر تحميل المعاينة"); return; }
+      const res = await fetch(url);
+      const html = await res.text();
+      setPreviews(p => ({ ...p, [roundId]: html }));
+    } catch { toast.error("تعذر تحميل المعاينة"); }
+    finally { setPreviewBusy(null); }
   }
 
   return (
@@ -154,7 +174,26 @@ export function DesignerFollowupPanel({ doctorSlot }: { doctorSlot?: number } = 
                           ) : (
                             <span className="text-[11px] text-muted-foreground">بدون ملف HTML</span>
                           )}
+                          {r.html_path && (
+                            <button onClick={() => togglePreview(r.id, r.html_path!)}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-gold px-3 py-1.5 text-xs font-bold hover:bg-gold/10">
+                              {previewBusy === r.id
+                                ? <><Loader2 className="size-3.5 animate-spin" /> جارٍ التحضير…</>
+                                : previews[r.id]
+                                  ? <><EyeOff className="size-3.5" /> إخفاء المعاينة</>
+                                  : <><Eye className="size-3.5" /> معاينة داخل الصفحة</>}
+                            </button>
+                          )}
                         </div>
+
+                        {previews[r.id] && (
+                          <iframe
+                            title={`معاينة ${r.html_name || "HTML"}`}
+                            srcDoc={previews[r.id]}
+                            sandbox="allow-same-origin"
+                            className="w-full h-[520px] rounded-xl border border-border bg-white"
+                          />
+                        )}
                       </li>
                     );
                   })}
