@@ -145,6 +145,11 @@ export function DesignerFollowupPanel({ doctorSlot, scope }: { doctorSlot?: numb
                           <span className="rounded-full bg-gold/15 text-gold px-2.5 py-0.5 text-[11px] font-extrabold">
                             الجولة {r.round}
                           </span>
+                          {new Date(r.requested_at).getTime() > seenAt.current && (
+                            <span className="rounded-full bg-red-500 text-white px-2 py-0.5 text-[10px] font-extrabold animate-pulse">
+                              جديد
+                            </span>
+                          )}
                           <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
                             <Clock className="size-3" /> {fmt(r.requested_at)}
                           </span>
