@@ -24,6 +24,8 @@ export function DesignerFollowupPanel({ doctorSlot }: { doctorSlot?: number } = 
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [viewer, setViewer] = useState<{ url: string; name: string; mime?: string } | null>(null);
+  const [previews, setPreviews] = useState<Record<string, string>>({});
+  const [previewBusy, setPreviewBusy] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -58,6 +60,23 @@ export function DesignerFollowupPanel({ doctorSlot }: { doctorSlot?: number } = 
     const url = /^https?:\/\//i.test(path) ? path : (await getSignedUrl(path, 3600));
     if (!url) { toast.error("تعذر فتح الملف"); return; }
     setViewer({ url, name, mime });
+  }
+
+  /** Toggle an inline HTML preview for a round — no manual download needed. */
+  async function togglePreview(roundId: string, path: string) {
+    if (previews[roundId]) {
+      setPreviews(p => { const n = { ...p }; delete n[roundId]; return n; });
+      return;
+    }
+    setPreviewBusy(roundId);
+    try {
+      const url = /^https?:\/\//i.test(path) ? path : (await getSignedUrl(path, 3600));
+      if (!url) { toast.error("تعذر تحميل المعاينة"); return; }
+      const res = await fetch(url);
+      const html = await res.text();
+      setPreviews(p => ({ ...p, [roundId]: html }));
+    } catch { toast.error("تعذر تحميل المعاينة"); }
+    finally { setPreviewBusy(null); }
   }
 
   return (
