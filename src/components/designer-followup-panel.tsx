@@ -20,7 +20,8 @@ function fmt(ts?: string | null) {
  * Designer "متابعة" tab: every revision round for every case, with the
  * attached HTML / design file of each round and a direct link to the case.
  */
-export function DesignerFollowupPanel({ doctorSlot }: { doctorSlot?: number } = {}) {
+export function DesignerFollowupPanel({ doctorSlot, scope }: { doctorSlot?: number; scope?: string } = {}) {
+  const seenAt = useRef<number>(getRoundsSeenAt(scope ?? (doctorSlot != null ? `doctor${doctorSlot}` : "designer")));
   const [rows, setRows] = useState<RevisionRound[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
