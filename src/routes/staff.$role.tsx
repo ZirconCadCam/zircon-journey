@@ -233,6 +233,7 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
   // Default tab: roles with a case list land on "cases"; admin stays on "chat".
   const initialTab: "chat" | "cases" | "settings" = role === "admin" ? "chat" : "cases";
   const [tab, setTab] = useState<"chat" | "cases" | "settings" | "archive" | "designfiles" | "reports" | "search" | "notify" | "photos" | "followup">(initialTab);
+  const { count: newRounds, clear: clearRounds } = useNewRevisionRounds(role === "technician" ? "technician" : "designer");
 
   useEffect(() => {
     (async () => {
