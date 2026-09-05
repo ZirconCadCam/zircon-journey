@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   RefreshCw, Loader2, FileArchive, FileCode2, ExternalLink, Search, Clock, CheckCircle2, AlertTriangle,
   Eye, EyeOff,
 } from "lucide-react";
 import { listRevisionRounds, type RevisionRound } from "@/lib/revision-rounds";
+import { getRoundsSeenAt, markRoundsSeen } from "@/lib/revision-round-alerts";
 import { InAppFileViewer } from "@/components/in-app-file-viewer";
 import { getSignedUrl } from "@/lib/chat";
 import { toast } from "sonner";
@@ -20,7 +21,8 @@ function fmt(ts?: string | null) {
  * Designer "متابعة" tab: every revision round for every case, with the
  * attached HTML / design file of each round and a direct link to the case.
  */
-export function DesignerFollowupPanel({ doctorSlot }: { doctorSlot?: number } = {}) {
+export function DesignerFollowupPanel({ doctorSlot, scope }: { doctorSlot?: number; scope?: string } = {}) {
+  const seenAt = useRef<number>(getRoundsSeenAt(scope ?? (doctorSlot != null ? `doctor${doctorSlot}` : "designer")));
   const [rows, setRows] = useState<RevisionRound[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
@@ -36,7 +38,12 @@ export function DesignerFollowupPanel({ doctorSlot }: { doctorSlot?: number } = 
     }
     finally { setLoading(false); }
   }
-  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [doctorSlot]);
+  useEffect(() => {
+    load();
+    // opening the tab counts as "seen" — the badge resets for next time
+    markRoundsSeen(scope ?? (doctorSlot != null ? `doctor${doctorSlot}` : "designer"));
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [doctorSlot, scope]);
 
   const groups = useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -138,6 +145,11 @@ export function DesignerFollowupPanel({ doctorSlot }: { doctorSlot?: number } = 
                           <span className="rounded-full bg-gold/15 text-gold px-2.5 py-0.5 text-[11px] font-extrabold">
                             الجولة {r.round}
                           </span>
+                          {new Date(r.requested_at).getTime() > seenAt.current && (
+                            <span className="rounded-full bg-red-500 text-white px-2 py-0.5 text-[10px] font-extrabold animate-pulse">
+                              جديد
+                            </span>
+                          )}
                           <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
                             <Clock className="size-3" /> {fmt(r.requested_at)}
                           </span>

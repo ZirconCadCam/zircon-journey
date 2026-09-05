@@ -19,6 +19,7 @@ import { saveStaffSession, hasValidStaffSession, clearStaffSession } from "@/lib
 import { getStage, deriveStageKey } from "@/lib/case-stages";
 import { Sparkles, ArrowRight, Lock, Stethoscope, MessageSquare, ClipboardList, Settings, Archive, FileArchive, FileText, Search, Bell, Camera, RefreshCw } from "lucide-react";
 import { DesignerFollowupPanel } from "@/components/designer-followup-panel";
+import { useNewRevisionRounds } from "@/lib/revision-round-alerts";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/staff/$role")({
@@ -232,6 +233,7 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
   // Default tab: roles with a case list land on "cases"; admin stays on "chat".
   const initialTab: "chat" | "cases" | "settings" = role === "admin" ? "chat" : "cases";
   const [tab, setTab] = useState<"chat" | "cases" | "settings" | "archive" | "designfiles" | "reports" | "search" | "notify" | "photos" | "followup">(initialTab);
+  const { count: newRounds, clear: clearRounds } = useNewRevisionRounds(role === "technician" ? "technician" : "designer");
 
   useEffect(() => {
     (async () => {
@@ -385,9 +387,12 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
                   className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "designfiles" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
                   <FileArchive className="size-4" /> ملفات التصاميم
                 </button>
-                <button onClick={() => setTab("followup")}
+                <button onClick={() => { setTab("followup"); clearRounds(); }}
                   className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "followup" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
                   <RefreshCw className="size-4" /> متابعة
+                  {newRounds > 0 && (
+                    <span className="rounded-full bg-red-500 text-white text-[10px] font-extrabold px-1.5 min-w-[18px] h-[18px] grid place-items-center animate-pulse">{newRounds}</span>
+                  )}
                 </button>
               </>
             )}
@@ -441,7 +446,7 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
           ) : role === "designer" && tab === "reports" ? (
             <DesignerReports />
           ) : role === "technician" && tab === "followup" ? (
-            <DesignerFollowupPanel />
+            <DesignerFollowupPanel scope="technician" />
           ) : role === "technician" && tab === "reports" ? (
             <TechnicianReports />
           ) : role === "technician" && tab === "designfiles" ? (
