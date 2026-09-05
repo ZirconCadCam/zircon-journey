@@ -385,6 +385,10 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
                   className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "designfiles" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
                   <FileArchive className="size-4" /> ملفات التصاميم
                 </button>
+                <button onClick={() => setTab("followup")}
+                  className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "followup" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
+                  <RefreshCw className="size-4" /> متابعة
+                </button>
               </>
             )}
             {role === "admin" && (
