@@ -440,6 +440,8 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
             <DesignerDesignFiles />
           ) : role === "designer" && tab === "reports" ? (
             <DesignerReports />
+          ) : role === "technician" && tab === "followup" ? (
+            <DesignerFollowupPanel />
           ) : role === "technician" && tab === "reports" ? (
             <TechnicianReports />
           ) : role === "technician" && tab === "designfiles" ? (
