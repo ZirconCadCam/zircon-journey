@@ -1265,8 +1265,11 @@ function DoctorControls({ c, actorName, doctorName }: {
   const canDecide = reviewReady && !permReady && !installed && !archived;
   const hasAction = canDecide || (permReady && !installed);
   const stageHint =
-    archived || installed ? "تمت أرشفة الحالة نهائياً ✅" :
+    archived ? "تمت أرشفة الحالة نهائياً ✅" :
+    installed && c.archive_approval === "pending" ? "أُرسل سند حساب المريض — بانتظار موافقة الإدارة على الأرشفة" :
+    installed && c.archive_approval === "rejected" ? "لم توافق الإدارة على الأرشفة — أعد إرسال سند الحساب" :
     permReady ? "تم نحت الأسنان الدائمة — أكد التركيب عند الانتهاء" :
+
     decision === "approved" ? "تم الاعتماد — بانتظار نحت الدائم من الفني" :
     decision === "revision" ? "تم إرسال طلب التعديل — بانتظار المصمم" :
     reviewReady ? "تمت المراجعة قيد قرارك — اختر معتمد للدائم أو يلزم تعديل" :
