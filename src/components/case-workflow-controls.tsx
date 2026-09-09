@@ -49,6 +49,15 @@ export interface WorkflowCase {
   permanent_received_by_secretary?: boolean | null;
   permanent_installed_by_doctor?: boolean | null;
   final_archived?: boolean | null;
+  archive_receipt_path?: string | null;
+  archive_receipt_name?: string | null;
+  archive_receipt_sent_at?: string | null;
+  archive_request_note?: string | null;
+  archive_approval?: string | null;
+  archive_reviewed_at?: string | null;
+  archive_reviewed_by?: string | null;
+  archive_reject_reason?: string | null;
+
   perm_delivered_at?: string | null;
   perm_read_at?: string | null;
   audit_log?: Array<{ at: string; actor: string; action: string; notes?: string }> | null;
