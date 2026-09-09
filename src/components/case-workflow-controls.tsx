@@ -1382,20 +1382,29 @@ function DoctorControls({ c, actorName, doctorName }: {
         </div>
       )}
 
-      {permReady && !installed && (
+      {permReady && (!installed || c.archive_approval === "rejected") && (
         <label className="inline-flex items-center gap-2 cursor-pointer text-xs font-bold rounded-lg border border-emerald-500/60 bg-emerald-50/60 px-3 py-2 hover:border-emerald-600">
-          <input type="checkbox" checked={installed} onChange={toggleInstalled} disabled={busy}
+          <input type="checkbox" checked={false} onChange={() => setReceiptOpen(true)} disabled={busy}
             className="size-4 accent-emerald-600" />
-          {busy && <Loader2 className="size-3.5 animate-spin" />}
           تم تركيب الأسنان الدائمة للمريض (أرشفة تلقائية)
         </label>
       )}
 
-      {installed && (
+      {(c.archive_approval || archived) && (
+        <ArchiveRequestStatus c={c as any} />
+      )}
+
+      {archived && (
         <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold border border-emerald-500 bg-emerald-50 rounded-lg px-2 py-1">
           <Archive className="size-3.5" /> تم التركيب — مؤرشفة نهائياً
         </span>
       )}
+
+      {receiptOpen && (
+        <ArchiveReceiptEditor c={c as any} actorName={actorName} doctorName={doctorName}
+          onClose={() => setReceiptOpen(false)} />
+      )}
+
 
       {/* Audit log */}
       <div className="pt-2 border-t border-border/60">
