@@ -14,6 +14,8 @@ import { ShadeConfirm, ShadePicker, CaseShadeConfirm } from "@/components/shade-
 import { ImageAnnotator } from "@/components/image-annotator";
 import { ImageLightbox } from "@/components/image-lightbox";
 import { PatientPhotoAlerts } from "@/components/patient-photo-alerts";
+import { ArchiveReceiptEditor, ArchiveRequestStatus } from "@/components/archive-receipt-editor";
+
 
 
 export interface WorkflowCase {
@@ -49,6 +51,15 @@ export interface WorkflowCase {
   permanent_received_by_secretary?: boolean | null;
   permanent_installed_by_doctor?: boolean | null;
   final_archived?: boolean | null;
+  archive_receipt_path?: string | null;
+  archive_receipt_name?: string | null;
+  archive_receipt_sent_at?: string | null;
+  archive_request_note?: string | null;
+  archive_approval?: string | null;
+  archive_reviewed_at?: string | null;
+  archive_reviewed_by?: string | null;
+  archive_reject_reason?: string | null;
+
   perm_delivered_at?: string | null;
   perm_read_at?: string | null;
   audit_log?: Array<{ at: string; actor: string; action: string; notes?: string }> | null;
@@ -1091,6 +1102,8 @@ function DoctorControls({ c, actorName, doctorName }: {
   const [confirmApprove, setConfirmApprove] = useState(false);
   const [revShadeConfirmed, setRevShadeConfirmed] = useState(false);
   const [revShade, setRevShade] = useState(c.shade ?? "");
+  const [receiptOpen, setReceiptOpen] = useState(false);
+
 
   // Review is ready as soon as the technician dispatches the data.
   // The doctor no longer needs to confirm receipt of the temporary first.
@@ -1243,50 +1256,20 @@ function DoctorControls({ c, actorName, doctorName }: {
   }
 
 
-  async function toggleInstalled() {
-    if (busy) return;
-    setBusy(true);
-    const next = !installed;
-    const patch: any = { permanent_installed_by_doctor: next };
-    if (next) {
-      patch.final_archived = true;
-      patch.archived = true;
-      patch.permanent_delivered_to_doctor = true; // mark delivered implicitly
-      patch.perm_ship_read_at = new Date().toISOString();
-    }
-    const { error } = await supabase.from("slot_cases").update(patch).eq("id", c.id);
-    if (error) { setBusy(false); toast.error(error.message); return; }
-    if (next) {
-      // Auto-archive this case's own conversations (title prefixed with [case_code]).
-      await supabase.from("chat_conversations").update({ archived: true })
-        .eq("doctor_slot", c.doctor_slot).like("title", `[${c.case_code}]%`);
-      await appendAudit(c, { actor: actorName || "الطبيب", action: "تأكيد تركيب الأسنان الدائمة وأرشفة الحالة" });
-      const msg = `🦷✅ تم تركيب الأسنان الدائمة للمريض — الحالة ${c.case_code} (${c.patient_name}). الحالة مؤرشفة نهائياً.`;
-      // Notify designer + technician + ONLY the matching-branch secretary.
-      const secRole = await branchSecretaryRole(c.doctor_slot);
-      const roles: RoleKey[] = ["designer", "technician"];
-      if (secRole) roles.push(secRole);
-      for (const role of roles) {
-        const conv = await ensureConv(c, "doctor", role, doctorName);
-        if (conv) await supabase.from("chat_messages").insert({
-          conversation_id: conv, sender: "doctor", sender_name: actorName,
-          content: msg, message_type: "text",
-        });
-      }
-      toast.success("✅ تم تأكيد التركيب — أُرشفت الحالة تلقائياً");
-    } else {
-      toast.success("تم إلغاء العلامة");
-    }
-    setBusy(false);
-  }
+  // Installing the permanent now goes through the archive-request editor
+  // (receipt photo → administration approval), see ArchiveReceiptEditor.
+
 
   // The doctor's decision panel stays open for as many revision rounds as
   // needed — it only closes once the permanent is carved / installed / archived.
   const canDecide = reviewReady && !permReady && !installed && !archived;
   const hasAction = canDecide || (permReady && !installed);
   const stageHint =
-    archived || installed ? "تمت أرشفة الحالة نهائياً ✅" :
+    archived ? "تمت أرشفة الحالة نهائياً ✅" :
+    installed && c.archive_approval === "pending" ? "أُرسل سند حساب المريض — بانتظار موافقة الإدارة على الأرشفة" :
+    installed && c.archive_approval === "rejected" ? "لم توافق الإدارة على الأرشفة — أعد إرسال سند الحساب" :
     permReady ? "تم نحت الأسنان الدائمة — أكد التركيب عند الانتهاء" :
+
     decision === "approved" ? "تم الاعتماد — بانتظار نحت الدائم من الفني" :
     decision === "revision" ? "تم إرسال طلب التعديل — بانتظار المصمم" :
     reviewReady ? "تمت المراجعة قيد قرارك — اختر معتمد للدائم أو يلزم تعديل" :
@@ -1371,20 +1354,29 @@ function DoctorControls({ c, actorName, doctorName }: {
         </div>
       )}
 
-      {permReady && !installed && (
+      {permReady && (!installed || c.archive_approval === "rejected") && (
         <label className="inline-flex items-center gap-2 cursor-pointer text-xs font-bold rounded-lg border border-emerald-500/60 bg-emerald-50/60 px-3 py-2 hover:border-emerald-600">
-          <input type="checkbox" checked={installed} onChange={toggleInstalled} disabled={busy}
+          <input type="checkbox" checked={false} onChange={() => setReceiptOpen(true)} disabled={busy}
             className="size-4 accent-emerald-600" />
-          {busy && <Loader2 className="size-3.5 animate-spin" />}
           تم تركيب الأسنان الدائمة للمريض (أرشفة تلقائية)
         </label>
       )}
 
-      {installed && (
+      {(c.archive_approval || archived) && (
+        <ArchiveRequestStatus c={c as any} />
+      )}
+
+      {archived && (
         <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 font-bold border border-emerald-500 bg-emerald-50 rounded-lg px-2 py-1">
           <Archive className="size-3.5" /> تم التركيب — مؤرشفة نهائياً
         </span>
       )}
+
+      {receiptOpen && (
+        <ArchiveReceiptEditor c={c as any} actorName={actorName} doctorName={doctorName}
+          onClose={() => setReceiptOpen(false)} />
+      )}
+
 
       {/* Audit log */}
       <div className="pt-2 border-t border-border/60">
