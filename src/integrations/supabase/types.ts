@@ -675,6 +675,16 @@ export type Database = {
           after_photo_name: string | null
           after_photo_path: string | null
           after_photo_sent_at: string | null
+          archive_approval: string | null
+          archive_receipt_mime: string | null
+          archive_receipt_name: string | null
+          archive_receipt_path: string | null
+          archive_receipt_sent_at: string | null
+          archive_receipt_size: number | null
+          archive_reject_reason: string | null
+          archive_request_note: string | null
+          archive_reviewed_at: string | null
+          archive_reviewed_by: string | null
           archived: boolean
           audit_log: Json
           before_photo_name: string | null
@@ -757,6 +767,16 @@ export type Database = {
           after_photo_name?: string | null
           after_photo_path?: string | null
           after_photo_sent_at?: string | null
+          archive_approval?: string | null
+          archive_receipt_mime?: string | null
+          archive_receipt_name?: string | null
+          archive_receipt_path?: string | null
+          archive_receipt_sent_at?: string | null
+          archive_receipt_size?: number | null
+          archive_reject_reason?: string | null
+          archive_request_note?: string | null
+          archive_reviewed_at?: string | null
+          archive_reviewed_by?: string | null
           archived?: boolean
           audit_log?: Json
           before_photo_name?: string | null
@@ -839,6 +859,16 @@ export type Database = {
           after_photo_name?: string | null
           after_photo_path?: string | null
           after_photo_sent_at?: string | null
+          archive_approval?: string | null
+          archive_receipt_mime?: string | null
+          archive_receipt_name?: string | null
+          archive_receipt_path?: string | null
+          archive_receipt_sent_at?: string | null
+          archive_receipt_size?: number | null
+          archive_reject_reason?: string | null
+          archive_request_note?: string | null
+          archive_reviewed_at?: string | null
+          archive_reviewed_by?: string | null
           archived?: boolean
           audit_log?: Json
           before_photo_name?: string | null
