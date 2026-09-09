@@ -14,6 +14,8 @@ import { ShadeConfirm, ShadePicker, CaseShadeConfirm } from "@/components/shade-
 import { ImageAnnotator } from "@/components/image-annotator";
 import { ImageLightbox } from "@/components/image-lightbox";
 import { PatientPhotoAlerts } from "@/components/patient-photo-alerts";
+import { ArchiveReceiptEditor, ArchiveRequestStatus } from "@/components/archive-receipt-editor";
+
 
 
 export interface WorkflowCase {
