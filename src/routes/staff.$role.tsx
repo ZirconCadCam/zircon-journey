@@ -7,6 +7,7 @@ import { CaseSearch } from "@/components/case-search";
 import { DesignerArchive, DesignerDesignFiles, DesignerReports } from "@/components/designer-panels";
 import { TechnicianReports, TechnicianDesignFiles } from "@/components/technician-panels";
 import { AdminSettingsPanel } from "@/components/admin-settings-panel";
+import { AdminArchiveApprovals } from "@/components/admin-archive-approvals";
 import { AdminVoiceListener } from "@/components/admin-voice-listener";
 import { RoleNotifications } from "@/components/role-notifications";
 import { NotificationSettings } from "@/components/notification-settings";
@@ -232,7 +233,7 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
   const [unread, setUnread] = useState<Record<number, number>>({});
   // Default tab: roles with a case list land on "cases"; admin stays on "chat".
   const initialTab: "chat" | "cases" | "settings" = role === "admin" ? "chat" : "cases";
-  const [tab, setTab] = useState<"chat" | "cases" | "settings" | "archive" | "designfiles" | "reports" | "search" | "notify" | "photos" | "followup">(initialTab);
+  const [tab, setTab] = useState<"chat" | "cases" | "settings" | "archive" | "designfiles" | "reports" | "search" | "notify" | "photos" | "followup" | "archiveapprovals">(initialTab);
   const { count: newRounds, clear: clearRounds } = useNewRevisionRounds(role === "technician" ? "technician" : "designer");
 
   useEffect(() => {
@@ -415,6 +416,12 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
               </button>
             )}
             {role === "admin" && (
+              <button onClick={() => setTab("archiveapprovals")}
+                className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "archiveapprovals" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
+                <BellRing className="size-4" /> إشعارات الأرشفة
+              </button>
+            )}
+            {role === "admin" && (
               <button onClick={() => setTab("settings")}
                 className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "settings" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
                 <Settings className="size-4" /> الإعدادات
@@ -434,6 +441,8 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
             <NotificationSettings />
           ) : tab === "photos" && (role === "secretary_sanaa" || role === "secretary_ibb") ? (
             <SecretaryPhotoInbox role={role} />
+          ) : tab === "archiveapprovals" && role === "admin" ? (
+            <AdminArchiveApprovals />
           ) : tab === "settings" && role === "admin" ? (
 
             <AdminSettingsPanel />
