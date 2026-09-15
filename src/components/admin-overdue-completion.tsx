@@ -4,9 +4,10 @@ import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import {
   Timer, Check, Loader2, ExternalLink, Search, Stethoscope, Filter,
-  Hammer, Wrench, Archive, ShieldCheck, ChevronsRight,
+  Hammer, Wrench, Archive, ShieldCheck, ChevronsRight, Printer, FileDown,
 } from "lucide-react";
 import { DoctorAvatar } from "@/components/doctor-avatar";
+import { printHtmlDocument } from "@/lib/print-report";
 
 /** Cases that have been sitting in the doctor's page for longer than this
  *  many days become eligible for administrative completion. */
@@ -92,6 +93,58 @@ function daysSince(iso: string): number {
   return Math.floor((Date.now() - Date.parse(iso)) / 86_400_000);
 }
 
+/** أول مستوى ناقص للحالة (نص عربي). */
+function pendingStepLabel(r: Row): string {
+  const done = doneFlags(r);
+  const next = STEPS.find(s => !done[s.key]);
+  return next ? next.label : "—";
+}
+
+/** يبني كشف HTML للطباعة/PDF لحالات طبيب واحد غير المكتملة. */
+function buildOverdueReportHtml(doctorName: string, branch: string | null, rows: Row[]): string {
+  const title = `${doctorName} - ${rows.length} - متأخر`;
+  const branchLabel = branch === "sanaa" ? "فرع صنعاء" : branch === "ibb" ? "فرع إب" : "";
+  const today = new Date().toLocaleDateString("ar-EG");
+  const body = rows.map((r, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${r.case_code ?? ""}</td>
+      <td>${r.patient_name ?? ""}</td>
+      <td>${r.tooth_number ?? "—"}</td>
+      <td>${r.teeth_count ?? "—"}</td>
+      <td>${r.shade ?? "—"}</td>
+      <td>${daysSince(r.created_at)} يوم</td>
+      <td>${pendingStepLabel(r)}</td>
+    </tr>`).join("");
+
+  return `<!doctype html>
+<html dir="rtl" lang="ar"><head><meta charset="utf-8" />
+<title>${title}</title>
+<style>
+  @page { size: A4; margin: 14mm; }
+  * { font-family: "Segoe UI", Tahoma, sans-serif; }
+  body { color: #241a12; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .sub { font-size: 12px; color: #6b5847; margin-bottom: 14px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { border: 1px solid #d8c9b6; padding: 6px 8px; text-align: right; }
+  thead th { background: #f2e7d8; font-weight: 800; }
+  tfoot td { background: #faf5ee; font-weight: 800; }
+</style></head>
+<body>
+  <h1>كشف الحالات غير المكتملة (متأخرة أكثر من ${OVERDUE_DAYS} يوماً)</h1>
+  <div class="sub">الطبيب: <b>${doctorName}</b>${branchLabel ? ` • ${branchLabel}` : ""} • عدد الحالات: <b>${rows.length}</b> • تاريخ الطباعة: ${today}</div>
+  <table>
+    <thead><tr>
+      <th>#</th><th>رقم الحالة</th><th>المريض</th><th>السن</th><th>عدد الأسنان</th>
+      <th>اللون</th><th>مدة التأخير</th><th>المستوى الناقص</th>
+    </tr></thead>
+    <tbody>${body}</tbody>
+    <tfoot><tr><td colspan="8">المجموع: ${rows.length} حالة غير مكتملة</td></tr></tfoot>
+  </table>
+</body></html>`;
+}
+
 /**
  * Administration tool: force-complete the closing stages of cases that have
  * been open in the doctor's page for more than 20 days.
@@ -138,6 +191,24 @@ export function AdminOverdueCompletion() {
     }
     return true;
   }), [rows, doctorSlot, search, doctors]);
+
+  /** تجميع الحالات المتأخرة حسب الطبيب لطباعة كشف لكل طبيب. */
+  const byDoctor = useMemo(() => {
+    const groups = new Map<number, Row[]>();
+    for (const r of filtered) {
+      const list = groups.get(r.doctor_slot);
+      if (list) list.push(r); else groups.set(r.doctor_slot, [r]);
+    }
+    return [...groups.entries()]
+      .map(([slot, list]) => ({ slot, list, doctor: doctors[slot] }))
+      .sort((a, b) => b.list.length - a.list.length);
+  }, [filtered, doctors]);
+
+  function printDoctor(slot: number, list: Row[]) {
+    const d = doctors[slot];
+    const name = d?.name ?? `Slot #${slot}`;
+    printHtmlDocument(buildOverdueReportHtml(name, d?.branch ?? null, list), `${name} - ${list.length} - متأخر`);
+  }
 
   async function apply(r: Row, step: StepKey) {
     const key = `${r.id}:${step}`;
@@ -187,6 +258,27 @@ export function AdminOverdueCompletion() {
           </div>
         </div>
       </div>
+
+      {!loading && byDoctor.length > 0 && (
+        <div className="rounded-2xl bg-card border border-border p-4 shadow-luxury">
+          <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground mb-3">
+            <Printer className="size-4 text-gold" /> طباعة كشف PDF بالحالات غير المكتملة — لكل طبيب على حدة
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {byDoctor.map(({ slot, list, doctor }) => (
+              <button key={slot} onClick={() => printDoctor(slot, list)}
+                className="flex items-center gap-3 rounded-xl border border-border bg-background px-3 py-2 text-right hover:border-gold transition">
+                <DoctorAvatar name={doctor?.name} className="size-9" rounded="lg" />
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-bold truncate">{doctor?.name ?? `Slot #${slot}`}</div>
+                  <div className="text-[11px] text-muted-foreground">{list.length} حالة غير مكتملة</div>
+                </div>
+                <FileDown className="size-4 text-gold shrink-0" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="rounded-2xl bg-card border border-border p-12 text-center text-sm text-muted-foreground shadow-luxury">
