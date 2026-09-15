@@ -114,12 +114,18 @@ export function AdminArchiveApprovals() {
         <div className="size-14 rounded-2xl gradient-gold grid place-items-center shadow-gold">
           <Receipt className="size-6 text-gold-foreground" />
         </div>
-        <div>
+        <div className="grow">
           <div className="text-xs opacity-80">اعتماد الأرشفة النهائية</div>
           <div className="text-xl font-extrabold">إشعارات الأرشفة</div>
           <div className="text-xs opacity-80 mt-1">اطّلع على صورة سند حساب المريض ثم وافق أو ارفض أرشفة الحالة</div>
         </div>
+        <button onClick={sendTelegramTest} disabled={testing}
+          className="shrink-0 inline-flex items-center gap-2 rounded-xl gradient-gold text-gold-foreground px-3 py-2 text-xs font-bold shadow-gold disabled:opacity-60">
+          {testing ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+          رسالة اختبار لتلجرام
+        </button>
       </div>
+
 
       {/* Status tabs */}
       <div className="grid sm:grid-cols-4 gap-2">
