@@ -102,7 +102,7 @@ function pendingStepLabel(r: Row): string {
 
 /** يبني كشف HTML للطباعة/PDF لحالات طبيب واحد غير المكتملة. */
 function buildOverdueReportHtml(doctorName: string, branch: string | null, rows: Row[]): string {
-  const title = `${doctorName} - ${rows.length} - متأخر`;
+  const title = `${doctorName} متأخر في التبويب ${rows.length}`;
   const branchLabel = branch === "sanaa" ? "فرع صنعاء" : branch === "ibb" ? "فرع إب" : "";
   const today = new Date().toLocaleDateString("ar-EG");
   const body = rows.map((r, i) => `
