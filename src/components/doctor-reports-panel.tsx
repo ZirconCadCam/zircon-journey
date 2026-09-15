@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { FileText, Download, Calendar as CalendarIcon, Clock, Wrench, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { getStage, deriveStageKey } from "@/lib/case-stages";
+import { teethOf as teethOfRow } from "@/lib/report-build";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
@@ -83,13 +84,7 @@ export function DoctorReportsPanel({ doctor }: { doctor: { slot: number; name: s
     return rows.filter(r => matchesReport(r, active) && inRange(r.created_at, from, to));
   }, [rows, active, from, to]);
 
-  const teethOf = (r: Row): number => {
-    const n = parseInt(String(r.teeth_count ?? ""), 10);
-    if (!isNaN(n) && n > 0) return n;
-    const tn = String(r.tooth_number ?? "");
-    if (!tn) return 0;
-    return tn.split(/[،,\s]+/).filter(s => /^[1-4][1-8]$/.test(s)).length;
-  };
+  const teethOf = (r: Row): number => teethOfRow(r);
 
   const totalTeeth = useMemo(() => filtered.reduce((s, r) => s + teethOf(r), 0), [filtered]);
 
