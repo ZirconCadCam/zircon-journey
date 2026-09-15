@@ -56,11 +56,15 @@ export function printHtmlDocument(html: string, fallbackTitle = "report") {
     const style = document.createElement("style");
     style.id = STYLE_ID;
     // Scope the report's own CSS to the host so it can't leak into the app.
-    const reportCss = Array.from(parsed.querySelectorAll("style"))
+    const rawCss = Array.from(parsed.querySelectorAll("style"))
       .map((s) => s.textContent ?? "")
-      .join("\n")
+      .join("\n");
+    // @page must stay at the top level, not nested inside @media print.
+    const pageRules = rawCss.match(/@page[^{]*\{[^}]*\}/g)?.join("\n") ?? "";
+    const reportCss = rawCss
+      .replace(/@page[^{]*\{[^}]*\}/g, "")
       .replace(/(^|\})\s*(?:html|body)\b/g, (_m, brace: string) => `${brace} #${HOST_ID}`);
-    style.textContent = `${baseStyle()}\n@media print {\n${reportCss}\n}`;
+    style.textContent = `${baseStyle()}\n${pageRules}\n@media print {\n${reportCss}\n}`;
     document.head.appendChild(style);
 
     const host = document.createElement("div");
