@@ -4,9 +4,10 @@ import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import {
   Timer, Check, Loader2, ExternalLink, Search, Stethoscope, Filter,
-  Hammer, Wrench, Archive, ShieldCheck, ChevronsRight,
+  Hammer, Wrench, Archive, ShieldCheck, ChevronsRight, Printer, FileDown,
 } from "lucide-react";
 import { DoctorAvatar } from "@/components/doctor-avatar";
+import { printHtmlDocument } from "@/lib/print-report";
 
 /** Cases that have been sitting in the doctor's page for longer than this
  *  many days become eligible for administrative completion. */
