@@ -5,7 +5,7 @@ import {
   CheckSquare, Square, Loader2, AlertCircle,
   FileArchive, FileCode, ChevronDown, ChevronUp, Check, Send, Truck,
   ThumbsUp, Pencil, X, Archive, Download, Type, FileText, Image as ImageIcon, Highlighter,
-  Mic, Trash2,
+  Mic, Trash2, Upload,
 } from "lucide-react";
 import type { RoleKey } from "@/lib/chat";
 import { ROLE_LABEL, getSignedUrl } from "@/lib/chat";
