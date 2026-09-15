@@ -207,7 +207,7 @@ export function AdminOverdueCompletion() {
   function printDoctor(slot: number, list: Row[]) {
     const d = doctors[slot];
     const name = d?.name ?? `Slot #${slot}`;
-    printHtmlDocument(buildOverdueReportHtml(name, d?.branch ?? null, list), `${name} - ${list.length} - متأخر`);
+    printHtmlDocument(buildOverdueReportHtml(name, d?.branch ?? null, list), `${name} متأخر في التبويب ${list.length}`);
   }
 
   async function apply(r: Row, step: StepKey) {
