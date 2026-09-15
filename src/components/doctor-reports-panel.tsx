@@ -83,6 +83,16 @@ export function DoctorReportsPanel({ doctor }: { doctor: { slot: number; name: s
     return rows.filter(r => matchesReport(r, active) && inRange(r.created_at, from, to));
   }, [rows, active, from, to]);
 
+  const teethOf = (r: Row): number => {
+    const n = parseInt(String(r.teeth_count ?? ""), 10);
+    if (!isNaN(n) && n > 0) return n;
+    const tn = String(r.tooth_number ?? "");
+    if (!tn) return 0;
+    return tn.split(/[،,\s]+/).filter(s => /^[1-4][1-8]$/.test(s)).length;
+  };
+
+  const totalTeeth = useMemo(() => filtered.reduce((s, r) => s + teethOf(r), 0), [filtered]);
+
   const counts = useMemo(() => ({
     pending:     rows.filter(r => matchesReport(r, "pending")).length,
     uninstalled: rows.filter(r => matchesReport(r, "uninstalled")).length,
@@ -217,6 +227,7 @@ export function DoctorReportsPanel({ doctor }: { doctor: { slot: number; name: s
                   <th className="text-start px-4 py-2.5 font-bold">#</th>
                   <th className="text-start px-4 py-2.5 font-bold">اسم المريض</th>
                   <th className="text-start px-4 py-2.5 font-bold">رقم الحالة</th>
+                  <th className="text-start px-4 py-2.5 font-bold">عدد الأسنان</th>
                   <th className="text-start px-4 py-2.5 font-bold">التاريخ</th>
                   <th className="text-start px-4 py-2.5 font-bold">الحالة الحالية</th>
                 </tr>
@@ -229,6 +240,7 @@ export function DoctorReportsPanel({ doctor }: { doctor: { slot: number; name: s
                       <td className="px-4 py-2.5 text-muted-foreground">{i + 1}</td>
                       <td className="px-4 py-2.5 font-bold">{r.patient_name}</td>
                       <td className="px-4 py-2.5 font-mono text-xs">{r.case_code}</td>
+                      <td className="px-4 py-2.5 font-bold">{teethOf(r) || "—"}</td>
                       <td className="px-4 py-2.5 text-xs">{new Date(r.created_at).toLocaleDateString("ar")}</td>
                       <td className="px-4 py-2.5">
                         <span className="inline-block rounded-full bg-gold/15 text-gold text-[11px] font-bold px-2.5 py-0.5">
@@ -239,6 +251,14 @@ export function DoctorReportsPanel({ doctor }: { doctor: { slot: number; name: s
                   );
                 })}
               </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-gold/40 bg-gold/10 font-bold">
+                  <td className="px-4 py-2.5" colSpan={2}>المجموع</td>
+                  <td className="px-4 py-2.5 text-muted-foreground text-xs">{filtered.length} حالة</td>
+                  <td className="px-4 py-2.5 text-gold">{totalTeeth} سِنّ</td>
+                  <td colSpan={2}></td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         )}
