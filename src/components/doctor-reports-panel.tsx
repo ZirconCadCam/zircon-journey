@@ -227,6 +227,7 @@ export function DoctorReportsPanel({ doctor }: { doctor: { slot: number; name: s
                   <th className="text-start px-4 py-2.5 font-bold">#</th>
                   <th className="text-start px-4 py-2.5 font-bold">اسم المريض</th>
                   <th className="text-start px-4 py-2.5 font-bold">رقم الحالة</th>
+                  <th className="text-start px-4 py-2.5 font-bold">عدد الأسنان</th>
                   <th className="text-start px-4 py-2.5 font-bold">التاريخ</th>
                   <th className="text-start px-4 py-2.5 font-bold">الحالة الحالية</th>
                 </tr>
