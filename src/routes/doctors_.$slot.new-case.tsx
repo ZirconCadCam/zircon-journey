@@ -5,7 +5,6 @@ import { ArrowRight, Sparkles, Upload, FileText, X, Loader2, ScanLine, Plus, Pau
 import { toast } from "sonner";
 import { z } from "zod";
 import { ToothQuadrantPicker } from "@/components/tooth-quadrant-picker";
-import { ShadeConfirm } from "@/components/shade-confirm";
 import type { ResumableHandle } from "@/lib/resumable-upload";
 
 const patientSchema = z.object({
@@ -217,10 +216,6 @@ function NewSlotCase() {
       toast.error("ملف المسح يجب أن يكون بصيغة .zip فقط");
       return;
     }
-    if (!shadeConfirmed) {
-      toast.error("الرجاء تأكيد اللون قبل حفظ الحالة");
-      return;
-    }
     const parsed = patientSchema.safeParse({
       patient_name: form.patient_name,
       patient_phone: form.patient_phone,
@@ -311,7 +306,9 @@ function NewSlotCase() {
         tooth_number: form.tooth_number.trim() || null,
         teeth_count: form.teeth_count.trim() || null,
         shade: form.shade || null,
-        shade_confirmed_doctor: shadeConfirmed,
+        // Shade confirmation is deliberately NOT done at case creation; the
+        // doctor confirms the shade once at the "قيد المراجعة" stage.
+        shade_confirmed_doctor: false,
         case_type: form.case_type || null,
         notes: form.notes.trim() || null,
         notes_images: noteImages,
@@ -484,13 +481,10 @@ function NewSlotCase() {
                       onChange={e=>{setForm({...form,shade:e.target.value}); setShadeConfirmed(false);}}>
                       {SHADES.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
-                    <div className="mt-2">
-                      <ShadeConfirm
-                        shade={form.shade}
-                        confirmed={shadeConfirmed}
-                        onConfirm={() => setShadeConfirmed(true)}
-                      />
+                    <div className="mt-1.5 text-[11px] font-bold text-muted-foreground">
+                      تأكيد اللون يتم لاحقاً في مرحلة «قيد المراجعة».
                     </div>
+
                   </Field>
                   <Field label="نوع الحالة">
                     <select className="zinput" value={form.case_type}
