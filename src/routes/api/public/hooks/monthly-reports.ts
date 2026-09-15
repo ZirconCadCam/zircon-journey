@@ -236,7 +236,7 @@ export const Route = createFileRoute("/api/public/hooks/monthly-reports")({
           );
         } catch { /* ignore */ }
 
-        return Response.json({ ok: true, month: `${year}-${month}`, doctors: results, grandCases, grandTeeth });
+        return Response.json({ ok: true, month: `${year}-${month}`, doctors: results, staff: staffResults, grandCases, grandTeeth });
       },
     },
   },
