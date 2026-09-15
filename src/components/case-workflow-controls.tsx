@@ -1167,6 +1167,19 @@ function DoctorControls({ c, actorName, doctorName }: {
   const [revShadeConfirmed, setRevShadeConfirmed] = useState(false);
   const [revShade, setRevShade] = useState(c.shade ?? "");
   const [receiptOpen, setReceiptOpen] = useState(false);
+  const [reviewShade, setReviewShade] = useState(c.shade ?? "");
+
+  /** One-time mandatory shade confirmation at the review stage. */
+  async function confirmReviewShade() {
+    const next = reviewShade.trim();
+    if (!next) { toast.error("اختر لون السن أولاً"); return; }
+    setBusy(true);
+    const { error } = await supabase.from("slot_cases")
+      .update({ shade: next, shade_confirmed_doctor: true }).eq("id", c.id);
+    setBusy(false);
+    if (error) toast.error(error.message);
+    else toast.success("✅ تم تأكيد لون السن");
+  }
 
 
   // Review is ready as soon as the technician dispatches the data.
@@ -1359,7 +1372,24 @@ function DoctorControls({ c, actorName, doctorName }: {
 
 
 
-      {canDecide && !confirmApprove && (
+      {/* Mandatory ONE-TIME shade confirmation: shown only at the review
+          stage (after the technician marks "تم النحت"). Once the doctor
+          confirms, it never appears again. */}
+      {canDecide && !c.shade_confirmed_doctor && (
+        <div className="rounded-xl border border-gold/50 bg-gold/5 p-3 space-y-2.5">
+          <div className="text-[11px] font-bold text-destructive">
+            تأكيد لون السن إلزامي قبل اتخاذ قرارك (مرة واحدة فقط).
+          </div>
+          <ShadePicker value={reviewShade} onChange={setReviewShade} collapsible />
+          {reviewShade.trim() ? (
+            <ShadeConfirm shade={reviewShade} confirmed={false} onConfirm={confirmReviewShade} />
+          ) : (
+            <div className="text-[11px] font-bold text-destructive">اختر لون السن أولاً.</div>
+          )}
+        </div>
+      )}
+
+      {canDecide && !!c.shade_confirmed_doctor && !confirmApprove && (
         <div className="space-y-2">
           <div className="text-xs font-bold text-foreground">
             {decision ? "قرارك متاح دائماً — يمكنك طلب تعديل آخر أو الاعتماد النهائي:" : "قرار الطبيب بعد المراجعة:"}
