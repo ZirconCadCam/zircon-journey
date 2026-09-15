@@ -346,6 +346,51 @@ export type Database = {
           },
         ]
       }
+      device_registry: {
+        Row: {
+          blocked: boolean
+          blocked_at: string | null
+          device_id: string
+          first_seen: string
+          ip: string | null
+          label: string | null
+          last_path: string | null
+          last_role: string | null
+          last_seen: string
+          platform: string | null
+          user_agent: string | null
+          visits: number
+        }
+        Insert: {
+          blocked?: boolean
+          blocked_at?: string | null
+          device_id: string
+          first_seen?: string
+          ip?: string | null
+          label?: string | null
+          last_path?: string | null
+          last_role?: string | null
+          last_seen?: string
+          platform?: string | null
+          user_agent?: string | null
+          visits?: number
+        }
+        Update: {
+          blocked?: boolean
+          blocked_at?: string | null
+          device_id?: string
+          first_seen?: string
+          ip?: string | null
+          label?: string | null
+          last_path?: string | null
+          last_role?: string | null
+          last_seen?: string
+          platform?: string | null
+          user_agent?: string | null
+          visits?: number
+        }
+        Relationships: []
+      }
       doctor_files: {
         Row: {
           archived: boolean
@@ -1027,6 +1072,10 @@ export type Database = {
         Args: { p_device: string; p_role: string }
         Returns: undefined
       }
+      delete_device: {
+        Args: { p_admin_password?: string; p_device_id: string }
+        Returns: undefined
+      }
       get_app_flag: { Args: { p_key: string }; Returns: boolean }
       get_primary_role: {
         Args: { _user_id: string }
@@ -1045,6 +1094,30 @@ export type Database = {
         Returns: boolean
       }
       is_admin_actor: { Args: { p_admin_password?: string }; Returns: boolean }
+      is_device_blocked: { Args: { p_device_id: string }; Returns: boolean }
+      list_devices: {
+        Args: { p_admin_password?: string }
+        Returns: {
+          blocked: boolean
+          blocked_at: string | null
+          device_id: string
+          first_seen: string
+          ip: string | null
+          label: string | null
+          last_path: string | null
+          last_role: string | null
+          last_seen: string
+          platform: string | null
+          user_agent: string | null
+          visits: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "device_registry"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       list_doctor_secrets: {
         Args: never
         Returns: {
@@ -1065,6 +1138,17 @@ export type Database = {
       prune_push_subscription: {
         Args: { p_id: string; p_secret: string }
         Returns: undefined
+      }
+      register_device: {
+        Args: {
+          p_device_id: string
+          p_ip?: string
+          p_path?: string
+          p_platform?: string
+          p_role?: string
+          p_user_agent?: string
+        }
+        Returns: boolean
       }
       remove_push_subscription: {
         Args: { p_endpoint: string }
@@ -1091,6 +1175,22 @@ export type Database = {
       }
       set_avatar_override: {
         Args: { p_image_url: string; p_label: string; p_subject: string }
+        Returns: undefined
+      }
+      set_device_blocked: {
+        Args: {
+          p_admin_password?: string
+          p_blocked: boolean
+          p_device_id: string
+        }
+        Returns: undefined
+      }
+      set_device_label: {
+        Args: {
+          p_admin_password?: string
+          p_device_id: string
+          p_label: string
+        }
         Returns: undefined
       }
       set_doctor_active: {
