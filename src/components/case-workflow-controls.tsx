@@ -711,6 +711,20 @@ function DesignerRevisionSection({ c, actorName, doctorName }: {
         )}
       </div>
 
+      <FileDropZone
+        busy={busy}
+        onFiles={async (list) => {
+          for (const f of Array.from(list ?? [])) {
+            if (RAR_RE.test(f.name)) await uploadRevision(f);
+            else if (HTML_RE.test(f.name)) await uploadRevisionHtml(f);
+            else toast.error(`صيغة غير مدعومة: ${f.name} (المسموح .rar و .html)`);
+          }
+        }}
+        title="اسحب ملفات التعديل وأفلتها هنا (.rar / .html)"
+        hint="يمكن الرفع أكثر من مرة — قبل التعديل وبعده"
+      />
+
+
       {textMode && !done && (
         <div className="space-y-2 rounded-lg border border-gold/40 bg-card p-2">
           <textarea value={text} onChange={e => setText(e.target.value)} rows={4}
