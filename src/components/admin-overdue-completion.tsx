@@ -259,6 +259,27 @@ export function AdminOverdueCompletion() {
         </div>
       </div>
 
+      {!loading && byDoctor.length > 0 && (
+        <div className="rounded-2xl bg-card border border-border p-4 shadow-luxury">
+          <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground mb-3">
+            <Printer className="size-4 text-gold" /> طباعة كشف PDF بالحالات غير المكتملة — لكل طبيب على حدة
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {byDoctor.map(({ slot, list, doctor }) => (
+              <button key={slot} onClick={() => printDoctor(slot, list)}
+                className="flex items-center gap-3 rounded-xl border border-border bg-background px-3 py-2 text-right hover:border-gold transition">
+                <DoctorAvatar name={doctor?.name} className="size-9" rounded="lg" />
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-bold truncate">{doctor?.name ?? `Slot #${slot}`}</div>
+                  <div className="text-[11px] text-muted-foreground">{list.length} حالة غير مكتملة</div>
+                </div>
+                <FileDown className="size-4 text-gold shrink-0" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div className="rounded-2xl bg-card border border-border p-12 text-center text-sm text-muted-foreground shadow-luxury">
           جاري التحميل…
