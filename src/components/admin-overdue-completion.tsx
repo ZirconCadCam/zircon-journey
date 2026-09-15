@@ -192,6 +192,24 @@ export function AdminOverdueCompletion() {
     return true;
   }), [rows, doctorSlot, search, doctors]);
 
+  /** تجميع الحالات المتأخرة حسب الطبيب لطباعة كشف لكل طبيب. */
+  const byDoctor = useMemo(() => {
+    const groups = new Map<number, Row[]>();
+    for (const r of filtered) {
+      const list = groups.get(r.doctor_slot);
+      if (list) list.push(r); else groups.set(r.doctor_slot, [r]);
+    }
+    return [...groups.entries()]
+      .map(([slot, list]) => ({ slot, list, doctor: doctors[slot] }))
+      .sort((a, b) => b.list.length - a.list.length);
+  }, [filtered, doctors]);
+
+  function printDoctor(slot: number, list: Row[]) {
+    const d = doctors[slot];
+    const name = d?.name ?? `Slot #${slot}`;
+    printHtmlDocument(buildOverdueReportHtml(name, d?.branch ?? null, list), `${name} - ${list.length} - متأخر`);
+  }
+
   async function apply(r: Row, step: StepKey) {
     const key = `${r.id}:${step}`;
     if (busy) return;
