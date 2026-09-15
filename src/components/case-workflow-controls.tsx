@@ -680,17 +680,19 @@ function DesignerRevisionSection({ c, actorName, doctorName }: {
         <label className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold cursor-pointer transition border
           ${done ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-border bg-card hover:border-gold"}`}>
           {busy ? <Loader2 className="size-3.5 animate-spin" /> : <FileArchive className="size-3.5" />}
-          {done ? "تم إرسال التعديل" : "رفع ملف التعديل (.rar)"}
+          {done ? "رفع ملف تعديل آخر (.rar)" : "رفع ملف التعديل (.rar)"}
           <input ref={fileRef} type="file"
             accept=".rar,.RAR,application/vnd.rar,application/x-rar-compressed,application/octet-stream" className="hidden"
-            onChange={uploadRevision} disabled={busy || done} />
+            onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; uploadRevision(f); }}
+            disabled={busy} />
         </label>
         <label className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold cursor-pointer transition border
           ${htmlSent ? "border-sky-500 bg-sky-50 text-sky-700" : "border-border bg-card hover:border-gold"}`}>
           {busy ? <Loader2 className="size-3.5 animate-spin" /> : <FileCode className="size-3.5" />}
-          {htmlSent ? "تم إرفاق HTML" : "إرفاق ملف HTML مع التعديل"}
+          {htmlSent ? "إرفاق ملف HTML آخر" : "إرفاق ملف HTML مع التعديل"}
           <input ref={htmlRef} type="file" accept=".html,.htm,text/html" className="hidden"
-            onChange={uploadRevisionHtml} disabled={busy} />
+            onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; uploadRevisionHtml(f); }}
+            disabled={busy} />
         </label>
         {!done && (
           <button type="button" onClick={() => setTextMode(o => !o)} disabled={busy}
