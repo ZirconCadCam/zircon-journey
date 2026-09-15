@@ -75,7 +75,9 @@ export function printHtmlDocument(html: string, fallbackTitle = "report") {
     document.body.appendChild(host);
 
     const prevTitle = document.title;
-    document.title = docTitle;
+    // The print dialog derives the suggested PDF filename from document.title.
+    const cleanTitle = docTitle.replace(/[\\/:*?"<>|]/g, "-").trim() || fallbackTitle;
+    document.title = cleanTitle;
 
     const cleanup = () => {
       document.title = prevTitle;
