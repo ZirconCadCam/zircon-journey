@@ -1814,6 +1814,12 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
       });
       if (oldUrl) await replaceImageInCase(oldUrl, up.url, name);
       else await persistImageToCase(up.url, name);
+      const { autoSendFileToTelegram } = await import("@/lib/telegram-auto");
+      autoSendFileToTelegram({
+        kind: "image", from: `الطبيب (${actorName}) — صورة معدّلة بالرسم`,
+        caseCode: c.case_code, patientName: c.patient_name, caseId: c.id,
+        url: up.url, filename: name,
+      });
       toast.success("✅ تم تحديث الصورة عند المصمم والفني بآخر تعديل");
       
     } catch (err: any) {
@@ -1839,11 +1845,13 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
         });
       }
       const newImages: { url: string; name: string }[] = [];
+      const allUploaded: { url: string; name: string }[] = [];
       for (const f of files) {
         const up = await uploadAttachment(f, c, "doctor-notes");
         if (!up) continue;
         const isImage = f.type.startsWith("image/");
         if (isImage) newImages.push({ url: up.url, name: f.name });
+        allUploaded.push({ url: up.url, name: f.name });
         await supabase.from("chat_messages").insert({
           conversation_id: convId, sender: "doctor", sender_name: actorName,
           content: `${isImage ? "🖼️ صورة" : "📎 ملف"} من الطبيب — الحالة ${c.case_code}`,
@@ -1864,21 +1872,22 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
         await supabase.from("slot_cases")
           .update({ notes_images: [...prev, ...newImages] as any }).eq("id", c.id);
       }
-      if (newImages.length) {
+      if (allUploaded.length) {
         const { autoSendFilesToTelegram, buildCaseCaption } = await import("@/lib/telegram-auto");
         const { deriveStageKey, getStage } = await import("@/lib/case-stages");
+        const onlyImages = allUploaded.length === newImages.length;
         autoSendFilesToTelegram(
           buildCaseCaption({
-            icon: "🖼️",
-            title: "إرسال تلقائي — صور من الطبيب",
+            icon: onlyImages ? "🖼️" : "📎",
+            title: onlyImages ? "إرسال تلقائي — صور من الطبيب" : "إرسال تلقائي — ملفات من الطبيب",
             from: `الطبيب (${actorName})`,
             caseCode: c.case_code,
             patientName: c.patient_name,
             stageLabel: getStage(deriveStageKey(c as any)).label,
             caseId: c.id,
-            filenames: newImages.map((i) => i.name),
+            filenames: allUploaded.map((i) => i.name),
           }),
-          newImages.map((i) => ({ url: i.url, filename: i.name })),
+          allUploaded.map((i) => ({ url: i.url, filename: i.name })),
         );
       }
       toast.success("✅ تم إرسال الملاحظات للمصمم والفني");

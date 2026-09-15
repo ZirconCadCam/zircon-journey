@@ -131,6 +131,21 @@ function PhotoAlertCard({ c, phase, actorName, doctorName }: {
       const { error } = await supabase.from("slot_cases").update(patch as any).eq("id", c.id);
       if (error) throw error;
 
+      // Auto-forward the photo to the clinic's Telegram group (fire-and-forget).
+      try {
+        const { data: signed } = await supabase.storage.from("chat-attachments")
+          .createSignedUrl(path, 60 * 60 * 24 * 365);
+        if (signed?.signedUrl) {
+          const { autoSendFileToTelegram } = await import("@/lib/telegram-auto");
+          autoSendFileToTelegram({
+            kind: "image",
+            from: `الطبيب (${actorName}) — ${LABEL[phase]}`,
+            caseCode: c.case_code, patientName: c.patient_name, caseId: c.id,
+            url: signed.signedUrl, filename: file.name,
+          });
+        }
+      } catch { /* telegram failure must not block the flow */ }
+
       toast.success(`تم إرسال ${LABEL[phase]} إلى ${ROLE_LABEL[secretary]}`);
     } catch (e: any) {
       toast.error(e?.message || "فشل إرسال الصورة");
