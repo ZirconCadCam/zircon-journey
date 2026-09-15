@@ -341,17 +341,36 @@ function NewSlotCase() {
         } catch { /* best-effort */ }
       }
 
-      // Instant auto-forward of the 3D-scan ZIP to the clinic's Telegram group.
-      if (scan_path && scan_name) {
-        const { autoSendFileToTelegram } = await import("@/lib/telegram-auto");
-        autoSendFileToTelegram({
-          kind: "zip", from: "الطبيب", caseCode: inserted?.case_code ?? "-",
+      // Instant auto-notification of every new case to the clinic's Telegram
+      // group — always sent, with the 3D-scan ZIP attached when present.
+      try {
+        const { autoSendFilesToTelegram, buildCaseCaption } = await import("@/lib/telegram-auto");
+        const details = [
+          form.patient_phone.trim() ? `📞 الهاتف: ${form.patient_phone.trim()}` : null,
+          form.patient_age ? `🎂 العمر: ${form.patient_age}` : null,
+          form.patient_gender ? `⚧ الجنس: ${form.patient_gender === "male" ? "ذكر" : "أنثى"}` : null,
+          form.teeth_count.trim() ? `🦷 عدد الأسنان: ${form.teeth_count.trim()}` : null,
+          form.tooth_number.trim() ? `#️⃣ أرقام الأسنان: ${form.tooth_number.trim()}` : null,
+          form.case_type ? `🧩 نوع الحالة: ${form.case_type}` : null,
+          form.notes.trim() ? `📝 ملاحظات: ${form.notes.trim()}` : null,
+        ].filter(Boolean).join("\n");
+        const caption = buildCaseCaption({
+          icon: "🆕",
+          title: "حالة جديدة",
+          from: "الطبيب",
+          caseCode: inserted?.case_code ?? "-",
           patientName: form.patient_name.trim(),
+          doctorName: doctor?.name ?? null,
+          stageLabel: "قيد التصميم",
           caseId: inserted?.id ?? null,
-          stageLabel: "حالة جديدة",
-          url: scan_path, filename: scan_name,
-        });
-      }
+          filenames: scan_name ? [scan_name] : [],
+        }) + (details ? `\n${details}` : "");
+        autoSendFilesToTelegram(
+          caption,
+          scan_path && scan_name ? [{ url: scan_path, filename: scan_name }] : [],
+        );
+      } catch { /* Telegram must never block the save */ }
+
 
 
 
