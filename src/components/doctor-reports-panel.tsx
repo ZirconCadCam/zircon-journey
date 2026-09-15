@@ -83,6 +83,16 @@ export function DoctorReportsPanel({ doctor }: { doctor: { slot: number; name: s
     return rows.filter(r => matchesReport(r, active) && inRange(r.created_at, from, to));
   }, [rows, active, from, to]);
 
+  const teethOf = (r: Row): number => {
+    const n = parseInt(String(r.teeth_count ?? ""), 10);
+    if (!isNaN(n) && n > 0) return n;
+    const tn = String(r.tooth_number ?? "");
+    if (!tn) return 0;
+    return tn.split(/[،,\s]+/).filter(s => /^[1-4][1-8]$/.test(s)).length;
+  };
+
+  const totalTeeth = useMemo(() => filtered.reduce((s, r) => s + teethOf(r), 0), [filtered]);
+
   const counts = useMemo(() => ({
     pending:     rows.filter(r => matchesReport(r, "pending")).length,
     uninstalled: rows.filter(r => matchesReport(r, "uninstalled")).length,
