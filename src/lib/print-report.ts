@@ -76,7 +76,14 @@ export function printHtmlDocument(html: string, fallbackTitle = "report") {
 
     const prevTitle = document.title;
     // The print dialog derives the suggested PDF filename from document.title.
-    const cleanTitle = docTitle.replace(/[\\/:*?"<>|]/g, "-").trim() || fallbackTitle;
+    // A dot makes Chrome treat everything after it as a file extension
+    // (title "د. محمد ..." became "د.pdf"), so drop dots entirely.
+    const cleanTitle =
+      docTitle
+        .replace(/[\\/:*?"<>|]/g, "-")
+        .replace(/\./g, "")
+        .replace(/\s+/g, " ")
+        .trim() || fallbackTitle;
     document.title = cleanTitle;
 
     const cleanup = () => {
