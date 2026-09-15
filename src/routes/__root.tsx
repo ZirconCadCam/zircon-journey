@@ -95,6 +95,7 @@ function RootComponent() {
       <InstallPrompt />
       <NativeBootstrap />
       <StoragePermissionPrompt />
+      <DeviceGuard />
       <TransferOverlay />
       <BackgroundKeepAlive />
     </QueryClientProvider>
