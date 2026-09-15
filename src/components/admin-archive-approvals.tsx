@@ -4,8 +4,9 @@ import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import {
   Archive, Check, X, Loader2, Clock, AlertTriangle, Calendar,
-  Stethoscope, Filter, Search, ExternalLink, Receipt,
+  Stethoscope, Filter, Search, ExternalLink, Receipt, Send,
 } from "lucide-react";
+
 import { DoctorAvatar } from "@/components/doctor-avatar";
 import { ImageLightbox } from "@/components/image-lightbox";
 
@@ -58,6 +59,34 @@ export function AdminArchiveApprovals() {
   const [month, setMonth] = useState<string>("all");
   const [doctorSlot, setDoctorSlot] = useState<number | "all">("all");
   const [search, setSearch] = useState("");
+  const [testing, setTesting] = useState(false);
+
+  /** Send a test message to the clinic's Telegram group to verify delivery. */
+  async function sendTelegramTest() {
+    setTesting(true);
+    try {
+      const { sendCaseToTelegram } = await import("@/lib/telegram.functions");
+      const stamp = new Date().toLocaleString("ar-EG", { dateStyle: "medium", timeStyle: "short" });
+      await sendCaseToTelegram({
+        data: {
+          caption: [
+            "🔔 <b>رسالة اختبار — إشعارات الأرشفة</b>",
+            "──────────────",
+            "✅ الربط بجروب تلجرام يعمل بنجاح",
+            `🕒 الوقت: ${stamp}`,
+            "📤 المصدر: صفحة الإدارة → إشعارات الأرشفة",
+          ].join("\n"),
+          documents: [],
+        },
+      });
+      toast.success("تم إرسال رسالة الاختبار إلى جروب تلجرام بنجاح");
+    } catch (e: any) {
+      toast.error(`تعذّر إرسال رسالة الاختبار: ${e?.message ?? "خطأ غير معروف"}`, { duration: 9000 });
+    } finally {
+      setTesting(false);
+    }
+  }
+
 
   async function load() {
     const [{ data: cases }, { data: docs }] = await Promise.all([
