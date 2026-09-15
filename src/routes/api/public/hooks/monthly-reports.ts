@@ -5,6 +5,12 @@ import {
   sumTeeth,
   arabicMonth,
   REPORT_LABELS,
+  buildStaffReportHtml,
+  matchesStaffRow,
+  STAFF_REPORT_LABELS,
+  DESIGNER_KEYS,
+  TECHNICIAN_KEYS,
+  type StaffReportKey,
   type ReportKey,
   type ReportRow,
 } from "@/lib/report-build";
