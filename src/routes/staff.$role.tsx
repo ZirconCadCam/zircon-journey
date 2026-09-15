@@ -9,6 +9,7 @@ import { TechnicianReports, TechnicianDesignFiles } from "@/components/technicia
 import { AdminSettingsPanel } from "@/components/admin-settings-panel";
 import { AdminArchiveApprovals } from "@/components/admin-archive-approvals";
 import { AdminOverdueCompletion } from "@/components/admin-overdue-completion";
+import { AdminDevicesPanel } from "@/components/admin-devices-panel";
 import { AdminVoiceListener } from "@/components/admin-voice-listener";
 import { RoleNotifications } from "@/components/role-notifications";
 import { NotificationSettings } from "@/components/notification-settings";
