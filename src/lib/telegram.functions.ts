@@ -2,13 +2,14 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 /**
- * Send a full case bundle to the configured Telegram group.
+ * Send a full case bundle to the configured Telegram group via the @ZirconiaBot
+ * bot token (TELEGRAM_BOT_TOKEN).
  * - One text message with the case data.
  * - One sendDocument call per attached file (passed as a publicly reachable
- *   URL — signed Supabase URLs work; Telegram fetches the file itself).
+ *   URL — signed Supabase URLs work; Telegram fetches the file itself, and we
+ *   also try a direct multipart upload for reliability with archives).
  *
- * Requires the Telegram connector (TELEGRAM_API_KEY) and a TELEGRAM_CHAT_ID
- * secret pointing to the destination group.
+ * Fire-and-forget by design: a Telegram failure must never block the upload flow.
  */
 
 const docSchema = z.object({
@@ -21,46 +22,33 @@ const schema = z.object({
   documents: z.array(docSchema).max(12).default([]),
 });
 
-const GATEWAY = "https://connector-gateway.lovable.dev/telegram";
+/** Base URL for direct Telegram Bot API calls using the bot token. */
+function telegramApi(): string {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  if (!token) throw new Error("TELEGRAM_BOT_TOKEN غير مُهيّأ.");
+  return `https://api.telegram.org/bot${token}`;
+}
 
 export const sendCaseToTelegram = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => schema.parse(d))
   .handler(async ({ data }) => {
-    const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
-    const TELEGRAM_API_KEY = process.env.TELEGRAM_API_KEY;
     // Destination group. TELEGRAM_CHAT_ID may be a numeric group/channel id
-    // (e.g. -1001234567890) or a public @username. Anything else (such as a
-    // bot token pasted by mistake) is ignored and we fall back to the known
-    // clinic group id.
+    // (e.g. -1001234567890) or a public @username. Anything else is ignored
+    // and we fall back to the known clinic group id.
     const DEFAULT_CHAT_ID = "-1003242061826";
     const envChat = (process.env.TELEGRAM_CHAT_ID || "").trim();
     const isValidChat = /^-?\d{5,}$/.test(envChat) || /^@[A-Za-z0-9_]{4,}$/.test(envChat);
     const chatId = isValidChat ? envChat : DEFAULT_CHAT_ID;
 
-    if (!LOVABLE_API_KEY || !TELEGRAM_API_KEY) {
-      throw new Error("تكامل تلجرام غير مُهيّأ.");
-    }
-
-
-
-    const headers = {
-      Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      "X-Connection-Api-Key": TELEGRAM_API_KEY,
-      "Content-Type": "application/json",
-    };
-    // For multipart uploads we must NOT set Content-Type (fetch adds the boundary).
-    const multipartHeaders = {
-      Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      "X-Connection-Api-Key": TELEGRAM_API_KEY,
-    };
+    const API = telegramApi();
     // Telegram's bot API allows up to 50 MB per document when uploaded directly.
     const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 
     // 1) Case data as a text message.
-    const msgRes = await fetch(`${GATEWAY}/sendMessage`, {
+    const msgRes = await fetch(`${API}/sendMessage`, {
       method: "POST",
-      headers,
-      body: JSON.stringify({ chat_id: chatId, text: data.caption }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, text: data.caption, parse_mode: "HTML" }),
     });
     const msgJson: any = await msgRes.json().catch(() => ({}));
     if (!msgRes.ok || !msgJson?.ok) {
@@ -70,7 +58,6 @@ export const sendCaseToTelegram = createServerFn({ method: "POST" })
         : "";
       throw new Error(`فشل إرسال بيانات الحالة [${msgRes.status}]: ${desc}${hint}`);
     }
-
 
     // 2) Each file as a document.
     //
@@ -103,9 +90,8 @@ export const sendCaseToTelegram = createServerFn({ method: "POST" })
                 new Blob([bytes], { type: "application/octet-stream" }),
                 doc.filename,
               );
-              const res = await fetch(`${GATEWAY}/sendDocument`, {
+              const res = await fetch(`${API}/sendDocument`, {
                 method: "POST",
-                headers: multipartHeaders,
                 body: form,
               });
               const j: any = await res.json().catch(() => ({}));
@@ -123,9 +109,9 @@ export const sendCaseToTelegram = createServerFn({ method: "POST" })
         // --- Fallback path: let Telegram fetch the URL directly ---
         if (!uploaded) {
           try {
-            const res = await fetch(`${GATEWAY}/sendDocument`, {
+            const res = await fetch(`${API}/sendDocument`, {
               method: "POST",
-              headers,
+              headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 chat_id: chatId,
                 document: doc.url,
