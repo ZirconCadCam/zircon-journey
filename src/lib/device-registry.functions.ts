@@ -31,11 +31,11 @@ export const registerDevice = createServerFn({ method: "POST" })
     }
     const { data: blocked, error } = await supabaseAdmin.rpc("register_device", {
       p_device_id: data.deviceId,
-      p_user_agent: data.userAgent ?? null,
-      p_platform: data.platform ?? null,
-      p_ip: ip,
-      p_role: data.role ?? null,
-      p_path: data.path ?? null,
+      p_user_agent: data.userAgent ?? undefined,
+      p_platform: data.platform ?? undefined,
+      p_ip: ip ?? undefined,
+      p_role: data.role ?? undefined,
+      p_path: data.path ?? undefined,
     });
     if (error) return { blocked: false, ip: null as string | null };
     return { blocked: Boolean(blocked), ip };
