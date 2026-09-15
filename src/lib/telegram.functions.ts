@@ -32,13 +32,15 @@ function telegramApi(): string {
 export const sendCaseToTelegram = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => schema.parse(d))
   .handler(async ({ data }) => {
-    // Destination group. TELEGRAM_CHAT_ID may be a numeric group/channel id
-    // (e.g. -1001234567890) or a public @username. Anything else is ignored
-    // and we fall back to the known clinic group id.
+    // Destination group. Only accept a real group/channel id (negative, e.g.
+    // -1003242061826) or a public @username. A positive numeric id is a private
+    // user/bot id — sending there fails with 403 — so it is ignored in favour of
+    // the known clinic group.
     const DEFAULT_CHAT_ID = "-1003242061826";
     const envChat = (process.env.TELEGRAM_CHAT_ID || "").trim();
-    const isValidChat = /^-?\d{5,}$/.test(envChat) || /^@[A-Za-z0-9_]{4,}$/.test(envChat);
+    const isValidChat = /^-\d{6,}$/.test(envChat) || /^@[A-Za-z0-9_]{4,}$/.test(envChat);
     const chatId = isValidChat ? envChat : DEFAULT_CHAT_ID;
+
 
     const API = telegramApi();
     // Telegram's bot API allows up to 50 MB per document when uploaded directly.
