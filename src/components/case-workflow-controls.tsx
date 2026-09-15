@@ -527,9 +527,7 @@ function DesignerRevisionSection({ c, actorName, doctorName }: {
     await transferDownload({ url, filename: f.name || "ملف-التعديل", mime: f.mime, saveToCenter: true });
   }
 
-  async function uploadRevision(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    if (e.target) e.target.value = "";
+  async function uploadRevision(f: File | null | undefined) {
     if (!f) return;
     if (!RAR_RE.test(f.name)) { toast.error("الملف يجب أن يكون .rar"); return; }
     setBusy(true);
