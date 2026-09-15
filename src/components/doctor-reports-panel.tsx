@@ -240,6 +240,7 @@ export function DoctorReportsPanel({ doctor }: { doctor: { slot: number; name: s
                       <td className="px-4 py-2.5 text-muted-foreground">{i + 1}</td>
                       <td className="px-4 py-2.5 font-bold">{r.patient_name}</td>
                       <td className="px-4 py-2.5 font-mono text-xs">{r.case_code}</td>
+                      <td className="px-4 py-2.5 font-bold">{teethOf(r) || "—"}</td>
                       <td className="px-4 py-2.5 text-xs">{new Date(r.created_at).toLocaleDateString("ar")}</td>
                       <td className="px-4 py-2.5">
                         <span className="inline-block rounded-full bg-gold/15 text-gold text-[11px] font-bold px-2.5 py-0.5">
