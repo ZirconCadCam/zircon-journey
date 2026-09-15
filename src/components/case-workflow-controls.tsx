@@ -5,7 +5,7 @@ import {
   CheckSquare, Square, Loader2, AlertCircle,
   FileArchive, FileCode, ChevronDown, ChevronUp, Check, Send, Truck,
   ThumbsUp, Pencil, X, Archive, Download, Type, FileText, Image as ImageIcon, Highlighter,
-  Mic, Trash2,
+  Mic, Trash2, Upload,
 } from "lucide-react";
 import type { RoleKey } from "@/lib/chat";
 import { ROLE_LABEL, getSignedUrl } from "@/lib/chat";
@@ -235,6 +235,39 @@ async function uploadAttachment(file: File, c: WorkflowCase, phase: string): Pro
 }
 
 
+/** Reusable drag & drop area for desktop file uploads (.rar / .html), reusable many times. */
+function FileDropZone({ busy, onFiles, title, hint, accept = ".rar,.RAR,.html,.htm,application/vnd.rar,application/x-rar-compressed,text/html,application/octet-stream" }: {
+  busy?: boolean;
+  onFiles: (files: FileList | File[] | null) => void | Promise<void>;
+  title: string;
+  hint?: string;
+  accept?: string;
+}) {
+  const [over, setOver] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  return (
+    <label
+      onDragOver={(e) => { e.preventDefault(); if (!busy) setOver(true); }}
+      onDragEnter={(e) => { e.preventDefault(); if (!busy) setOver(true); }}
+      onDragLeave={() => setOver(false)}
+      onDrop={(e) => {
+        e.preventDefault(); setOver(false);
+        if (busy) return;
+        onFiles(e.dataTransfer?.files ?? null);
+      }}
+      className={`flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed px-3 py-4 text-center transition
+        ${over ? "border-gold bg-gold/10 ring-2 ring-gold" : busy ? "border-border bg-muted/40 opacity-70" : "border-border bg-card/60 hover:border-gold hover:bg-gold/5"}`}
+    >
+      {busy ? <Loader2 className="size-5 animate-spin text-gold" /> : <Upload className="size-5 text-gold" />}
+      <span className="text-xs font-bold">{over ? "أفلت الملفات الآن" : title}</span>
+      {hint && <span className="text-[10px] text-muted-foreground">{hint}</span>}
+      <input ref={inputRef} type="file" multiple accept={accept} className="hidden"
+        disabled={busy}
+        onChange={(e) => { const fl = e.target.files; e.target.value = ""; onFiles(fl); }} />
+    </label>
+  );
+}
+
 // ============== DESIGNER ==============
 function DesignerControls({ c, actorName, doctorName, target, blockedByPending }: {
   c: WorkflowCase; actorName: string; doctorName: string; target: RoleKey; blockedByPending: string | null;
@@ -364,26 +397,37 @@ function DesignerControls({ c, actorName, doctorName, target, blockedByPending }
     return null;
   }
 
+  /** Route every dropped/selected file by extension — supports many files at once. */
+  async function processMany(list: FileList | File[] | null) {
+    const files = Array.from(list ?? []);
+    if (!files.length) return;
+    for (const f of files) {
+      if (RAR_RE.test(f.name)) await processRar(f);
+      else if (HTML_RE.test(f.name)) await processHtml(f);
+      else toast.error(`صيغة غير مدعومة: ${f.name} (المسموح .rar و .html)`);
+    }
+  }
+
   return (
     <div className="rounded-xl border border-border bg-muted/30 p-3 mt-3 space-y-2">
       <div className="flex items-center gap-2 flex-wrap">
         <label
-          onDragOver={(e) => { e.preventDefault(); if (!busy && !rarSent) setDragRar(true); }}
+          onDragOver={(e) => { e.preventDefault(); if (!busy) setDragRar(true); }}
           onDragLeave={() => setDragRar(false)}
           onDrop={(e) => {
             e.preventDefault(); setDragRar(false);
-            if (busy || rarSent) return;
+            if (busy) return;
             const f = pickDropped(e.dataTransfer);
             if (f) processRar(f);
           }}
           className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold cursor-pointer transition border
           ${dragRar ? "border-gold bg-gold/10 ring-2 ring-gold" : rarSent ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-border bg-card hover:border-gold"}`}>
           {busy ? <Loader2 className="size-3.5 animate-spin" /> : <FileArchive className="size-3.5" />}
-          {dragRar ? "أفلت ملف .rar هنا" : rarSent ? "تم إرسال ملف التصميم" : "إرسال ملف التصميم (.rar)"}
+          {dragRar ? "أفلت ملف .rar هنا" : rarSent ? "إرسال ملف تصميم آخر (.rar)" : "إرسال ملف التصميم (.rar)"}
           <input ref={rarRef} type="file"
             accept=".rar,.RAR,application/vnd.rar,application/x-rar-compressed,application/octet-stream"
             className="hidden"
-            onChange={sendRar} disabled={busy || rarSent} />
+            onChange={sendRar} disabled={busy} />
         </label>
         <label
           onDragOver={(e) => { e.preventDefault(); if (!busyHtml) setDragHtml(true); }}
@@ -397,7 +441,7 @@ function DesignerControls({ c, actorName, doctorName, target, blockedByPending }
           className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold cursor-pointer transition border
           ${dragHtml ? "border-gold bg-gold/10 ring-2 ring-gold" : htmlSent ? "border-sky-500 bg-sky-50 text-sky-700" : "border-border bg-card hover:border-gold"}`}>
           {busyHtml ? <Loader2 className="size-3.5 animate-spin" /> : <FileCode className="size-3.5" />}
-          {dragHtml ? "أفلت ملف .html هنا" : htmlSent ? "تم رفع ملف HTML" : "رفع ملف التصميم (.html)"}
+          {dragHtml ? "أفلت ملف .html هنا" : htmlSent ? "رفع ملف HTML آخر" : "رفع ملف التصميم (.html)"}
           <input ref={htmlRef} type="file"
             accept=".html,.htm,text/html,application/octet-stream"
             className="hidden"
@@ -412,6 +456,14 @@ function DesignerControls({ c, actorName, doctorName, target, blockedByPending }
           </span>
         )}
       </div>
+
+      {/* Unified drag & drop zone — accepts .rar and .html, any number of times */}
+      <FileDropZone
+        busy={busy || busyHtml}
+        onFiles={processMany}
+        title="اسحب ملفات التصميم وأفلتها هنا (.rar / .html)"
+        hint="يمكنك السحب والإفلات عدة مرات — قبل التعديل وبعده — أو اضغط للاختيار من الكمبيوتر"
+      />
       {blocked && !rarSent && (
         <div className="flex items-center gap-1.5 text-[11px] text-destructive">
           <AlertCircle className="size-3" />
@@ -475,9 +527,7 @@ function DesignerRevisionSection({ c, actorName, doctorName }: {
     await transferDownload({ url, filename: f.name || "ملف-التعديل", mime: f.mime, saveToCenter: true });
   }
 
-  async function uploadRevision(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    if (e.target) e.target.value = "";
+  async function uploadRevision(f: File | null | undefined) {
     if (!f) return;
     if (!RAR_RE.test(f.name)) { toast.error("الملف يجب أن يكون .rar"); return; }
     setBusy(true);
@@ -523,9 +573,7 @@ function DesignerRevisionSection({ c, actorName, doctorName }: {
   }
 
   /** Optional HTML report the designer may attach with every revision file. */
-  async function uploadRevisionHtml(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    if (e.target) e.target.value = "";
+  async function uploadRevisionHtml(f: File | null | undefined) {
     if (!f) return;
     if (!HTML_RE.test(f.name)) { toast.error("الملف يجب أن يكون .html"); return; }
     setBusy(true);
@@ -632,17 +680,19 @@ function DesignerRevisionSection({ c, actorName, doctorName }: {
         <label className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold cursor-pointer transition border
           ${done ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-border bg-card hover:border-gold"}`}>
           {busy ? <Loader2 className="size-3.5 animate-spin" /> : <FileArchive className="size-3.5" />}
-          {done ? "تم إرسال التعديل" : "رفع ملف التعديل (.rar)"}
+          {done ? "رفع ملف تعديل آخر (.rar)" : "رفع ملف التعديل (.rar)"}
           <input ref={fileRef} type="file"
             accept=".rar,.RAR,application/vnd.rar,application/x-rar-compressed,application/octet-stream" className="hidden"
-            onChange={uploadRevision} disabled={busy || done} />
+            onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; uploadRevision(f); }}
+            disabled={busy} />
         </label>
         <label className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold cursor-pointer transition border
           ${htmlSent ? "border-sky-500 bg-sky-50 text-sky-700" : "border-border bg-card hover:border-gold"}`}>
           {busy ? <Loader2 className="size-3.5 animate-spin" /> : <FileCode className="size-3.5" />}
-          {htmlSent ? "تم إرفاق HTML" : "إرفاق ملف HTML مع التعديل"}
+          {htmlSent ? "إرفاق ملف HTML آخر" : "إرفاق ملف HTML مع التعديل"}
           <input ref={htmlRef} type="file" accept=".html,.htm,text/html" className="hidden"
-            onChange={uploadRevisionHtml} disabled={busy} />
+            onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; uploadRevisionHtml(f); }}
+            disabled={busy} />
         </label>
         {!done && (
           <button type="button" onClick={() => setTextMode(o => !o)} disabled={busy}
@@ -660,6 +710,20 @@ function DesignerRevisionSection({ c, actorName, doctorName }: {
           </span>
         )}
       </div>
+
+      <FileDropZone
+        busy={busy}
+        onFiles={async (list) => {
+          for (const f of Array.from(list ?? [])) {
+            if (RAR_RE.test(f.name)) await uploadRevision(f);
+            else if (HTML_RE.test(f.name)) await uploadRevisionHtml(f);
+            else toast.error(`صيغة غير مدعومة: ${f.name} (المسموح .rar و .html)`);
+          }
+        }}
+        title="اسحب ملفات التعديل وأفلتها هنا (.rar / .html)"
+        hint="يمكن الرفع أكثر من مرة — قبل التعديل وبعده"
+      />
+
 
       {textMode && !done && (
         <div className="space-y-2 rounded-lg border border-gold/40 bg-card p-2">
