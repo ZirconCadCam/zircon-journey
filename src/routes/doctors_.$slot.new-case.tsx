@@ -217,10 +217,6 @@ function NewSlotCase() {
       toast.error("ملف المسح يجب أن يكون بصيغة .zip فقط");
       return;
     }
-    if (!shadeConfirmed) {
-      toast.error("الرجاء تأكيد اللون قبل حفظ الحالة");
-      return;
-    }
     const parsed = patientSchema.safeParse({
       patient_name: form.patient_name,
       patient_phone: form.patient_phone,
