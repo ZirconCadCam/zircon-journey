@@ -92,6 +92,58 @@ function daysSince(iso: string): number {
   return Math.floor((Date.now() - Date.parse(iso)) / 86_400_000);
 }
 
+/** أول مستوى ناقص للحالة (نص عربي). */
+function pendingStepLabel(r: Row): string {
+  const done = doneFlags(r);
+  const next = STEPS.find(s => !done[s.key]);
+  return next ? next.label : "—";
+}
+
+/** يبني كشف HTML للطباعة/PDF لحالات طبيب واحد غير المكتملة. */
+function buildOverdueReportHtml(doctorName: string, branch: string | null, rows: Row[]): string {
+  const title = `${doctorName} - ${rows.length} - متأخر`;
+  const branchLabel = branch === "sanaa" ? "فرع صنعاء" : branch === "ibb" ? "فرع إب" : "";
+  const today = new Date().toLocaleDateString("ar-EG");
+  const body = rows.map((r, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${r.case_code ?? ""}</td>
+      <td>${r.patient_name ?? ""}</td>
+      <td>${r.tooth_number ?? "—"}</td>
+      <td>${r.teeth_count ?? "—"}</td>
+      <td>${r.shade ?? "—"}</td>
+      <td>${daysSince(r.created_at)} يوم</td>
+      <td>${pendingStepLabel(r)}</td>
+    </tr>`).join("");
+
+  return `<!doctype html>
+<html dir="rtl" lang="ar"><head><meta charset="utf-8" />
+<title>${title}</title>
+<style>
+  @page { size: A4; margin: 14mm; }
+  * { font-family: "Segoe UI", Tahoma, sans-serif; }
+  body { color: #241a12; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .sub { font-size: 12px; color: #6b5847; margin-bottom: 14px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { border: 1px solid #d8c9b6; padding: 6px 8px; text-align: right; }
+  thead th { background: #f2e7d8; font-weight: 800; }
+  tfoot td { background: #faf5ee; font-weight: 800; }
+</style></head>
+<body>
+  <h1>كشف الحالات غير المكتملة (متأخرة أكثر من ${OVERDUE_DAYS} يوماً)</h1>
+  <div class="sub">الطبيب: <b>${doctorName}</b>${branchLabel ? ` • ${branchLabel}` : ""} • عدد الحالات: <b>${rows.length}</b> • تاريخ الطباعة: ${today}</div>
+  <table>
+    <thead><tr>
+      <th>#</th><th>رقم الحالة</th><th>المريض</th><th>السن</th><th>عدد الأسنان</th>
+      <th>اللون</th><th>مدة التأخير</th><th>المستوى الناقص</th>
+    </tr></thead>
+    <tbody>${body}</tbody>
+    <tfoot><tr><td colspan="8">المجموع: ${rows.length} حالة غير مكتملة</td></tr></tfoot>
+  </table>
+</body></html>`;
+}
+
 /**
  * Administration tool: force-complete the closing stages of cases that have
  * been open in the doctor's page for more than 20 days.
