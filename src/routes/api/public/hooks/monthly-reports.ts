@@ -180,6 +180,51 @@ export const Route = createFileRoute("/api/public/hooks/monthly-reports")({
           }
         }
 
+        // كشوفات المصمم والفني (كل الأطباء مجتمعين)
+        const doctorNameOf = (r: ReportRow) => {
+          const p = (docs ?? []).find((d: any) => Number(d.slot) === Number((r as any).doctor_slot)) as any;
+          return p?.name ?? `طبيب ${(r as any).doctor_slot ?? ""}`;
+        };
+        const staffReports: { title: string; icon: string; keys: StaffReportKey[] }[] = [
+          { title: "مصمم CAD/CAM", icon: "🖥️", keys: DESIGNER_KEYS },
+          { title: "فني النحت", icon: "🛠️", keys: TECHNICIAN_KEYS },
+        ];
+        const staffResults: { staff: string; cases: number; teeth: number; ok: boolean; error?: string }[] = [];
+
+        for (const rep of staffReports) {
+          const groups = rep.keys.map((key) => ({
+            key,
+            rows: rows.filter((r) => matchesStaffRow(r, key)),
+          }));
+          const involved = rows.filter((r) => rep.keys.some((k) => matchesStaffRow(r, k)));
+          const teeth = sumTeeth(involved);
+          const lines = groups
+            .map(({ key, rows: g }) => `• ${STAFF_REPORT_LABELS[key]}: <b>${g.length}</b> حالة — <b>${sumTeeth(g)}</b> سِنّ`)
+            .join("\n");
+          const caption =
+            `${rep.icon} <b>الكشف الشهري</b> — ${monthLabel}\n` +
+            `👤 القسم: <b>${rep.title}</b>\n\n` +
+            `${lines}\n\n` +
+            `📦 إجمالي الحالات: <b>${involved.length}</b>\n` +
+            `🦷 مجموع الأسنان: <b>${teeth}</b> سِنّ`;
+          const html = buildStaffReportHtml({
+            staffTitle: rep.title,
+            monthLabel,
+            groups,
+            doctorNameOf,
+          });
+          const filename = `كشف-${rep.title.replace(/[\/\s]+/g, "-")}-${year}-${String(month).padStart(2, "0")}.html`;
+          try {
+            await sendHtmlDocument(api, chatId, filename, html, caption);
+            staffResults.push({ staff: rep.title, cases: involved.length, teeth, ok: true });
+          } catch (e: any) {
+            try {
+              await sendMessage(api, chatId, caption);
+            } catch { /* ignore */ }
+            staffResults.push({ staff: rep.title, cases: involved.length, teeth, ok: false, error: e?.message });
+          }
+        }
+
         try {
           await sendMessage(
             api,
