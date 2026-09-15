@@ -251,6 +251,14 @@ export function DoctorReportsPanel({ doctor }: { doctor: { slot: number; name: s
                   );
                 })}
               </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-gold/40 bg-gold/10 font-bold">
+                  <td className="px-4 py-2.5" colSpan={2}>المجموع</td>
+                  <td className="px-4 py-2.5 text-muted-foreground text-xs">{filtered.length} حالة</td>
+                  <td className="px-4 py-2.5 text-gold">{totalTeeth} سِنّ</td>
+                  <td colSpan={2}></td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         )}
