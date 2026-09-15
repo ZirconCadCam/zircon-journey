@@ -235,6 +235,39 @@ async function uploadAttachment(file: File, c: WorkflowCase, phase: string): Pro
 }
 
 
+/** Reusable drag & drop area for desktop file uploads (.rar / .html), reusable many times. */
+function FileDropZone({ busy, onFiles, title, hint, accept = ".rar,.RAR,.html,.htm,application/vnd.rar,application/x-rar-compressed,text/html,application/octet-stream" }: {
+  busy?: boolean;
+  onFiles: (files: FileList | File[] | null) => void | Promise<void>;
+  title: string;
+  hint?: string;
+  accept?: string;
+}) {
+  const [over, setOver] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  return (
+    <label
+      onDragOver={(e) => { e.preventDefault(); if (!busy) setOver(true); }}
+      onDragEnter={(e) => { e.preventDefault(); if (!busy) setOver(true); }}
+      onDragLeave={() => setOver(false)}
+      onDrop={(e) => {
+        e.preventDefault(); setOver(false);
+        if (busy) return;
+        onFiles(e.dataTransfer?.files ?? null);
+      }}
+      className={`flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed px-3 py-4 text-center transition
+        ${over ? "border-gold bg-gold/10 ring-2 ring-gold" : busy ? "border-border bg-muted/40 opacity-70" : "border-border bg-card/60 hover:border-gold hover:bg-gold/5"}`}
+    >
+      {busy ? <Loader2 className="size-5 animate-spin text-gold" /> : <Upload className="size-5 text-gold" />}
+      <span className="text-xs font-bold">{over ? "أفلت الملفات الآن" : title}</span>
+      {hint && <span className="text-[10px] text-muted-foreground">{hint}</span>}
+      <input ref={inputRef} type="file" multiple accept={accept} className="hidden"
+        disabled={busy}
+        onChange={(e) => { const fl = e.target.files; e.target.value = ""; onFiles(fl); }} />
+    </label>
+  );
+}
+
 // ============== DESIGNER ==============
 function DesignerControls({ c, actorName, doctorName, target, blockedByPending }: {
   c: WorkflowCase; actorName: string; doctorName: string; target: RoleKey; blockedByPending: string | null;
