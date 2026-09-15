@@ -364,26 +364,37 @@ function DesignerControls({ c, actorName, doctorName, target, blockedByPending }
     return null;
   }
 
+  /** Route every dropped/selected file by extension — supports many files at once. */
+  async function processMany(list: FileList | File[] | null) {
+    const files = Array.from(list ?? []);
+    if (!files.length) return;
+    for (const f of files) {
+      if (RAR_RE.test(f.name)) await processRar(f);
+      else if (HTML_RE.test(f.name)) await processHtml(f);
+      else toast.error(`صيغة غير مدعومة: ${f.name} (المسموح .rar و .html)`);
+    }
+  }
+
   return (
     <div className="rounded-xl border border-border bg-muted/30 p-3 mt-3 space-y-2">
       <div className="flex items-center gap-2 flex-wrap">
         <label
-          onDragOver={(e) => { e.preventDefault(); if (!busy && !rarSent) setDragRar(true); }}
+          onDragOver={(e) => { e.preventDefault(); if (!busy) setDragRar(true); }}
           onDragLeave={() => setDragRar(false)}
           onDrop={(e) => {
             e.preventDefault(); setDragRar(false);
-            if (busy || rarSent) return;
+            if (busy) return;
             const f = pickDropped(e.dataTransfer);
             if (f) processRar(f);
           }}
           className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold cursor-pointer transition border
           ${dragRar ? "border-gold bg-gold/10 ring-2 ring-gold" : rarSent ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-border bg-card hover:border-gold"}`}>
           {busy ? <Loader2 className="size-3.5 animate-spin" /> : <FileArchive className="size-3.5" />}
-          {dragRar ? "أفلت ملف .rar هنا" : rarSent ? "تم إرسال ملف التصميم" : "إرسال ملف التصميم (.rar)"}
+          {dragRar ? "أفلت ملف .rar هنا" : rarSent ? "إرسال ملف تصميم آخر (.rar)" : "إرسال ملف التصميم (.rar)"}
           <input ref={rarRef} type="file"
             accept=".rar,.RAR,application/vnd.rar,application/x-rar-compressed,application/octet-stream"
             className="hidden"
-            onChange={sendRar} disabled={busy || rarSent} />
+            onChange={sendRar} disabled={busy} />
         </label>
         <label
           onDragOver={(e) => { e.preventDefault(); if (!busyHtml) setDragHtml(true); }}
@@ -397,7 +408,7 @@ function DesignerControls({ c, actorName, doctorName, target, blockedByPending }
           className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold cursor-pointer transition border
           ${dragHtml ? "border-gold bg-gold/10 ring-2 ring-gold" : htmlSent ? "border-sky-500 bg-sky-50 text-sky-700" : "border-border bg-card hover:border-gold"}`}>
           {busyHtml ? <Loader2 className="size-3.5 animate-spin" /> : <FileCode className="size-3.5" />}
-          {dragHtml ? "أفلت ملف .html هنا" : htmlSent ? "تم رفع ملف HTML" : "رفع ملف التصميم (.html)"}
+          {dragHtml ? "أفلت ملف .html هنا" : htmlSent ? "رفع ملف HTML آخر" : "رفع ملف التصميم (.html)"}
           <input ref={htmlRef} type="file"
             accept=".html,.htm,text/html,application/octet-stream"
             className="hidden"
@@ -412,6 +423,14 @@ function DesignerControls({ c, actorName, doctorName, target, blockedByPending }
           </span>
         )}
       </div>
+
+      {/* Unified drag & drop zone — accepts .rar and .html, any number of times */}
+      <FileDropZone
+        busy={busy || busyHtml}
+        onFiles={processMany}
+        title="اسحب ملفات التصميم وأفلتها هنا (.rar / .html)"
+        hint="يمكنك السحب والإفلات عدة مرات — قبل التعديل وبعده — أو اضغط للاختيار من الكمبيوتر"
+      />
       {blocked && !rarSent && (
         <div className="flex items-center gap-1.5 text-[11px] text-destructive">
           <AlertCircle className="size-3" />
