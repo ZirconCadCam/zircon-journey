@@ -459,6 +459,8 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
             <AdminArchiveApprovals />
           ) : tab === "overdue" && role === "admin" ? (
             <AdminOverdueCompletion />
+          ) : tab === "devices" && role === "admin" ? (
+            <AdminDevicesPanel />
           ) : tab === "settings" && role === "admin" ? (
 
             <AdminSettingsPanel />
