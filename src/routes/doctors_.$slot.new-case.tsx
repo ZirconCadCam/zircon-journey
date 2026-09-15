@@ -5,7 +5,6 @@ import { ArrowRight, Sparkles, Upload, FileText, X, Loader2, ScanLine, Plus, Pau
 import { toast } from "sonner";
 import { z } from "zod";
 import { ToothQuadrantPicker } from "@/components/tooth-quadrant-picker";
-import { ShadeConfirm } from "@/components/shade-confirm";
 import type { ResumableHandle } from "@/lib/resumable-upload";
 
 const patientSchema = z.object({
