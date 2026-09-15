@@ -573,9 +573,7 @@ function DesignerRevisionSection({ c, actorName, doctorName }: {
   }
 
   /** Optional HTML report the designer may attach with every revision file. */
-  async function uploadRevisionHtml(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    if (e.target) e.target.value = "";
+  async function uploadRevisionHtml(f: File | null | undefined) {
     if (!f) return;
     if (!HTML_RE.test(f.name)) { toast.error("الملف يجب أن يكون .html"); return; }
     setBusy(true);
