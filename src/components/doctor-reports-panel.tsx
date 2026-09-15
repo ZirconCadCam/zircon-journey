@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { FileText, Download, Calendar as CalendarIcon, Clock, Wrench, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { getStage, deriveStageKey } from "@/lib/case-stages";
+import { teethOf as teethOfRow } from "@/lib/report-build";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
