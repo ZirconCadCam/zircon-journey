@@ -423,6 +423,12 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
               </button>
             )}
             {role === "admin" && (
+              <button onClick={() => setTab("overdue")}
+                className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "overdue" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
+                <Timer className="size-4" /> إكمال المتأخرة
+              </button>
+            )}
+            {role === "admin" && (
               <button onClick={() => setTab("settings")}
                 className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "settings" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
                 <Settings className="size-4" /> الإعدادات
@@ -444,6 +450,8 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
             <SecretaryPhotoInbox role={role} />
           ) : tab === "archiveapprovals" && role === "admin" ? (
             <AdminArchiveApprovals />
+          ) : tab === "overdue" && role === "admin" ? (
+            <AdminOverdueCompletion />
           ) : tab === "settings" && role === "admin" ? (
 
             <AdminSettingsPanel />
