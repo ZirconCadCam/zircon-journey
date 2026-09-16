@@ -799,7 +799,11 @@ function TechnicianControls({ c, actorName, doctorName, target }: {
 
   async function sendDataToSecretary() {
     if (!target) { toast.error("لا يوجد فرع سكرتارية محدد"); return; }
-    if (c.shade && !c.shade_confirmed_technician) { toast.error("الرجاء تأكيد لون السن أولاً قبل إرسال البيانات"); return; }
+    // No shade gate here: the doctor confirms the shade later, at the
+    // "قيد المراجعة" stage. Requiring the technician's shade confirmation
+    // first created a deadlock (technician confirm is locked until the
+    // doctor confirms, and the doctor's prompt only shows after review).
+
     setBusy(true);
     const lines = [
       `📋 حالة جاهزة للإرسال`,
