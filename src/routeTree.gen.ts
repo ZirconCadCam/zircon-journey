@@ -23,7 +23,6 @@ import { Route as ApiTtsRouteImport } from './routes/api/tts'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminArchiveRouteImport } from './routes/admin.archive'
 import { Route as DoctorsSlotNewCaseRouteImport } from './routes/doctors_.$slot.new-case'
-import { Route as ApiPublicTgDiagRouteImport } from './routes/api/public/tg-diag'
 import { Route as ApiPublicPushDispatchRouteImport } from './routes/api/public/push-dispatch'
 import { Route as ApiPublicTelegramDrainRouteImport } from './routes/api/public/telegram/drain'
 import { Route as ApiPublicHooksMonthlyReportsRouteImport } from './routes/api/public/hooks/monthly-reports'
@@ -99,11 +98,6 @@ const DoctorsSlotNewCaseRoute = DoctorsSlotNewCaseRouteImport.update({
   path: '/doctors/$slot/new-case',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicTgDiagRoute = ApiPublicTgDiagRouteImport.update({
-  id: '/api/public/tg-diag',
-  path: '/api/public/tg-diag',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiPublicPushDispatchRoute = ApiPublicPushDispatchRouteImport.update({
   id: '/api/public/push-dispatch',
   path: '/api/public/push-dispatch',
@@ -142,7 +136,6 @@ export interface FileRoutesByFullPath {
   '/doctors/': typeof DoctorsIndexRoute
   '/help/': typeof HelpIndexRoute
   '/api/public/push-dispatch': typeof ApiPublicPushDispatchRoute
-  '/api/public/tg-diag': typeof ApiPublicTgDiagRoute
   '/doctors/$slot/new-case': typeof DoctorsSlotNewCaseRoute
   '/api/public/hooks/monthly-accounting': typeof ApiPublicHooksMonthlyAccountingRoute
   '/api/public/hooks/monthly-reports': typeof ApiPublicHooksMonthlyReportsRoute
@@ -163,7 +156,6 @@ export interface FileRoutesByTo {
   '/doctors': typeof DoctorsIndexRoute
   '/help': typeof HelpIndexRoute
   '/api/public/push-dispatch': typeof ApiPublicPushDispatchRoute
-  '/api/public/tg-diag': typeof ApiPublicTgDiagRoute
   '/doctors/$slot/new-case': typeof DoctorsSlotNewCaseRoute
   '/api/public/hooks/monthly-accounting': typeof ApiPublicHooksMonthlyAccountingRoute
   '/api/public/hooks/monthly-reports': typeof ApiPublicHooksMonthlyReportsRoute
@@ -185,7 +177,6 @@ export interface FileRoutesById {
   '/doctors/': typeof DoctorsIndexRoute
   '/help/': typeof HelpIndexRoute
   '/api/public/push-dispatch': typeof ApiPublicPushDispatchRoute
-  '/api/public/tg-diag': typeof ApiPublicTgDiagRoute
   '/doctors_/$slot/new-case': typeof DoctorsSlotNewCaseRoute
   '/api/public/hooks/monthly-accounting': typeof ApiPublicHooksMonthlyAccountingRoute
   '/api/public/hooks/monthly-reports': typeof ApiPublicHooksMonthlyReportsRoute
@@ -208,7 +199,6 @@ export interface FileRouteTypes {
     | '/doctors/'
     | '/help/'
     | '/api/public/push-dispatch'
-    | '/api/public/tg-diag'
     | '/doctors/$slot/new-case'
     | '/api/public/hooks/monthly-accounting'
     | '/api/public/hooks/monthly-reports'
@@ -229,7 +219,6 @@ export interface FileRouteTypes {
     | '/doctors'
     | '/help'
     | '/api/public/push-dispatch'
-    | '/api/public/tg-diag'
     | '/doctors/$slot/new-case'
     | '/api/public/hooks/monthly-accounting'
     | '/api/public/hooks/monthly-reports'
@@ -250,7 +239,6 @@ export interface FileRouteTypes {
     | '/doctors/'
     | '/help/'
     | '/api/public/push-dispatch'
-    | '/api/public/tg-diag'
     | '/doctors_/$slot/new-case'
     | '/api/public/hooks/monthly-accounting'
     | '/api/public/hooks/monthly-reports'
@@ -272,7 +260,6 @@ export interface RootRouteChildren {
   DoctorsIndexRoute: typeof DoctorsIndexRoute
   HelpIndexRoute: typeof HelpIndexRoute
   ApiPublicPushDispatchRoute: typeof ApiPublicPushDispatchRoute
-  ApiPublicTgDiagRoute: typeof ApiPublicTgDiagRoute
   DoctorsSlotNewCaseRoute: typeof DoctorsSlotNewCaseRoute
   ApiPublicHooksMonthlyAccountingRoute: typeof ApiPublicHooksMonthlyAccountingRoute
   ApiPublicHooksMonthlyReportsRoute: typeof ApiPublicHooksMonthlyReportsRoute
@@ -379,13 +366,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DoctorsSlotNewCaseRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/tg-diag': {
-      id: '/api/public/tg-diag'
-      path: '/api/public/tg-diag'
-      fullPath: '/api/public/tg-diag'
-      preLoaderRoute: typeof ApiPublicTgDiagRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/public/push-dispatch': {
       id: '/api/public/push-dispatch'
       path: '/api/public/push-dispatch'
@@ -432,7 +412,6 @@ const rootRouteChildren: RootRouteChildren = {
   DoctorsIndexRoute: DoctorsIndexRoute,
   HelpIndexRoute: HelpIndexRoute,
   ApiPublicPushDispatchRoute: ApiPublicPushDispatchRoute,
-  ApiPublicTgDiagRoute: ApiPublicTgDiagRoute,
   DoctorsSlotNewCaseRoute: DoctorsSlotNewCaseRoute,
   ApiPublicHooksMonthlyAccountingRoute: ApiPublicHooksMonthlyAccountingRoute,
   ApiPublicHooksMonthlyReportsRoute: ApiPublicHooksMonthlyReportsRoute,
