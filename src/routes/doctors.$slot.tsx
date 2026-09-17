@@ -8,7 +8,7 @@ import {
   Sparkles, ArrowRight, Upload, FileText, Download, Archive,
   Trash2, Share2, MessageSquare, Files as FilesIcon, ArchiveRestore, Copy, Check, Search, Plus,
   ClipboardList, MoreHorizontal, Pencil, Pin, PinOff, Send, X, Loader2,
-  Palette, Shield, Building2, FileSpreadsheet, Bell, RefreshCw,
+  Palette, Shield, Building2, FileSpreadsheet, Bell, RefreshCw, Eye, EyeOff,
 } from "lucide-react";
 import { DesignerFollowupPanel } from "@/components/designer-followup-panel";
 import { useNewRevisionRounds } from "@/lib/revision-round-alerts";
@@ -198,6 +198,7 @@ function ShellHeader({ children, right }: { children: React.ReactNode; right?: R
 
 function PasswordGate({ doctor, onOk }: { doctor: Doctor; onOk: () => void }) {
   const [pw, setPw] = useState("");
+  const [showPw, setShowPw] = useState(false);
   const [err, setErr] = useState("");
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -217,8 +218,15 @@ function PasswordGate({ doctor, onOk }: { doctor: Doctor; onOk: () => void }) {
             <div className="text-xl font-bold">{doctor.name}</div>
             <div className="text-xs text-muted-foreground mt-1">أدخل كلمة المرور الخاصة للدخول إلى صفحتك</div>
           </div>
-          <input type="password" autoFocus value={pw} onChange={e=>{setPw(e.target.value); setErr("");}}
-            placeholder="كلمة المرور" className="mt-6 w-full rounded-xl border border-input bg-background px-4 py-3 text-center font-mono text-lg outline-none focus:border-gold" />
+          <div className="relative mt-6">
+            <input type={showPw ? "text" : "password"} autoFocus value={pw} onChange={e=>{setPw(e.target.value); setErr("");}}
+              placeholder="كلمة المرور" className="w-full rounded-xl border border-input bg-background px-4 py-3 pl-11 text-center font-mono text-lg outline-none focus:border-gold" />
+            <button type="button" onClick={() => setShowPw(v=>!v)}
+              className="absolute left-2 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-muted-foreground hover:text-foreground"
+              aria-label={showPw ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"} title={showPw ? "إخفاء" : "إظهار"}>
+              {showPw ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+            </button>
+          </div>
           {err && <div className="text-xs text-destructive mt-2 text-center">{err}</div>}
           <button type="submit" className="mt-4 w-full rounded-xl gradient-brown py-3 font-bold shadow-luxury">دخول</button>
         </form>
