@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { STAFF_PASSWORDS, ROLE_LABEL, type RoleKey } from "@/lib/chat";
-import { Sparkles, Lock } from "lucide-react";
+import { Sparkles, Lock, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
@@ -25,6 +25,7 @@ export function clearAllPortalSessions() {
 function LoginPage() {
   const nav = useNavigate();
   const [pw, setPw] = useState("");
+  const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
 
@@ -132,16 +133,27 @@ function LoginPage() {
           <form onSubmit={handleSubmit} className="mt-8 space-y-4">
             <label className="block">
               <div className="text-sm font-semibold mb-1.5">كلمة المرور</div>
-              <input
-                type="password"
-                autoFocus
-                value={pw}
-                onChange={(e) => { setPw(e.target.value); setErr(""); }}
-                required
-                className="input text-center font-mono text-lg"
-                placeholder="••••••••"
-                dir="ltr"
-              />
+              <div className="relative">
+                <input
+                  type={showPw ? "text" : "password"}
+                  autoFocus
+                  value={pw}
+                  onChange={(e) => { setPw(e.target.value); setErr(""); }}
+                  required
+                  className="input text-center font-mono text-lg pl-11"
+                  placeholder="••••••••"
+                  dir="ltr"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPw((v) => !v)}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-muted-foreground hover:text-foreground"
+                  aria-label={showPw ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
+                  title={showPw ? "إخفاء" : "إظهار"}
+                >
+                  {showPw ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+                </button>
+              </div>
             </label>
 
             {err && <div className="text-xs text-destructive text-center">{err}</div>}
