@@ -600,6 +600,7 @@ function MonthsSettlement({
     if (error) { toast.error(error.message); return; }
     setSettled((s) => ({ ...s, [month]: next }));
     toast.success(next ? `تم تأكيد حساب ${AR_MONTHS[month - 1]}` : `تم إلغاء حساب ${AR_MONTHS[month - 1]}`);
+    onChanged?.();
   }
 
   const doneCount = Object.values(settled).filter(Boolean).length;
