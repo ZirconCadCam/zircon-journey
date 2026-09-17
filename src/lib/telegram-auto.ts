@@ -11,31 +11,19 @@ export interface AutoTelegramFile {
   filename: string;
 }
 
-/** Send a caption + files to the Telegram group without awaiting the result. */
+/**
+ * Queue a caption + files for the Telegram group.
+ *
+ * The delivery itself happens on the server from a durable queue, so closing
+ * the page or losing the connection right after an upload no longer drops the
+ * file: it is retried automatically until it lands in the group.
+ */
 export function autoSendFilesToTelegram(caption: string, files: AutoTelegramFile[]): void {
   const documents = files.filter((f) => !!f.url && !!f.filename).slice(0, 12);
   if (!caption.trim()) return;
   void (async () => {
-    try {
-      const { sendCaseToTelegram } = await import("@/lib/telegram.functions");
-      const res: any = await sendCaseToTelegram({ data: { caption: caption.slice(0, 3900), documents } });
-      const failed = (res?.sent ?? []).filter((s: any) => !s.ok);
-      if (failed.length) {
-        const { toast } = await import("sonner");
-        toast.warning(
-          `تعذّر إرسال ${failed.length} ملف إلى تلجرام: ${failed
-            .map((f: any) => `${f.filename}${f.error ? ` (${f.error})` : ""}`)
-            .join("، ")}`,
-          { duration: 8000 },
-        );
-      }
-    } catch (e: any) {
-      console.warn("[telegram-auto] الإرسال التلقائي إلى تلجرام لم ينجح", e);
-      try {
-        const { toast } = await import("sonner");
-        toast.warning(`الإرسال التلقائي إلى تلجرام لم ينجح: ${e?.message ?? "خطأ"}`, { duration: 8000 });
-      } catch { /* ignore */ }
-    }
+    const { queueTelegram } = await import("@/lib/telegram-outbox");
+    await queueTelegram(caption, documents);
   })();
 }
 
