@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -369,7 +369,7 @@ function DoctorPointsTable({
                   <td className="p-2">
                     <input
                       value={amounts[r.id] ?? ""}
-                      onChange={(e) => setAmounts({ ...amounts, [r.id]: e.target.value })}
+                      onChange={(e) => handleAmountChange(r, e.target.value)}
                       onBlur={() => saveAmount(r)}
                       inputMode="decimal"
                       placeholder="0"
