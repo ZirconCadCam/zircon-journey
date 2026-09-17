@@ -20,7 +20,7 @@ import { SecretaryPhotoInbox } from "@/components/secretary-photo-inbox";
 import { ROLE_LABEL, STAFF_PASSWORDS, type RoleKey } from "@/lib/chat";
 import { saveStaffSession, hasValidStaffSession, clearStaffSession } from "@/lib/staff-session";
 import { getStage, deriveStageKey } from "@/lib/case-stages";
-import { Sparkles, ArrowRight, Lock, Stethoscope, MessageSquare, ClipboardList, Settings, Archive, FileArchive, FileText, Search, Bell, BellRing, Camera, RefreshCw, Timer, MonitorSmartphone } from "lucide-react";
+import { Sparkles, ArrowRight, Lock, Stethoscope, MessageSquare, ClipboardList, Settings, Archive, FileArchive, FileText, Search, Bell, BellRing, Camera, RefreshCw, Timer, MonitorSmartphone, Eye, EyeOff } from "lucide-react";
 import { DesignerFollowupPanel } from "@/components/designer-followup-panel";
 import { useNewRevisionRounds } from "@/lib/revision-round-alerts";
 import { toast } from "sonner";
@@ -195,6 +195,7 @@ function Shell({ children, right }: { children: React.ReactNode; right?: React.R
 
 function Gate({ role, onOk }: { role: RoleKey; onOk: () => void }) {
   const [pw, setPw] = useState("");
+  const [showPw, setShowPw] = useState(false);
   const [err, setErr] = useState("");
   const [checking, setChecking] = useState(false);
   async function submit(e: React.FormEvent) {
@@ -219,8 +220,15 @@ function Gate({ role, onOk }: { role: RoleKey; onOk: () => void }) {
             <div className="text-xl font-bold">{ROLE_LABEL[role]}</div>
             <div className="text-xs text-muted-foreground mt-1">أدخل كلمة المرور للدخول إلى لوحة المحادثات</div>
           </div>
-          <input type="password" autoFocus value={pw} onChange={e=>{setPw(e.target.value); setErr("");}}
-            placeholder="كلمة المرور" className="mt-6 w-full rounded-xl border border-input bg-background px-4 py-3 text-center font-mono text-lg outline-none focus:border-gold" />
+          <div className="relative mt-6">
+            <input type={showPw ? "text" : "password"} autoFocus value={pw} onChange={e=>{setPw(e.target.value); setErr("");}}
+              placeholder="كلمة المرور" className="w-full rounded-xl border border-input bg-background px-4 py-3 pl-11 text-center font-mono text-lg outline-none focus:border-gold" />
+            <button type="button" onClick={() => setShowPw(v=>!v)}
+              className="absolute left-2 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-muted-foreground hover:text-foreground"
+              aria-label={showPw ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"} title={showPw ? "إخفاء" : "إظهار"}>
+              {showPw ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+            </button>
+          </div>
           {err && <div className="text-xs text-destructive mt-2 text-center">{err}</div>}
           <button type="submit" disabled={checking} className="mt-4 w-full rounded-xl gradient-brown py-3 font-bold shadow-luxury disabled:opacity-60">{checking ? "جارٍ التحقق…" : "دخول"}</button>
         </form>
