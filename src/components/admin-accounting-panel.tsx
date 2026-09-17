@@ -498,7 +498,20 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
 function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] }) {
   const nameOf = (slot: number) => doctors.find((d) => d.slot === slot)?.name ?? `#${slot}`;
   const now = new Date();
-  const [month, setMonth] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
+  const year = now.getFullYear();
+  const [month, setMonth] = useState(`${year}-${String(now.getMonth() + 1).padStart(2, "0")}`);
+
+  // Months marked as settled (حُسِبَت) — their cases are hidden from the table.
+  const [settledMonths, setSettledMonths] = useState<Set<number>>(new Set());
+  async function loadSettled() {
+    const { data } = await supabase
+      .from("staff_month_settlements")
+      .select("month,settled")
+      .eq("scope", "technician")
+      .eq("year", year);
+    setSettledMonths(new Set((data ?? []).filter((x: any) => x.settled).map((x: any) => Number(x.month))));
+  }
+  useEffect(() => { loadSettled(); }, [year]);
 
   const carved = useMemo(() => rows.filter((r) => r.permanent_fabrication_done), [rows]);
   const dateOf = (r: Row) => r.perm_sent_at ?? r.updated_at;
@@ -509,11 +522,20 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
     return [...set].sort().reverse();
   }, [carved, month]);
 
+  // Hide cases whose month has been settled.
   const list = useMemo(
-    () => dedupe(carved.filter((r) => monthKey(dateOf(r)) === month)),
-    [carved, month],
+    () => dedupe(
+      carved.filter((r) => {
+        const mk = monthKey(dateOf(r));
+        if (mk !== month) return false;
+        const mNum = Number(mk.split("-")[1]);
+        return !settledMonths.has(mNum);
+      }),
+    ),
+    [carved, month, settledMonths],
   );
   const total = list.reduce((s, r) => s + teethOf(r), 0);
+  const monthIsSettled = settledMonths.has(Number(month.split("-")[1]));
 
   return (
     <div className="space-y-5">
@@ -543,7 +565,11 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
             </thead>
             <tbody>
               {list.length === 0 ? (
-                <tr><td colSpan={5} className="p-6 text-center text-xs text-muted-foreground">لا توجد حالات في هذا الشهر</td></tr>
+                <tr><td colSpan={5} className="p-6 text-center text-xs text-muted-foreground">
+                  {monthIsSettled
+                    ? "تم حساب هذا الشهر — الحالات المخفية ✅"
+                    : "لا توجد حالات في هذا الشهر"}
+                </td></tr>
               ) : list.map((r, i) => (
                 <tr key={r.id} className="border-t border-border">
                   <td className="p-2 text-xs text-muted-foreground">{i + 1}</td>
@@ -564,7 +590,7 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
         </div>
       </div>
 
-      <MonthsSettlement scope="technician" title="حساب شهور الفني" />
+      <MonthsSettlement scope="technician" title="حساب شهور الفني" onChanged={loadSettled} />
     </div>
   );
 }
