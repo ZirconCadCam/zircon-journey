@@ -372,6 +372,11 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
   const year = now.getFullYear();
   const [month, setMonth] = useState(`${year}-${String(now.getMonth() + 1).padStart(2, "0")}`);
 
+  // Filters: patient name, branch, doctor.
+  const [q, setQ] = useState("");
+  const [branch, setBranch] = useState<"all" | "sanaa" | "ibb">("all");
+  const [doctorSlot, setDoctorSlot] = useState<number | "all">("all");
+
   // Months marked as settled (حُسِبَت) — their cases are hidden from the table.
   const [settledMonths, setSettledMonths] = useState<Set<number>>(new Set());
   async function loadSettled() {
