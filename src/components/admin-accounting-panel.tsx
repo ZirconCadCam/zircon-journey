@@ -228,7 +228,12 @@ function DoctorPointsTable({
   doctor, rows, onBack, onChanged,
 }: { doctor: Doctor; rows: Row[]; onBack: () => void; onChanged: () => void }) {
   const [month, setMonth] = useState<string>("all");
-  const [withdrawn, setWithdrawn] = useState(0);
+  const list = useMemo(
+    () => (month === "all" ? rows : rows.filter((r) => monthKey(dateOf(r)) === month)),
+    [rows, month],
+  );
+  const sortedList = useMemo(() => sortRows(list, sortBy), [list, sortBy]);
+  const dupPh = useMemo(() => dupPhones(sortedList), [sortedList]);
   const [addPts, setAddPts] = useState("");
   const [saving, setSaving] = useState(false);
   const [amounts, setAmounts] = useState<Record<string, string>>({});
