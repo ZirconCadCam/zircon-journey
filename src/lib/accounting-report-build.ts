@@ -43,6 +43,12 @@ export const firstName = (s: unknown) => norm(s).split(" ")[0] ?? "";
 const REPEAT_RE = /(اعادة|اعاده)\s*$/;
 export const isRepeatName = (s: unknown) => REPEAT_RE.test(norm(s));
 
+/** اسم مريض «معدّل/إعادة»: يحتوي «تعديل» أو إحدى صيغ «إعادة». */
+export const isSpecialName = (s: unknown) => {
+  const n = norm(s);
+  return n.includes("تعديل") || /اعاد[هة]/.test(n);
+};
+
 /** Month key ("YYYY-MM") of a date in Aden time (UTC+3). */
 export function monthKeyAden(iso?: string | null): string {
   if (!iso) return "";
@@ -128,7 +134,18 @@ ${inner}
 </body></html>`;
 }
 
-/** جدول نقاط طبيب واحد لشهر محدد. */
+/** يفصل الصفوف إلى عادية ومعدّلة/إعادة (بالاسم أو بمعرّفات التكرار الممرّرة). */
+function splitSpecial(rows: AccRow[], extraIds?: Set<string>) {
+  const normal: AccRow[] = [];
+  const special: AccRow[] = [];
+  for (const r of rows) {
+    if (isSpecialName(r.patient_name) || (extraIds?.has(String(r.id)) ?? false)) special.push(r);
+    else normal.push(r);
+  }
+  return { normal, special };
+}
+
+/** جدول نقاط طبيب واحد لشهر محدد — جدولان: عادي + تعديل/إعادة. */
 export function buildDoctorPointsHtml(opts: {
   doctorName: string;
   branch?: string | null;
@@ -137,13 +154,18 @@ export function buildDoctorPointsHtml(opts: {
   withdrawn: number;
 }): string {
   const dup = dupPhones(opts.rows);
+  const { normal, special } = splitSpecial(opts.rows);
   const totalPoints = sumTeethAcc(opts.rows);
   const totalAmount = opts.rows.reduce((s, r) => s + (Number(r.remaining_amount) || 0), 0);
-  const body = opts.rows.length
-    ? opts.rows
-        .map((r, i) => {
-          const isDup = dup.has(digits(r.patient_phone));
-          return `<tr>
+
+  const table = (title: string, rows: AccRow[]) => {
+    const pts = sumTeethAcc(rows);
+    const amt = rows.reduce((s, r) => s + (Number(r.remaining_amount) || 0), 0);
+    const body = rows.length
+      ? rows
+          .map((r, i) => {
+            const isDup = dup.has(digits(r.patient_phone));
+            return `<tr>
         <td>${i + 1}</td>
         <td class="b">${esc(r.patient_name)}</td>
         <td class="mono${isDup ? " dup" : ""}" dir="ltr">${esc(r.patient_phone ?? "—")}</td>
@@ -151,9 +173,18 @@ export function buildDoctorPointsHtml(opts: {
         <td>${fmtDate(doctorDateOf(r))}</td>
         <td class="mono">${r.remaining_amount == null ? "—" : esc(r.remaining_amount)}</td>
       </tr>`;
-        })
-        .join("")
-    : `<tr><td colspan="6" class="empty">لا توجد حالات مؤرشفة في هذا الشهر</td></tr>`;
+          })
+          .join("")
+      : `<tr><td colspan="6" class="empty">لا توجد حالات</td></tr>`;
+    return `<section>
+  <h2>${esc(title)}</h2>
+  <table>
+    <thead><tr><th>#</th><th>اسم المريض</th><th>رقم الهاتف</th><th>عدد النقاط</th><th>تاريخ الأرشفة</th><th>المبلغ المتبقي</th></tr></thead>
+    <tbody>${body}</tbody>
+    <tfoot><tr><td colspan="3">المجموع — ${rows.length} حالة</td><td>${pts} نقطة</td><td>—</td><td class="mono">${amt || 0}</td></tr></tfoot>
+  </table>
+</section>`;
+  };
 
   const branch = opts.branch === "ibb" ? "فرع إب" : opts.branch === "sanaa" ? "فرع صنعاء" : "";
   const inner = `
@@ -163,14 +194,8 @@ export function buildDoctorPointsHtml(opts: {
   <div class="card"><div class="l">النقاط المتبقية</div><div class="v">${totalPoints - opts.withdrawn}</div></div>
   <div class="card"><div class="l">إجمالي المبالغ المتبقية</div><div class="v">${totalAmount || 0}</div></div>
 </div>
-<section>
-  <h2>الحالات المؤرشفة</h2>
-  <table>
-    <thead><tr><th>#</th><th>اسم المريض</th><th>رقم الهاتف</th><th>عدد النقاط</th><th>تاريخ الأرشفة</th><th>المبلغ المتبقي</th></tr></thead>
-    <tbody>${body}</tbody>
-    <tfoot><tr><td colspan="3">المجموع — ${opts.rows.length} حالة</td><td>${totalPoints} نقطة</td><td>—</td><td class="mono">${totalAmount || 0}</td></tr></tfoot>
-  </table>
-</section>
+${table("الحالات المؤرشفة", normal)}
+${table("الحالات المعدّلة / الإعادة", special)}
 <div class="grand"><span>عدد الحالات: ${opts.rows.length}</span><span>مجموع النقاط: ${totalPoints}</span><span>المتبقي: ${totalPoints - opts.withdrawn} نقطة</span></div>`;
   return shell(
     `كشف نقاط ${opts.doctorName} — ${opts.monthLabel}`,
@@ -179,7 +204,7 @@ export function buildDoctorPointsHtml(opts: {
   );
 }
 
-/** جدول حساب المصمم أو الفني لشهر محدد. */
+/** جدول حساب المصمم أو الفني لشهر محدد — جدولان: عادي + تعديل/إعادة. */
 export function buildStaffAccountingHtml(opts: {
   staffTitle: string;
   monthLabel: string;
@@ -191,14 +216,16 @@ export function buildStaffAccountingHtml(opts: {
 }): string {
   const dup = dupPhones(opts.rows);
   const total = sumTeethAcc(opts.rows);
-  const reps = opts.repeatIds ?? new Set<string>();
-  const repeatTotal = sumTeethAcc(opts.rows.filter((r) => reps.has(String(r.id))));
-  const body = opts.rows.length
-    ? opts.rows
-        .map((r, i) => {
-          const isDup = dup.has(digits(r.patient_phone));
-          const rep = reps.has(String(r.id));
-          return `<tr class="${rep ? "rep" : ""}">
+  const { normal, special } = splitSpecial(opts.rows, opts.repeatIds);
+  const specialTotal = sumTeethAcc(special);
+
+  const table = (title: string, rows: AccRow[], mark: boolean) => {
+    const t = sumTeethAcc(rows);
+    const body = rows.length
+      ? rows
+          .map((r, i) => {
+            const isDup = dup.has(digits(r.patient_phone));
+            return `<tr class="${mark ? "rep" : ""}">
         <td>${i + 1}</td>
         <td class="b">${esc(r.patient_name)}</td>
         <td class="mono${isDup ? " dup" : ""}" dir="ltr">${esc(r.patient_phone ?? "—")}</td>
@@ -206,24 +233,27 @@ export function buildStaffAccountingHtml(opts: {
         <td class="b">${teethOf(r) || "—"}</td>
         <td>${fmtDate(opts.dateOf(r))}</td>
       </tr>`;
-        })
-        .join("")
-    : `<tr><td colspan="6" class="empty">لا توجد حالات في هذا الشهر</td></tr>`;
+          })
+          .join("")
+      : `<tr><td colspan="6" class="empty">لا توجد حالات</td></tr>`;
+    return `<section>
+  <h2>${esc(title)}</h2>
+  <table>
+    <thead><tr><th>#</th><th>اسم المريض</th><th>رقم الهاتف</th><th>الطبيب</th><th>عدد الأسنان</th><th>${esc(opts.dateHeader)}</th></tr></thead>
+    <tbody>${body}</tbody>
+    <tfoot><tr><td colspan="4">المجموع — ${rows.length} حالة</td><td colspan="2">${t} سِنّ</td></tr></tfoot>
+  </table>
+</section>`;
+  };
 
   const inner = `
 <div class="cards">
   <div class="card"><div class="l">عدد الحالات</div><div class="v">${opts.rows.length}</div></div>
   <div class="card"><div class="l">مجموع الأسنان</div><div class="v">${total}</div></div>
-  ${reps.size ? `<div class="card"><div class="l">أسنان حالات الإعادة</div><div class="v">${repeatTotal}</div></div>` : ""}
+  <div class="card"><div class="l">أسنان التعديل/الإعادة</div><div class="v">${specialTotal}</div></div>
 </div>
-<section>
-  <h2>${esc(opts.staffTitle)}</h2>
-  <table>
-    <thead><tr><th>#</th><th>اسم المريض</th><th>رقم الهاتف</th><th>الطبيب</th><th>عدد الأسنان</th><th>${esc(opts.dateHeader)}</th></tr></thead>
-    <tbody>${body}</tbody>
-    <tfoot><tr><td colspan="4">المجموع — ${opts.rows.length} حالة</td><td colspan="2">${total} سِنّ</td></tr></tfoot>
-  </table>
-</section>
+${table(opts.staffTitle, normal, false)}
+${table("الحالات المعدّلة / الإعادة", special, true)}
 <div class="grand"><span>عدد الحالات: ${opts.rows.length}</span><span>مجموع الأسنان: ${total} سِنّ</span></div>`;
   return shell(`حساب ${opts.staffTitle} — ${opts.monthLabel}`, opts.monthLabel, inner);
 }
