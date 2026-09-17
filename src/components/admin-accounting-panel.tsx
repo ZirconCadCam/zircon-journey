@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   Calculator, Stethoscope, MonitorCog, Wrench, ArrowRight, Loader2,
-  RefreshCw, Coins, Check, Plus, Search, Building2, X,
+  RefreshCw, Coins, Check, Plus, Search, Building2, X, ArrowDownUp,
 } from "lucide-react";
 import { DoctorAvatar } from "@/components/doctor-avatar";
 import { teethOf } from "@/lib/report-build";
