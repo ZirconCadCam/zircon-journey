@@ -659,6 +659,76 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
   );
 }
 
+/* ---------------------- shared accounting filter bar ---------------------- */
+
+function AccountingFilterBar({
+  q, setQ, branch, setBranch, doctorSlot, setDoctorSlot, doctors, hasFilters, onReset,
+}: {
+  q: string;
+  setQ: (v: string) => void;
+  branch: "all" | "sanaa" | "ibb";
+  setBranch: (v: "all" | "sanaa" | "ibb") => void;
+  doctorSlot: number | "all";
+  setDoctorSlot: (v: number | "all") => void;
+  doctors: Doctor[];
+  hasFilters: boolean;
+  onReset: () => void;
+}) {
+  return (
+    <div className="grid sm:grid-cols-3 gap-3 rounded-xl bg-muted/20 border border-border p-3">
+      <div className="relative">
+        <Search className="size-4 absolute top-1/2 -translate-y-1/2 right-3 text-muted-foreground" />
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="ابحث باسم المريض أو الهاتف…"
+          className="w-full rounded-lg border border-input bg-background pr-9 pl-3 py-2 text-xs outline-none focus:border-gold"
+        />
+      </div>
+      <label className="block">
+        <div className="text-[10px] font-bold text-muted-foreground mb-1 flex items-center gap-1">
+          <Building2 className="size-3 text-gold" /> الفرع
+        </div>
+        <select
+          value={branch}
+          onChange={(e) => setBranch(e.target.value as any)}
+          className="w-full rounded-lg border border-input bg-background px-2 py-2 text-xs outline-none focus:border-gold"
+        >
+          <option value="all">كل الفروع</option>
+          <option value="sanaa">صنعاء</option>
+          <option value="ibb">إب</option>
+        </select>
+      </label>
+      <label className="block">
+        <div className="text-[10px] font-bold text-muted-foreground mb-1 flex items-center gap-1">
+          <Stethoscope className="size-3 text-gold" /> الطبيب
+        </div>
+        <div className="flex gap-2">
+          <select
+            value={doctorSlot === "all" ? "all" : String(doctorSlot)}
+            onChange={(e) => setDoctorSlot(e.target.value === "all" ? "all" : Number(e.target.value))}
+            className="flex-1 rounded-lg border border-input bg-background px-2 py-2 text-xs outline-none focus:border-gold"
+          >
+            <option value="all">كل الأطباء</option>
+            {doctors.map((d) => (
+              <option key={d.slot} value={d.slot}>{d.name}</option>
+            ))}
+          </select>
+          {hasFilters && (
+            <button
+              onClick={onReset}
+              className="rounded-lg border border-border bg-card px-2.5 text-xs font-bold hover:border-gold transition flex items-center gap-1"
+              title="مسح الفلاتر"
+            >
+              <X className="size-3.5" />
+            </button>
+          )}
+        </div>
+      </label>
+    </div>
+  );
+}
+
 /* ---------------------- months settlement checkboxes ---------------------- */
 
 function MonthsSettlement({
