@@ -232,6 +232,7 @@ function DoctorPointsTable({
   const [addPts, setAddPts] = useState("");
   const [saving, setSaving] = useState(false);
   const [amounts, setAmounts] = useState<Record<string, string>>({});
+  const [sortBy, setSortBy] = useState<SortBy>("default");
 
   const dateOf = (r: Row) => r.archive_reviewed_at ?? r.updated_at;
 
