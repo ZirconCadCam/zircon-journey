@@ -714,7 +714,7 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
 
 function AccountingFilterBar({
   q, setQ, branch, setBranch, doctorSlot, setDoctorSlot, doctors, hasFilters, onReset,
-  sortBy, setSortBy,
+  sortBy, setSortBy, repeat, setRepeat,
 }: {
   q: string;
   setQ: (v: string) => void;
@@ -727,6 +727,8 @@ function AccountingFilterBar({
   onReset: () => void;
   sortBy: SortBy;
   setSortBy: (v: SortBy) => void;
+  repeat: RepeatFilter;
+  setRepeat: (v: RepeatFilter) => void;
 }) {
   return (
     <div className="grid sm:grid-cols-4 gap-3 rounded-xl bg-muted/20 border border-border p-3">
