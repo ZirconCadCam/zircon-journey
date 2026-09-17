@@ -52,6 +52,12 @@ const firstName = (s: unknown) => norm(s).split(" ")[0] ?? "";
 const REPEAT_RE = /(اعادة|اعاده|إعادة|إعاده)\s*$/;
 const isRepeatName = (s: unknown) => REPEAT_RE.test(norm(s));
 
+/** أسماء تحتوي على «تعديل» أو إحدى صيغ «إعادة» (بعد التطبيع). */
+const SPECIAL_RE = /(تعديل|اعادة|اعاده)/;
+const isSpecialName = (s: unknown) => SPECIAL_RE.test(norm(s));
+
+type RepeatFilter = "all" | "special" | "normal";
+
 /** Returns a Set of phone digits that appear more than once in the list. */
 function dupPhones(rows: Row[]): Set<string> {
   const counts = new Map<string, number>();
