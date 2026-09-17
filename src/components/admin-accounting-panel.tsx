@@ -411,7 +411,7 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
           <div>
             <div className="font-bold">حساب المصمم — أسنان الحالات المُصمَّمة</div>
             <div className="text-[11px] text-muted-foreground">
-              يُحسب كل مريض مرة واحدة. حالات «الإعادة» تظهر بلون أحمر ولا تُحتسب ضمن المستحق.
+              يُحسب كل مريض مرة واحدة. حالات «الإعادة» (تطابق الهاتف والاسم الأول) تظهر بلون أحمر للتمييز.
             </div>
           </div>
           <select value={month} onChange={(e) => setMonth(e.target.value)}
