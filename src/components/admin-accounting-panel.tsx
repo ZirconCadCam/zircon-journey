@@ -493,6 +493,7 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
           doctorSlot={doctorSlot} setDoctorSlot={setDoctorSlot}
           doctors={doctors}
           hasFilters={hasFilters} onReset={resetFilters}
+          sortBy={sortBy} setSortBy={setSortBy}
         />
 
         <div className="overflow-x-auto rounded-xl border border-border">
@@ -508,19 +509,20 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
+              {sorted.length === 0 ? (
                 <tr><td colSpan={6} className="p-6 text-center text-xs text-muted-foreground">
                   {monthIsSettled
                     ? "تم حساب هذا الشهر — الحالات المخفية ✅"
                     : hasFilters ? "لا توجد نتائج مطابقة للفلاتر" : "لا توجد حالات مُصمَّمة في هذا الشهر"}
                 </td></tr>
-              ) : filtered.map((r, i) => {
+              ) : sorted.map((r, i) => {
                 const rep = repeatIds.has(r.id);
+                const dupPhone = dupPh.has(digits(r.patient_phone));
                 return (
                   <tr key={r.id} className={`border-t border-border ${rep ? "bg-red-500/5" : ""}`}>
                     <td className="p-2 text-xs text-muted-foreground">{i + 1}</td>
                     <td className={`p-2 font-bold ${rep ? "text-red-600" : ""}`}>{r.patient_name}</td>
-                    <td className="p-2 font-mono text-xs" dir="ltr">{r.patient_phone || "—"}</td>
+                    <td className={`p-2 font-mono text-xs ${dupPhone ? "text-red-600 font-bold" : ""}`} dir="ltr">{r.patient_phone || "—"}</td>
                     <td className="p-2 text-xs">{nameOf(r.doctor_slot)}</td>
                     <td className={`p-2 font-extrabold ${rep ? "text-red-600" : "text-gold"}`}>{teethOf(r) || "—"}</td>
                     <td className="p-2 text-xs">{fmtDate(r.design_delivered_at ?? r.design_sent_at ?? r.updated_at)}</td>
@@ -530,7 +532,7 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-gold bg-gold/10 font-extrabold">
-                <td className="p-2" colSpan={4}>المجموع — {filtered.length} حالة</td>
+                <td className="p-2" colSpan={4}>المجموع — {sorted.length} حالة</td>
                 <td className="p-2" colSpan={2}>
                   {total} سِنّ
                   {repeatTotal > 0 && <span className="text-red-600 text-xs font-bold"> (منها {repeatTotal} إعادة)</span>}
