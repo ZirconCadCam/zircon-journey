@@ -451,6 +451,13 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
               </button>
             )}
             {role === "admin" && (
+              <button onClick={() => setTab("accreport")}
+                className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "accreport" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
+                <FileSpreadsheet className="size-4" /> تقرير الحسابات
+              </button>
+            )}
+
+            {role === "admin" && (
               <button onClick={() => setTab("settings")}
                 className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "settings" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
                 <Settings className="size-4" /> الإعدادات
