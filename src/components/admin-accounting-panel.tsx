@@ -571,7 +571,26 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
     ),
     [carved, month, settledMonths],
   );
-  const total = list.reduce((s, r) => s + teethOf(r), 0);
+  // Apply filters (patient name, branch, doctor).
+  const filtered = useMemo(() => {
+    const term = norm(q);
+    const dl = new Map(doctors.map((d) => [d.slot, d]));
+    return list.filter((r) => {
+      const d = dl.get(r.doctor_slot);
+      if (branch !== "all" && d?.branch !== branch) return false;
+      if (doctorSlot !== "all" && r.doctor_slot !== doctorSlot) return false;
+      if (term) {
+        const hay = norm(`${r.patient_name} ${r.patient_phone ?? ""}`);
+        if (!hay.includes(term)) return false;
+      }
+      return true;
+    });
+  }, [list, q, branch, doctorSlot, doctors]);
+
+  const hasFilters = !!q || branch !== "all" || doctorSlot !== "all";
+  function resetFilters() { setQ(""); setBranch("all"); setDoctorSlot("all"); }
+
+  const total = filtered.reduce((s, r) => s + teethOf(r), 0);
   const monthIsSettled = settledMonths.has(Number(month.split("-")[1]));
 
   return (
@@ -588,6 +607,14 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
             {months.map((m) => <option key={m} value={m}>{monthLabel(m)}</option>)}
           </select>
         </div>
+
+        <AccountingFilterBar
+          q={q} setQ={setQ}
+          branch={branch} setBranch={setBranch}
+          doctorSlot={doctorSlot} setDoctorSlot={setDoctorSlot}
+          doctors={doctors}
+          hasFilters={hasFilters} onReset={resetFilters}
+        />
 
         <div className="overflow-x-auto rounded-xl border border-border">
           <table className="w-full text-sm">
