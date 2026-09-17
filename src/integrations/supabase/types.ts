@@ -1129,6 +1129,39 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_outbox: {
+        Row: {
+          attempts: number
+          caption: string
+          created_at: string
+          documents: Json
+          id: string
+          last_error: string | null
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          attempts?: number
+          caption: string
+          created_at?: string
+          documents?: Json
+          id?: string
+          last_error?: string | null
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          attempts?: number
+          caption?: string
+          created_at?: string
+          documents?: Json
+          id?: string
+          last_error?: string | null
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           branch: Database["public"]["Enums"]["branch"] | null
