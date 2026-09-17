@@ -369,7 +369,20 @@ function DoctorPointsTable({
 function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] }) {
   const nameOf = (slot: number) => doctors.find((d) => d.slot === slot)?.name ?? `#${slot}`;
   const now = new Date();
-  const [month, setMonth] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
+  const year = now.getFullYear();
+  const [month, setMonth] = useState(`${year}-${String(now.getMonth() + 1).padStart(2, "0")}`);
+
+  // Months marked as settled (حُسِبَت) — their cases are hidden from the table.
+  const [settledMonths, setSettledMonths] = useState<Set<number>>(new Set());
+  async function loadSettled() {
+    const { data } = await supabase
+      .from("staff_month_settlements")
+      .select("month,settled")
+      .eq("scope", "designer")
+      .eq("year", year);
+    setSettledMonths(new Set((data ?? []).filter((x: any) => x.settled).map((x: any) => Number(x.month))));
+  }
+  useEffect(() => { loadSettled(); }, [year]);
 
   const designed = useMemo(() => rows.filter((r) => r.design_done), [rows]);
   const dateOf = (r: Row) => r.design_delivered_at ?? r.design_sent_at ?? r.updated_at;
@@ -380,9 +393,17 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
     return [...set].sort().reverse();
   }, [designed, month]);
 
+  // Hide cases whose month has been settled.
   const list = useMemo(
-    () => dedupe(designed.filter((r) => monthKey(dateOf(r)) === month)),
-    [designed, month],
+    () => dedupe(
+      designed.filter((r) => {
+        const mk = monthKey(dateOf(r));
+        if (mk !== month) return false;
+        const mNum = Number(mk.split("-")[1]);
+        return !settledMonths.has(mNum);
+      }),
+    ),
+    [designed, month, settledMonths],
   );
 
   /** Repeat case: name ends with "إعادة" and matches an earlier case by phone + first name. */
@@ -402,6 +423,7 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
 
   const total = list.reduce((s, r) => s + teethOf(r), 0);
   const repeatTotal = list.filter((r) => repeatIds.has(r.id)).reduce((s, r) => s + teethOf(r), 0);
+  const monthIsSettled = settledMonths.has(Number(month.split("-")[1]));
 
   return (
     <div className="space-y-5">
