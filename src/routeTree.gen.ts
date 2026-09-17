@@ -25,6 +25,7 @@ import { Route as AdminArchiveRouteImport } from './routes/admin.archive'
 import { Route as DoctorsSlotNewCaseRouteImport } from './routes/doctors_.$slot.new-case'
 import { Route as ApiPublicPushDispatchRouteImport } from './routes/api/public/push-dispatch'
 import { Route as ApiPublicHooksMonthlyReportsRouteImport } from './routes/api/public/hooks/monthly-reports'
+import { Route as ApiPublicHooksMonthlyAccountingRouteImport } from './routes/api/public/hooks/monthly-accounting'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -107,6 +108,12 @@ const ApiPublicHooksMonthlyReportsRoute =
     path: '/api/public/hooks/monthly-reports',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksMonthlyAccountingRoute =
+  ApiPublicHooksMonthlyAccountingRouteImport.update({
+    id: '/api/public/hooks/monthly-accounting',
+    path: '/api/public/hooks/monthly-accounting',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -124,6 +131,7 @@ export interface FileRoutesByFullPath {
   '/help/': typeof HelpIndexRoute
   '/api/public/push-dispatch': typeof ApiPublicPushDispatchRoute
   '/doctors/$slot/new-case': typeof DoctorsSlotNewCaseRoute
+  '/api/public/hooks/monthly-accounting': typeof ApiPublicHooksMonthlyAccountingRoute
   '/api/public/hooks/monthly-reports': typeof ApiPublicHooksMonthlyReportsRoute
 }
 export interface FileRoutesByTo {
@@ -142,6 +150,7 @@ export interface FileRoutesByTo {
   '/help': typeof HelpIndexRoute
   '/api/public/push-dispatch': typeof ApiPublicPushDispatchRoute
   '/doctors/$slot/new-case': typeof DoctorsSlotNewCaseRoute
+  '/api/public/hooks/monthly-accounting': typeof ApiPublicHooksMonthlyAccountingRoute
   '/api/public/hooks/monthly-reports': typeof ApiPublicHooksMonthlyReportsRoute
 }
 export interface FileRoutesById {
@@ -161,6 +170,7 @@ export interface FileRoutesById {
   '/help/': typeof HelpIndexRoute
   '/api/public/push-dispatch': typeof ApiPublicPushDispatchRoute
   '/doctors_/$slot/new-case': typeof DoctorsSlotNewCaseRoute
+  '/api/public/hooks/monthly-accounting': typeof ApiPublicHooksMonthlyAccountingRoute
   '/api/public/hooks/monthly-reports': typeof ApiPublicHooksMonthlyReportsRoute
 }
 export interface FileRouteTypes {
@@ -181,6 +191,7 @@ export interface FileRouteTypes {
     | '/help/'
     | '/api/public/push-dispatch'
     | '/doctors/$slot/new-case'
+    | '/api/public/hooks/monthly-accounting'
     | '/api/public/hooks/monthly-reports'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -199,6 +210,7 @@ export interface FileRouteTypes {
     | '/help'
     | '/api/public/push-dispatch'
     | '/doctors/$slot/new-case'
+    | '/api/public/hooks/monthly-accounting'
     | '/api/public/hooks/monthly-reports'
   id:
     | '__root__'
@@ -217,6 +229,7 @@ export interface FileRouteTypes {
     | '/help/'
     | '/api/public/push-dispatch'
     | '/doctors_/$slot/new-case'
+    | '/api/public/hooks/monthly-accounting'
     | '/api/public/hooks/monthly-reports'
   fileRoutesById: FileRoutesById
 }
@@ -236,6 +249,7 @@ export interface RootRouteChildren {
   HelpIndexRoute: typeof HelpIndexRoute
   ApiPublicPushDispatchRoute: typeof ApiPublicPushDispatchRoute
   DoctorsSlotNewCaseRoute: typeof DoctorsSlotNewCaseRoute
+  ApiPublicHooksMonthlyAccountingRoute: typeof ApiPublicHooksMonthlyAccountingRoute
   ApiPublicHooksMonthlyReportsRoute: typeof ApiPublicHooksMonthlyReportsRoute
 }
 
@@ -353,6 +367,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksMonthlyReportsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/monthly-accounting': {
+      id: '/api/public/hooks/monthly-accounting'
+      path: '/api/public/hooks/monthly-accounting'
+      fullPath: '/api/public/hooks/monthly-accounting'
+      preLoaderRoute: typeof ApiPublicHooksMonthlyAccountingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -372,6 +393,7 @@ const rootRouteChildren: RootRouteChildren = {
   HelpIndexRoute: HelpIndexRoute,
   ApiPublicPushDispatchRoute: ApiPublicPushDispatchRoute,
   DoctorsSlotNewCaseRoute: DoctorsSlotNewCaseRoute,
+  ApiPublicHooksMonthlyAccountingRoute: ApiPublicHooksMonthlyAccountingRoute,
   ApiPublicHooksMonthlyReportsRoute: ApiPublicHooksMonthlyReportsRoute,
 }
 export const routeTree = rootRouteImport

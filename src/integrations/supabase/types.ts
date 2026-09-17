@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounting_report_deliveries: {
+        Row: {
+          created_at: string
+          doctor_slot: number
+          error: string | null
+          id: string
+          month: number
+          ok: boolean
+          scope: string
+          sent_at: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          doctor_slot?: number
+          error?: string | null
+          id?: string
+          month: number
+          ok?: boolean
+          scope: string
+          sent_at?: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          doctor_slot?: number
+          error?: string | null
+          id?: string
+          month?: number
+          ok?: boolean
+          scope?: string
+          sent_at?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
       app_settings: {
         Row: {
           bool_value: boolean
