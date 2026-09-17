@@ -795,6 +795,20 @@ function AccountingFilterBar({
           <option value="name-desc">الاسم: تنازلي (ي→أ)</option>
         </select>
       </label>
+      <label className="block">
+        <div className="text-[10px] font-bold text-muted-foreground mb-1 flex items-center gap-1">
+          <RefreshCw className="size-3 text-gold" /> تعديل/إعادة
+        </div>
+        <select
+          value={repeat}
+          onChange={(e) => setRepeat(e.target.value as RepeatFilter)}
+          className="w-full rounded-lg border border-input bg-background px-2 py-2 text-xs outline-none focus:border-gold"
+        >
+          <option value="all">كل الحالات</option>
+          <option value="special">تعديل/إعادة فقط</option>
+          <option value="normal">بدون تعديل/إعادة</option>
+        </select>
+      </label>
     </div>
   );
 }
