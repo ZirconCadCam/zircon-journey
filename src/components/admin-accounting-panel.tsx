@@ -535,6 +535,7 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
     [carved, month, settledMonths],
   );
   const total = list.reduce((s, r) => s + teethOf(r), 0);
+  const monthIsSettled = settledMonths.has(Number(month.split("-")[1]));
 
   return (
     <div className="space-y-5">
