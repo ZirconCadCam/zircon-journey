@@ -52,6 +52,23 @@ const firstName = (s: unknown) => norm(s).split(" ")[0] ?? "";
 const REPEAT_RE = /(اعادة|اعاده|إعادة|إعاده)\s*$/;
 const isRepeatName = (s: unknown) => REPEAT_RE.test(norm(s));
 
+/** Returns a Set of phone digits that appear more than once in the list. */
+function dupPhones(rows: Row[]): Set<string> {
+  const counts = new Map<string, number>();
+  for (const r of rows) {
+    const ph = digits(r.patient_phone);
+    if (ph) counts.set(ph, (counts.get(ph) ?? 0) + 1);
+  }
+  return new Set([...counts.entries()].filter(([, n]) => n > 1).map(([k]) => k));
+}
+
+type SortBy = "default" | "name-asc" | "name-desc";
+function sortRows(rows: Row[], sortBy: SortBy): Row[] {
+  if (sortBy === "default") return rows;
+  const dir = sortBy === "name-asc" ? 1 : -1;
+  return [...rows].sort((a, b) => dir * norm(a.patient_name).localeCompare(norm(b.patient_name), "ar"));
+}
+
 function monthKey(iso?: string | null): string {
   if (!iso) return "";
   const d = new Date(iso);
