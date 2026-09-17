@@ -485,6 +485,9 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
             <AdminDevicesPanel />
           ) : tab === "accounts" && role === "admin" ? (
             <AdminAccountingPanel />
+          ) : tab === "accreport" && role === "admin" ? (
+            <AdminAccountingReport />
+
           ) : tab === "settings" && role === "admin" ? (
 
             <AdminSettingsPanel />
