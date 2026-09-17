@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -280,14 +280,23 @@ function DoctorPointsTable({
   const remainingPoints = totalPoints - withdrawn;
   const totalAmount = sortedList.reduce((s, r) => s + (Number(amounts[r.id]) || 0), 0);
 
-  async function saveAmount(r: Row) {
-    const raw = amounts[r.id];
-    const val = raw === "" ? null : Number(raw);
-    if (val !== null && isNaN(val)) { toast.error("قيمة غير صحيحة"); return; }
+  async function saveAmount(r: Row, rawOverride?: string) {
+    const raw = rawOverride !== undefined ? rawOverride : amounts[r.id];
+    const val = raw === "" || raw == null ? null : Number(raw);
+    if (val !== null && isNaN(val)) return;
+    // Skip if unchanged
+    if ((r.remaining_amount ?? null) === val) return;
     const { error } = await supabase.from("slot_cases")
       .update({ remaining_amount: val } as any).eq("id", r.id);
-    if (error) toast.error(error.message);
-    else { toast.success("تم حفظ المبلغ المتبقي"); onChanged(); }
+    if (!error) onChanged();
+  }
+
+  // حفظ تلقائي مؤجّل عند كل تحرير لخانة المبلغ المتبقي
+  const saveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  function handleAmountChange(r: Row, raw: string) {
+    setAmounts((prev) => ({ ...prev, [r.id]: raw }));
+    clearTimeout(saveTimers.current[r.id]);
+    saveTimers.current[r.id] = setTimeout(() => saveAmount(r, raw), 800);
   }
 
   async function addWithdrawal() {
@@ -360,7 +369,7 @@ function DoctorPointsTable({
                   <td className="p-2">
                     <input
                       value={amounts[r.id] ?? ""}
-                      onChange={(e) => setAmounts({ ...amounts, [r.id]: e.target.value })}
+                      onChange={(e) => handleAmountChange(r, e.target.value)}
                       onBlur={() => saveAmount(r)}
                       inputMode="decimal"
                       placeholder="0"
