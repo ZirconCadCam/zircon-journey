@@ -164,7 +164,7 @@ export const Route = createFileRoute("/api/public/hooks/monthly-accounting")({
 
         async function record(
           scope: string,
-          doctorSlot: number | null,
+          doctorSlot: number,
           year: number,
           month: number,
           ok: boolean,
@@ -265,7 +265,7 @@ export const Route = createFileRoute("/api/public/hooks/monthly-accounting")({
               `🦷 مجموع الأسنان: <b>${total}</b> سِنّ` +
               (repeatIds.size ? `\n🔁 حالات الإعادة: <b>${repeatIds.size}</b>` : "");
             if (!list.length) {
-              await record("designer", null, year, month, true, "لا توجد حالات");
+              await record("designer", -1, year, month, true, "لا توجد حالات");
             } else {
               const html = buildStaffAccountingHtml({
                 staffTitle: "مصمم CAD/CAM — الحالات المُصمَّمة",
@@ -279,11 +279,11 @@ export const Route = createFileRoute("/api/public/hooks/monthly-accounting")({
               const filename = safeName(`حساب المصمم ${year}-${String(month).padStart(2, "0")}`) + ".html";
               try {
                 await sendHtml(api, chatId, filename, html, caption);
-                await record("designer", null, year, month, true);
+                await record("designer", -1, year, month, true);
                 results.push({ scope: "designer", month: mk, cases: list.length, teeth: total, ok: true });
               } catch (e: any) {
                 try { await sendMessage(api, chatId, caption); } catch { /* ignore */ }
-                await record("designer", null, year, month, false, String(e?.message ?? e));
+                await record("designer", -1, year, month, false, String(e?.message ?? e));
                 results.push({ scope: "designer", month: mk, ok: false, error: e?.message });
               }
             }
@@ -303,7 +303,7 @@ export const Route = createFileRoute("/api/public/hooks/monthly-accounting")({
               `📦 حالات «تم نحت الزركون الدائم»: <b>${list.length}</b>\n` +
               `🦷 مجموع الأسنان: <b>${total}</b> سِنّ`;
             if (!list.length) {
-              await record("technician", null, year, month, true, "لا توجد حالات");
+              await record("technician", -1, year, month, true, "لا توجد حالات");
             } else {
               const html = buildStaffAccountingHtml({
                 staffTitle: "فني النحت — نحت الزركون الدائم",
@@ -316,11 +316,11 @@ export const Route = createFileRoute("/api/public/hooks/monthly-accounting")({
               const filename = safeName(`حساب الفني ${year}-${String(month).padStart(2, "0")}`) + ".html";
               try {
                 await sendHtml(api, chatId, filename, html, caption);
-                await record("technician", null, year, month, true);
+                await record("technician", -1, year, month, true);
                 results.push({ scope: "technician", month: mk, cases: list.length, teeth: total, ok: true });
               } catch (e: any) {
                 try { await sendMessage(api, chatId, caption); } catch { /* ignore */ }
-                await record("technician", null, year, month, false, String(e?.message ?? e));
+                await record("technician", -1, year, month, false, String(e?.message ?? e));
                 results.push({ scope: "technician", month: mk, ok: false, error: e?.message });
               }
             }
