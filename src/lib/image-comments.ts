@@ -119,4 +119,11 @@ export async function postImageVoiceToChat(opts: {
     attachment_size: opts.blob.size,
   });
   if (error) throw error;
+
+  // Mirror the voice note to the clinic's Telegram group.
+  const { queueTelegram } = await import("@/lib/telegram-outbox");
+  void queueTelegram(
+    `🎤 إرسال تلقائي — تسجيل صوتي على صورة\n──────────────\n👤 المريض: ${opts.patientName}\n🔖 رقم الحالة: ${opts.caseCode}\n📤 المصدر: ${opts.authorName}\n📁 الملف: ${fileName}`,
+    [{ bucket: ATTACHMENTS_BUCKET, path, filename: fileName }],
+  );
 }

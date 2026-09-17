@@ -84,7 +84,17 @@ function CaseDetail() {
     const { error } = await supabase.from("case_files").insert({
       case_id: id, uploader_id: session.user.id, file_name: f.name, file_path: path, file_type: f.type, file_kind: kind, size_bytes: f.size,
     });
-    if (error) toast.error(error.message); else { toast.success("تم رفع الملف"); loadFiles(); }
+    if (error) toast.error(error.message);
+    else {
+      toast.success("تم رفع الملف");
+      loadFiles();
+      // Mirror the case file to the clinic's Telegram group.
+      const { queueTelegram } = await import("@/lib/telegram-outbox");
+      void queueTelegram(
+        `📎 إرسال تلقائي — ملف حالة\n──────────────\n👤 المريض: ${c?.patient_name ?? ""}\n🔖 رقم الحالة: ${c?.case_code ?? ""}\n📁 الملف: ${f.name}`,
+        [{ bucket: "case-files", path, filename: f.name }],
+      );
+    }
     if (fileInput.current) fileInput.current.value = "";
   }
 

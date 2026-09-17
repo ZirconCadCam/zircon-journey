@@ -401,7 +401,16 @@ function FilesPanel({ doctor, actor }: { doctor: Doctor; actor: string }) {
       public_url: pub.publicUrl, size_bytes: f.size, uploaded_by: actor,
     });
     setUploading(false);
-    if (error) toast.error(error.message); else toast.success("تم رفع الملف");
+    if (error) toast.error(error.message);
+    else {
+      toast.success("تم رفع الملف");
+      // Every doctor upload is mirrored to the clinic's Telegram group.
+      const { queueTelegram } = await import("@/lib/telegram-outbox");
+      void queueTelegram(
+        `📎 إرسال تلقائي — ملف من الطبيب\n──────────────\n🩺 الطبيب: ${doctor.name}\n📤 المصدر: ${actor}\n📁 الملف: ${f.name}`,
+        [{ bucket: "doctor-files", path, filename: f.name }],
+      );
+    }
     if (fileInput.current) fileInput.current.value = "";
   }
 

@@ -450,6 +450,12 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
           } else {
             tracker.done();
             setMsgs(prev => prev.map(m => m.id === id ? { ...m, _local: undefined, _progress: 100, _file: undefined } : m));
+            // Mirror every chat attachment to the clinic's Telegram group.
+            const { queueTelegram } = await import("@/lib/telegram-outbox");
+            void queueTelegram(
+              `📎 إرسال تلقائي — مرفق من المحادثة\n──────────────\n📤 المصدر: ${ROLE_LABEL[me]} (${myName})\n📁 الملف: ${file.name || "ملف"}`,
+              [{ bucket: "chat-attachments", path, filename: file.name || "ملف" }],
+            );
           }
         },
       });

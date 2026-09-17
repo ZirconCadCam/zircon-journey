@@ -24,6 +24,7 @@ import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminArchiveRouteImport } from './routes/admin.archive'
 import { Route as DoctorsSlotNewCaseRouteImport } from './routes/doctors_.$slot.new-case'
 import { Route as ApiPublicPushDispatchRouteImport } from './routes/api/public/push-dispatch'
+import { Route as ApiPublicTelegramDrainRouteImport } from './routes/api/public/telegram/drain'
 import { Route as ApiPublicHooksMonthlyReportsRouteImport } from './routes/api/public/hooks/monthly-reports'
 import { Route as ApiPublicHooksMonthlyAccountingRouteImport } from './routes/api/public/hooks/monthly-accounting'
 
@@ -102,6 +103,11 @@ const ApiPublicPushDispatchRoute = ApiPublicPushDispatchRouteImport.update({
   path: '/api/public/push-dispatch',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicTelegramDrainRoute = ApiPublicTelegramDrainRouteImport.update({
+  id: '/api/public/telegram/drain',
+  path: '/api/public/telegram/drain',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksMonthlyReportsRoute =
   ApiPublicHooksMonthlyReportsRouteImport.update({
     id: '/api/public/hooks/monthly-reports',
@@ -133,6 +139,7 @@ export interface FileRoutesByFullPath {
   '/doctors/$slot/new-case': typeof DoctorsSlotNewCaseRoute
   '/api/public/hooks/monthly-accounting': typeof ApiPublicHooksMonthlyAccountingRoute
   '/api/public/hooks/monthly-reports': typeof ApiPublicHooksMonthlyReportsRoute
+  '/api/public/telegram/drain': typeof ApiPublicTelegramDrainRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -152,6 +159,7 @@ export interface FileRoutesByTo {
   '/doctors/$slot/new-case': typeof DoctorsSlotNewCaseRoute
   '/api/public/hooks/monthly-accounting': typeof ApiPublicHooksMonthlyAccountingRoute
   '/api/public/hooks/monthly-reports': typeof ApiPublicHooksMonthlyReportsRoute
+  '/api/public/telegram/drain': typeof ApiPublicTelegramDrainRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -172,6 +180,7 @@ export interface FileRoutesById {
   '/doctors_/$slot/new-case': typeof DoctorsSlotNewCaseRoute
   '/api/public/hooks/monthly-accounting': typeof ApiPublicHooksMonthlyAccountingRoute
   '/api/public/hooks/monthly-reports': typeof ApiPublicHooksMonthlyReportsRoute
+  '/api/public/telegram/drain': typeof ApiPublicTelegramDrainRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -193,6 +202,7 @@ export interface FileRouteTypes {
     | '/doctors/$slot/new-case'
     | '/api/public/hooks/monthly-accounting'
     | '/api/public/hooks/monthly-reports'
+    | '/api/public/telegram/drain'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -212,6 +222,7 @@ export interface FileRouteTypes {
     | '/doctors/$slot/new-case'
     | '/api/public/hooks/monthly-accounting'
     | '/api/public/hooks/monthly-reports'
+    | '/api/public/telegram/drain'
   id:
     | '__root__'
     | '/'
@@ -231,6 +242,7 @@ export interface FileRouteTypes {
     | '/doctors_/$slot/new-case'
     | '/api/public/hooks/monthly-accounting'
     | '/api/public/hooks/monthly-reports'
+    | '/api/public/telegram/drain'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -251,6 +263,7 @@ export interface RootRouteChildren {
   DoctorsSlotNewCaseRoute: typeof DoctorsSlotNewCaseRoute
   ApiPublicHooksMonthlyAccountingRoute: typeof ApiPublicHooksMonthlyAccountingRoute
   ApiPublicHooksMonthlyReportsRoute: typeof ApiPublicHooksMonthlyReportsRoute
+  ApiPublicTelegramDrainRoute: typeof ApiPublicTelegramDrainRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -360,6 +373,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPushDispatchRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/telegram/drain': {
+      id: '/api/public/telegram/drain'
+      path: '/api/public/telegram/drain'
+      fullPath: '/api/public/telegram/drain'
+      preLoaderRoute: typeof ApiPublicTelegramDrainRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/monthly-reports': {
       id: '/api/public/hooks/monthly-reports'
       path: '/api/public/hooks/monthly-reports'
@@ -395,6 +415,7 @@ const rootRouteChildren: RootRouteChildren = {
   DoctorsSlotNewCaseRoute: DoctorsSlotNewCaseRoute,
   ApiPublicHooksMonthlyAccountingRoute: ApiPublicHooksMonthlyAccountingRoute,
   ApiPublicHooksMonthlyReportsRoute: ApiPublicHooksMonthlyReportsRoute,
+  ApiPublicTelegramDrainRoute: ApiPublicTelegramDrainRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
