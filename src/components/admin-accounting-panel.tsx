@@ -52,6 +52,12 @@ const firstName = (s: unknown) => norm(s).split(" ")[0] ?? "";
 const REPEAT_RE = /(اعادة|اعاده|إعادة|إعاده)\s*$/;
 const isRepeatName = (s: unknown) => REPEAT_RE.test(norm(s));
 
+/** أسماء تحتوي على «تعديل» أو إحدى صيغ «إعادة» (بعد التطبيع). */
+const SPECIAL_RE = /(تعديل|اعادة|اعاده)/;
+const isSpecialName = (s: unknown) => SPECIAL_RE.test(norm(s));
+
+type RepeatFilter = "all" | "special" | "normal";
+
 /** Returns a Set of phone digits that appear more than once in the list. */
 function dupPhones(rows: Row[]): Set<string> {
   const counts = new Map<string, number>();
@@ -233,6 +239,7 @@ function DoctorPointsTable({
   const [saving, setSaving] = useState(false);
   const [amounts, setAmounts] = useState<Record<string, string>>({});
   const [sortBy, setSortBy] = useState<SortBy>("default");
+  const [repeat, setRepeat] = useState<RepeatFilter>("all");
 
   const dateOf = (r: Row) => r.archive_reviewed_at ?? r.updated_at;
 
@@ -245,7 +252,15 @@ function DoctorPointsTable({
     () => (month === "all" ? rows : rows.filter((r) => monthKey(dateOf(r)) === month)),
     [rows, month],
   );
-  const sortedList = useMemo(() => sortRows(list, sortBy), [list, sortBy]);
+  const repeatFiltered = useMemo(
+    () => list.filter((r) =>
+      repeat === "all" ? true
+      : repeat === "special" ? isSpecialName(r.patient_name)
+      : !isSpecialName(r.patient_name),
+    ),
+    [list, repeat],
+  );
+  const sortedList = useMemo(() => sortRows(repeatFiltered, sortBy), [repeatFiltered, sortBy]);
   const dupPh = useMemo(() => dupPhones(sortedList), [sortedList]);
 
   async function loadWithdrawn() {
@@ -309,6 +324,12 @@ function DoctorPointsTable({
           <option value="default">الافتراضي (التاريخ)</option>
           <option value="name-asc">الاسم: تصاعدي</option>
           <option value="name-desc">الاسم: تنازلي</option>
+        </select>
+        <select value={repeat} onChange={(e) => setRepeat(e.target.value as RepeatFilter)}
+          className="rounded-lg border border-input bg-background px-3 py-1.5 text-xs font-bold outline-none focus:border-gold">
+          <option value="all">كل الحالات</option>
+          <option value="special">تعديل/إعادة فقط</option>
+          <option value="normal">بدون تعديل/إعادة</option>
         </select>
       </div>
 
@@ -406,6 +427,7 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
   const [branch, setBranch] = useState<"all" | "sanaa" | "ibb">("all");
   const [doctorSlot, setDoctorSlot] = useState<number | "all">("all");
   const [sortBy, setSortBy] = useState<SortBy>("default");
+  const [repeat, setRepeat] = useState<RepeatFilter>("all");
 
   // Months marked as settled (حُسِبَت) — their cases are hidden from the table.
   const [settledMonths, setSettledMonths] = useState<Set<number>>(new Set());
@@ -453,12 +475,14 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
         const hay = norm(`${r.patient_name} ${r.patient_phone ?? ""}`);
         if (!hay.includes(term)) return false;
       }
+      if (repeat === "special" && !isSpecialName(r.patient_name)) return false;
+      if (repeat === "normal" && isSpecialName(r.patient_name)) return false;
       return true;
     });
-  }, [list, q, branch, doctorSlot, doctors]);
+  }, [list, q, branch, doctorSlot, doctors, repeat]);
 
-  const hasFilters = !!q || branch !== "all" || doctorSlot !== "all" || sortBy !== "default";
-  function resetFilters() { setQ(""); setBranch("all"); setDoctorSlot("all"); setSortBy("default"); }
+  const hasFilters = !!q || branch !== "all" || doctorSlot !== "all" || sortBy !== "default" || repeat !== "all";
+  function resetFilters() { setQ(""); setBranch("all"); setDoctorSlot("all"); setSortBy("default"); setRepeat("all"); }
 
   const sorted = useMemo(() => sortRows(filtered, sortBy), [filtered, sortBy]);
   const dupPh = useMemo(() => dupPhones(sorted), [sorted]);
@@ -506,6 +530,7 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
           doctors={doctors}
           hasFilters={hasFilters} onReset={resetFilters}
           sortBy={sortBy} setSortBy={setSortBy}
+          repeat={repeat} setRepeat={setRepeat}
         />
 
         <div className="overflow-x-auto rounded-xl border border-border">
@@ -573,6 +598,7 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
   const [branch, setBranch] = useState<"all" | "sanaa" | "ibb">("all");
   const [doctorSlot, setDoctorSlot] = useState<number | "all">("all");
   const [sortBy, setSortBy] = useState<SortBy>("default");
+  const [repeat, setRepeat] = useState<RepeatFilter>("all");
 
   // Months marked as settled (حُسِبَت) — their cases are hidden from the table.
   const [settledMonths, setSettledMonths] = useState<Set<number>>(new Set());
@@ -619,12 +645,14 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
         const hay = norm(`${r.patient_name} ${r.patient_phone ?? ""}`);
         if (!hay.includes(term)) return false;
       }
+      if (repeat === "special" && !isSpecialName(r.patient_name)) return false;
+      if (repeat === "normal" && isSpecialName(r.patient_name)) return false;
       return true;
     });
-  }, [list, q, branch, doctorSlot, doctors]);
+  }, [list, q, branch, doctorSlot, doctors, repeat]);
 
-  const hasFilters = !!q || branch !== "all" || doctorSlot !== "all" || sortBy !== "default";
-  function resetFilters() { setQ(""); setBranch("all"); setDoctorSlot("all"); setSortBy("default"); }
+  const hasFilters = !!q || branch !== "all" || doctorSlot !== "all" || sortBy !== "default" || repeat !== "all";
+  function resetFilters() { setQ(""); setBranch("all"); setDoctorSlot("all"); setSortBy("default"); setRepeat("all"); }
 
   const sorted = useMemo(() => sortRows(filtered, sortBy), [filtered, sortBy]);
   const dupPh = useMemo(() => dupPhones(sorted), [sorted]);
@@ -654,6 +682,7 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
           doctors={doctors}
           hasFilters={hasFilters} onReset={resetFilters}
           sortBy={sortBy} setSortBy={setSortBy}
+          repeat={repeat} setRepeat={setRepeat}
         />
 
         <div className="overflow-x-auto rounded-xl border border-border">
@@ -708,7 +737,7 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
 
 function AccountingFilterBar({
   q, setQ, branch, setBranch, doctorSlot, setDoctorSlot, doctors, hasFilters, onReset,
-  sortBy, setSortBy,
+  sortBy, setSortBy, repeat, setRepeat,
 }: {
   q: string;
   setQ: (v: string) => void;
@@ -721,9 +750,11 @@ function AccountingFilterBar({
   onReset: () => void;
   sortBy: SortBy;
   setSortBy: (v: SortBy) => void;
+  repeat: RepeatFilter;
+  setRepeat: (v: RepeatFilter) => void;
 }) {
   return (
-    <div className="grid sm:grid-cols-4 gap-3 rounded-xl bg-muted/20 border border-border p-3">
+    <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3 rounded-xl bg-muted/20 border border-border p-3">
       <div className="relative">
         <Search className="size-4 absolute top-1/2 -translate-y-1/2 right-3 text-muted-foreground" />
         <input
@@ -785,6 +816,20 @@ function AccountingFilterBar({
           <option value="default">الافتراضي (التاريخ)</option>
           <option value="name-asc">الاسم: تصاعدي (أ→ي)</option>
           <option value="name-desc">الاسم: تنازلي (ي→أ)</option>
+        </select>
+      </label>
+      <label className="block">
+        <div className="text-[10px] font-bold text-muted-foreground mb-1 flex items-center gap-1">
+          <RefreshCw className="size-3 text-gold" /> تعديل/إعادة
+        </div>
+        <select
+          value={repeat}
+          onChange={(e) => setRepeat(e.target.value as RepeatFilter)}
+          className="w-full rounded-lg border border-input bg-background px-2 py-2 text-xs outline-none focus:border-gold"
+        >
+          <option value="all">كل الحالات</option>
+          <option value="special">تعديل/إعادة فقط</option>
+          <option value="normal">بدون تعديل/إعادة</option>
         </select>
       </label>
     </div>
