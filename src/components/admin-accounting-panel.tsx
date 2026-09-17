@@ -228,12 +228,7 @@ function DoctorPointsTable({
   doctor, rows, onBack, onChanged,
 }: { doctor: Doctor; rows: Row[]; onBack: () => void; onChanged: () => void }) {
   const [month, setMonth] = useState<string>("all");
-  const list = useMemo(
-    () => (month === "all" ? rows : rows.filter((r) => monthKey(dateOf(r)) === month)),
-    [rows, month],
-  );
-  const sortedList = useMemo(() => sortRows(list, sortBy), [list, sortBy]);
-  const dupPh = useMemo(() => dupPhones(sortedList), [sortedList]);
+  const [withdrawn, setWithdrawn] = useState(0);
   const [addPts, setAddPts] = useState("");
   const [saving, setSaving] = useState(false);
   const [amounts, setAmounts] = useState<Record<string, string>>({});
@@ -250,6 +245,8 @@ function DoctorPointsTable({
     () => (month === "all" ? rows : rows.filter((r) => monthKey(dateOf(r)) === month)),
     [rows, month],
   );
+  const sortedList = useMemo(() => sortRows(list, sortBy), [list, sortBy]);
+  const dupPh = useMemo(() => dupPhones(sortedList), [sortedList]);
 
   async function loadWithdrawn() {
     const { data } = await supabase
@@ -264,9 +261,9 @@ function DoctorPointsTable({
     setAmounts(Object.fromEntries(rows.map((r) => [r.id, r.remaining_amount == null ? "" : String(r.remaining_amount)])));
   }, [rows]);
 
-  const totalPoints = list.reduce((s, r) => s + teethOf(r), 0);
+  const totalPoints = sortedList.reduce((s, r) => s + teethOf(r), 0);
   const remainingPoints = totalPoints - withdrawn;
-  const totalAmount = list.reduce((s, r) => s + (Number(amounts[r.id]) || 0), 0);
+  const totalAmount = sortedList.reduce((s, r) => s + (Number(amounts[r.id]) || 0), 0);
 
   async function saveAmount(r: Row) {
     const raw = amounts[r.id];
