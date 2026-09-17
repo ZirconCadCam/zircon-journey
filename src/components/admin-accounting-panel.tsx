@@ -411,10 +411,29 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
     [designed, month, settledMonths],
   );
 
+  // Apply filters (patient name, branch, doctor).
+  const filtered = useMemo(() => {
+    const term = norm(q);
+    const dl = new Map(doctors.map((d) => [d.slot, d]));
+    return list.filter((r) => {
+      const d = dl.get(r.doctor_slot);
+      if (branch !== "all" && d?.branch !== branch) return false;
+      if (doctorSlot !== "all" && r.doctor_slot !== doctorSlot) return false;
+      if (term) {
+        const hay = norm(`${r.patient_name} ${r.patient_phone ?? ""}`);
+        if (!hay.includes(term)) return false;
+      }
+      return true;
+    });
+  }, [list, q, branch, doctorSlot, doctors]);
+
+  const hasFilters = !!q || branch !== "all" || doctorSlot !== "all";
+  function resetFilters() { setQ(""); setBranch("all"); setDoctorSlot("all"); }
+
   /** Repeat case: name ends with "إعادة" and matches an earlier case by phone + first name. */
   const repeatIds = useMemo(() => {
     const ids = new Set<string>();
-    for (const r of list) {
+    for (const r of filtered) {
       if (!isRepeatName(r.patient_name)) continue;
       const ph = digits(r.patient_phone);
       const fn = firstName(r.patient_name);
@@ -424,10 +443,10 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
       if (match) ids.add(r.id);
     }
     return ids;
-  }, [list, rows]);
+  }, [filtered, rows]);
 
-  const total = list.reduce((s, r) => s + teethOf(r), 0);
-  const repeatTotal = list.filter((r) => repeatIds.has(r.id)).reduce((s, r) => s + teethOf(r), 0);
+  const total = filtered.reduce((s, r) => s + teethOf(r), 0);
+  const repeatTotal = filtered.filter((r) => repeatIds.has(r.id)).reduce((s, r) => s + teethOf(r), 0);
   const monthIsSettled = settledMonths.has(Number(month.split("-")[1]));
 
   return (
@@ -446,6 +465,14 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
             {months.map((m) => <option key={m} value={m}>{monthLabel(m)}</option>)}
           </select>
         </div>
+
+        <AccountingFilterBar
+          q={q} setQ={setQ}
+          branch={branch} setBranch={setBranch}
+          doctorSlot={doctorSlot} setDoctorSlot={setDoctorSlot}
+          doctors={doctors}
+          hasFilters={hasFilters} onReset={resetFilters}
+        />
 
         <div className="overflow-x-auto rounded-xl border border-border">
           <table className="w-full text-sm">
