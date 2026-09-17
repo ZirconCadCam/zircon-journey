@@ -304,6 +304,12 @@ function DoctorPointsTable({
           <option value="all">كل الشهور</option>
           {months.map((m) => <option key={m} value={m}>{monthLabel(m)}</option>)}
         </select>
+        <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortBy)}
+          className="rounded-lg border border-input bg-background px-3 py-1.5 text-xs font-bold outline-none focus:border-gold">
+          <option value="default">الافتراضي (التاريخ)</option>
+          <option value="name-asc">الاسم: تصاعدي</option>
+          <option value="name-desc">الاسم: تنازلي</option>
+        </select>
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-border">
@@ -319,31 +325,34 @@ function DoctorPointsTable({
             </tr>
           </thead>
           <tbody>
-            {list.length === 0 ? (
+            {sortedList.length === 0 ? (
               <tr><td colSpan={6} className="p-6 text-center text-xs text-muted-foreground">لا توجد حالات مؤرشفة في هذه الفترة</td></tr>
-            ) : list.map((r, i) => (
-              <tr key={r.id} className="border-t border-border">
-                <td className="p-2 text-xs text-muted-foreground">{i + 1}</td>
-                <td className="p-2 font-bold">{r.patient_name}</td>
-                <td className="p-2 font-mono text-xs" dir="ltr">{r.patient_phone || "—"}</td>
-                <td className="p-2 font-extrabold text-gold">{teethOf(r) || "—"}</td>
-                <td className="p-2 text-xs">{fmtDate(r.archive_reviewed_at ?? r.updated_at)}</td>
-                <td className="p-2">
-                  <input
-                    value={amounts[r.id] ?? ""}
-                    onChange={(e) => setAmounts({ ...amounts, [r.id]: e.target.value })}
-                    onBlur={() => saveAmount(r)}
-                    inputMode="decimal"
-                    placeholder="0"
-                    className="w-24 rounded-lg border border-input bg-background px-2 py-1 text-xs font-mono outline-none focus:border-gold"
-                  />
-                </td>
-              </tr>
-            ))}
+            ) : sortedList.map((r, i) => {
+              const dupPhone = dupPh.has(digits(r.patient_phone));
+              return (
+                <tr key={r.id} className="border-t border-border">
+                  <td className="p-2 text-xs text-muted-foreground">{i + 1}</td>
+                  <td className="p-2 font-bold">{r.patient_name}</td>
+                  <td className={`p-2 font-mono text-xs ${dupPhone ? "text-red-600 font-bold" : ""}`} dir="ltr">{r.patient_phone || "—"}</td>
+                  <td className="p-2 font-extrabold text-gold">{teethOf(r) || "—"}</td>
+                  <td className="p-2 text-xs">{fmtDate(r.archive_reviewed_at ?? r.updated_at)}</td>
+                  <td className="p-2">
+                    <input
+                      value={amounts[r.id] ?? ""}
+                      onChange={(e) => setAmounts({ ...amounts, [r.id]: e.target.value })}
+                      onBlur={() => saveAmount(r)}
+                      inputMode="decimal"
+                      placeholder="0"
+                      className="w-24 rounded-lg border border-input bg-background px-2 py-1 text-xs font-mono outline-none focus:border-gold"
+                    />
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
           <tfoot>
             <tr className="border-t-2 border-gold bg-gold/10 font-extrabold">
-              <td className="p-2" colSpan={3}>المجموع — {list.length} حالة</td>
+              <td className="p-2" colSpan={3}>المجموع — {sortedList.length} حالة</td>
               <td className="p-2">{totalPoints} نقطة</td>
               <td className="p-2 text-xs">—</td>
               <td className="p-2 font-mono">{totalAmount || 0}</td>
