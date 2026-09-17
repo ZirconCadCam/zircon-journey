@@ -500,6 +500,33 @@ export type Database = {
           },
         ]
       }
+      doctor_point_withdrawals: {
+        Row: {
+          created_at: string
+          doctor_slot: number
+          id: string
+          note: string | null
+          points: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          doctor_slot: number
+          id?: string
+          note?: string | null
+          points?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          doctor_slot?: number
+          id?: string
+          note?: string | null
+          points?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       doctor_profiles: {
         Row: {
           active: boolean
@@ -782,6 +809,7 @@ export type Database = {
           pinned: boolean
           received_permanent: boolean
           received_temporary: boolean
+          remaining_amount: number | null
           review_delivered_at: string | null
           review_read_at: string | null
           review_sent_at: string | null
@@ -874,6 +902,7 @@ export type Database = {
           pinned?: boolean
           received_permanent?: boolean
           received_temporary?: boolean
+          remaining_amount?: number | null
           review_delivered_at?: string | null
           review_read_at?: string | null
           review_sent_at?: string | null
@@ -966,6 +995,7 @@ export type Database = {
           pinned?: boolean
           received_permanent?: boolean
           received_temporary?: boolean
+          remaining_amount?: number | null
           review_delivered_at?: string | null
           review_read_at?: string | null
           review_sent_at?: string | null
@@ -991,6 +1021,36 @@ export type Database = {
           temporary_delivered?: boolean
           tooth_number?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      staff_month_settlements: {
+        Row: {
+          created_at: string
+          id: string
+          month: number
+          scope: string
+          settled: boolean
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          month: number
+          scope: string
+          settled?: boolean
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          month?: number
+          scope?: string
+          settled?: boolean
+          updated_at?: string
+          year?: number
         }
         Relationships: []
       }
