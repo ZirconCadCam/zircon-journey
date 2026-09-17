@@ -325,6 +325,12 @@ function DoctorPointsTable({
           <option value="name-asc">الاسم: تصاعدي</option>
           <option value="name-desc">الاسم: تنازلي</option>
         </select>
+        <select value={repeat} onChange={(e) => setRepeat(e.target.value as RepeatFilter)}
+          className="rounded-lg border border-input bg-background px-3 py-1.5 text-xs font-bold outline-none focus:border-gold">
+          <option value="all">كل الحالات</option>
+          <option value="special">تعديل/إعادة فقط</option>
+          <option value="normal">بدون تعديل/إعادة</option>
+        </select>
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-border">
