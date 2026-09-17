@@ -460,12 +460,14 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
         const hay = norm(`${r.patient_name} ${r.patient_phone ?? ""}`);
         if (!hay.includes(term)) return false;
       }
+      if (repeat === "special" && !isSpecialName(r.patient_name)) return false;
+      if (repeat === "normal" && isSpecialName(r.patient_name)) return false;
       return true;
     });
-  }, [list, q, branch, doctorSlot, doctors]);
+  }, [list, q, branch, doctorSlot, doctors, repeat]);
 
-  const hasFilters = !!q || branch !== "all" || doctorSlot !== "all" || sortBy !== "default";
-  function resetFilters() { setQ(""); setBranch("all"); setDoctorSlot("all"); setSortBy("default"); }
+  const hasFilters = !!q || branch !== "all" || doctorSlot !== "all" || sortBy !== "default" || repeat !== "all";
+  function resetFilters() { setQ(""); setBranch("all"); setDoctorSlot("all"); setSortBy("default"); setRepeat("all"); }
 
   const sorted = useMemo(() => sortRows(filtered, sortBy), [filtered, sortBy]);
   const dupPh = useMemo(() => dupPhones(sorted), [sorted]);
