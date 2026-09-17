@@ -509,7 +509,7 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-gold bg-gold/10 font-extrabold">
-                <td className="p-2" colSpan={4}>المجموع — {list.length} حالة</td>
+                <td className="p-2" colSpan={4}>المجموع — {filtered.length} حالة</td>
                 <td className="p-2" colSpan={2}>
                   {total} سِنّ
                   {repeatTotal > 0 && <span className="text-red-600 text-xs font-bold"> (منها {repeatTotal} إعادة)</span>}
