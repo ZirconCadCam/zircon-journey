@@ -585,7 +585,7 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
         </div>
       </div>
 
-      <MonthsSettlement scope="technician" title="حساب شهور الفني" />
+      <MonthsSettlement scope="technician" title="حساب شهور الفني" onChanged={loadSettled} />
     </div>
   );
 }
