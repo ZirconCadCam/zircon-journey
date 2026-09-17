@@ -641,6 +641,7 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
           doctorSlot={doctorSlot} setDoctorSlot={setDoctorSlot}
           doctors={doctors}
           hasFilters={hasFilters} onReset={resetFilters}
+          sortBy={sortBy} setSortBy={setSortBy}
         />
 
         <div className="overflow-x-auto rounded-xl border border-border">
@@ -649,31 +650,36 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
               <tr>
                 <th className="p-2 text-right">#</th>
                 <th className="p-2 text-right">اسم المريض</th>
+                <th className="p-2 text-right">رقم الهاتف</th>
                 <th className="p-2 text-right">الطبيب</th>
                 <th className="p-2 text-right">عدد الأسنان</th>
                 <th className="p-2 text-right">تاريخ النحت الدائم</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
-                <tr><td colSpan={5} className="p-6 text-center text-xs text-muted-foreground">
+              {sorted.length === 0 ? (
+                <tr><td colSpan={6} className="p-6 text-center text-xs text-muted-foreground">
                   {monthIsSettled
                     ? "تم حساب هذا الشهر — الحالات المخفية ✅"
                     : hasFilters ? "لا توجد نتائج مطابقة للفلاتر" : "لا توجد حالات في هذا الشهر"}
                 </td></tr>
-              ) : filtered.map((r, i) => (
-                <tr key={r.id} className="border-t border-border">
-                  <td className="p-2 text-xs text-muted-foreground">{i + 1}</td>
-                  <td className="p-2 font-bold">{r.patient_name}</td>
-                  <td className="p-2 text-xs">{nameOf(r.doctor_slot)}</td>
-                  <td className="p-2 font-extrabold text-gold">{teethOf(r) || "—"}</td>
-                  <td className="p-2 text-xs">{fmtDate(r.perm_sent_at ?? r.updated_at)}</td>
-                </tr>
-              ))}
+              ) : sorted.map((r, i) => {
+                const dupPhone = dupPh.has(digits(r.patient_phone));
+                return (
+                  <tr key={r.id} className="border-t border-border">
+                    <td className="p-2 text-xs text-muted-foreground">{i + 1}</td>
+                    <td className="p-2 font-bold">{r.patient_name}</td>
+                    <td className={`p-2 font-mono text-xs ${dupPhone ? "text-red-600 font-bold" : ""}`} dir="ltr">{r.patient_phone || "—"}</td>
+                    <td className="p-2 text-xs">{nameOf(r.doctor_slot)}</td>
+                    <td className="p-2 font-extrabold text-gold">{teethOf(r) || "—"}</td>
+                    <td className="p-2 text-xs">{fmtDate(r.perm_sent_at ?? r.updated_at)}</td>
+                  </tr>
+                );
+              })}
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-gold bg-gold/10 font-extrabold">
-                <td className="p-2" colSpan={3}>المجموع — {filtered.length} حالة</td>
+                <td className="p-2" colSpan={4}>المجموع — {sorted.length} حالة</td>
                 <td className="p-2" colSpan={2}>{total} سِنّ</td>
               </tr>
             </tfoot>
