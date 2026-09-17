@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   Calculator, Stethoscope, MonitorCog, Wrench, ArrowRight, Loader2,
-  RefreshCw, Coins, Check, Plus, Search, Building2, X,
+  RefreshCw, Coins, Check, Plus, Search, Building2, X, ArrowDownUp,
 } from "lucide-react";
 import { DoctorAvatar } from "@/components/doctor-avatar";
 import { teethOf } from "@/lib/report-build";
@@ -51,6 +51,23 @@ const firstName = (s: unknown) => norm(s).split(" ")[0] ?? "";
 
 const REPEAT_RE = /(اعادة|اعاده|إعادة|إعاده)\s*$/;
 const isRepeatName = (s: unknown) => REPEAT_RE.test(norm(s));
+
+/** Returns a Set of phone digits that appear more than once in the list. */
+function dupPhones(rows: Row[]): Set<string> {
+  const counts = new Map<string, number>();
+  for (const r of rows) {
+    const ph = digits(r.patient_phone);
+    if (ph) counts.set(ph, (counts.get(ph) ?? 0) + 1);
+  }
+  return new Set([...counts.entries()].filter(([, n]) => n > 1).map(([k]) => k));
+}
+
+type SortBy = "default" | "name-asc" | "name-desc";
+function sortRows(rows: Row[], sortBy: SortBy): Row[] {
+  if (sortBy === "default") return rows;
+  const dir = sortBy === "name-asc" ? 1 : -1;
+  return [...rows].sort((a, b) => dir * norm(a.patient_name).localeCompare(norm(b.patient_name), "ar"));
+}
 
 function monthKey(iso?: string | null): string {
   if (!iso) return "";
@@ -215,6 +232,7 @@ function DoctorPointsTable({
   const [addPts, setAddPts] = useState("");
   const [saving, setSaving] = useState(false);
   const [amounts, setAmounts] = useState<Record<string, string>>({});
+  const [sortBy, setSortBy] = useState<SortBy>("default");
 
   const dateOf = (r: Row) => r.archive_reviewed_at ?? r.updated_at;
 
@@ -227,6 +245,8 @@ function DoctorPointsTable({
     () => (month === "all" ? rows : rows.filter((r) => monthKey(dateOf(r)) === month)),
     [rows, month],
   );
+  const sortedList = useMemo(() => sortRows(list, sortBy), [list, sortBy]);
+  const dupPh = useMemo(() => dupPhones(sortedList), [sortedList]);
 
   async function loadWithdrawn() {
     const { data } = await supabase
@@ -241,9 +261,9 @@ function DoctorPointsTable({
     setAmounts(Object.fromEntries(rows.map((r) => [r.id, r.remaining_amount == null ? "" : String(r.remaining_amount)])));
   }, [rows]);
 
-  const totalPoints = list.reduce((s, r) => s + teethOf(r), 0);
+  const totalPoints = sortedList.reduce((s, r) => s + teethOf(r), 0);
   const remainingPoints = totalPoints - withdrawn;
-  const totalAmount = list.reduce((s, r) => s + (Number(amounts[r.id]) || 0), 0);
+  const totalAmount = sortedList.reduce((s, r) => s + (Number(amounts[r.id]) || 0), 0);
 
   async function saveAmount(r: Row) {
     const raw = amounts[r.id];
@@ -284,6 +304,12 @@ function DoctorPointsTable({
           <option value="all">كل الشهور</option>
           {months.map((m) => <option key={m} value={m}>{monthLabel(m)}</option>)}
         </select>
+        <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortBy)}
+          className="rounded-lg border border-input bg-background px-3 py-1.5 text-xs font-bold outline-none focus:border-gold">
+          <option value="default">الافتراضي (التاريخ)</option>
+          <option value="name-asc">الاسم: تصاعدي</option>
+          <option value="name-desc">الاسم: تنازلي</option>
+        </select>
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-border">
@@ -299,31 +325,34 @@ function DoctorPointsTable({
             </tr>
           </thead>
           <tbody>
-            {list.length === 0 ? (
+            {sortedList.length === 0 ? (
               <tr><td colSpan={6} className="p-6 text-center text-xs text-muted-foreground">لا توجد حالات مؤرشفة في هذه الفترة</td></tr>
-            ) : list.map((r, i) => (
-              <tr key={r.id} className="border-t border-border">
-                <td className="p-2 text-xs text-muted-foreground">{i + 1}</td>
-                <td className="p-2 font-bold">{r.patient_name}</td>
-                <td className="p-2 font-mono text-xs" dir="ltr">{r.patient_phone || "—"}</td>
-                <td className="p-2 font-extrabold text-gold">{teethOf(r) || "—"}</td>
-                <td className="p-2 text-xs">{fmtDate(r.archive_reviewed_at ?? r.updated_at)}</td>
-                <td className="p-2">
-                  <input
-                    value={amounts[r.id] ?? ""}
-                    onChange={(e) => setAmounts({ ...amounts, [r.id]: e.target.value })}
-                    onBlur={() => saveAmount(r)}
-                    inputMode="decimal"
-                    placeholder="0"
-                    className="w-24 rounded-lg border border-input bg-background px-2 py-1 text-xs font-mono outline-none focus:border-gold"
-                  />
-                </td>
-              </tr>
-            ))}
+            ) : sortedList.map((r, i) => {
+              const dupPhone = dupPh.has(digits(r.patient_phone));
+              return (
+                <tr key={r.id} className="border-t border-border">
+                  <td className="p-2 text-xs text-muted-foreground">{i + 1}</td>
+                  <td className="p-2 font-bold">{r.patient_name}</td>
+                  <td className={`p-2 font-mono text-xs ${dupPhone ? "text-red-600 font-bold" : ""}`} dir="ltr">{r.patient_phone || "—"}</td>
+                  <td className="p-2 font-extrabold text-gold">{teethOf(r) || "—"}</td>
+                  <td className="p-2 text-xs">{fmtDate(r.archive_reviewed_at ?? r.updated_at)}</td>
+                  <td className="p-2">
+                    <input
+                      value={amounts[r.id] ?? ""}
+                      onChange={(e) => setAmounts({ ...amounts, [r.id]: e.target.value })}
+                      onBlur={() => saveAmount(r)}
+                      inputMode="decimal"
+                      placeholder="0"
+                      className="w-24 rounded-lg border border-input bg-background px-2 py-1 text-xs font-mono outline-none focus:border-gold"
+                    />
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
           <tfoot>
             <tr className="border-t-2 border-gold bg-gold/10 font-extrabold">
-              <td className="p-2" colSpan={3}>المجموع — {list.length} حالة</td>
+              <td className="p-2" colSpan={3}>المجموع — {sortedList.length} حالة</td>
               <td className="p-2">{totalPoints} نقطة</td>
               <td className="p-2 text-xs">—</td>
               <td className="p-2 font-mono">{totalAmount || 0}</td>
@@ -372,10 +401,11 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
   const year = now.getFullYear();
   const [month, setMonth] = useState(`${year}-${String(now.getMonth() + 1).padStart(2, "0")}`);
 
-  // Filters: patient name, branch, doctor.
+  // Filters: patient name, branch, doctor, sort.
   const [q, setQ] = useState("");
   const [branch, setBranch] = useState<"all" | "sanaa" | "ibb">("all");
   const [doctorSlot, setDoctorSlot] = useState<number | "all">("all");
+  const [sortBy, setSortBy] = useState<SortBy>("default");
 
   // Months marked as settled (حُسِبَت) — their cases are hidden from the table.
   const [settledMonths, setSettledMonths] = useState<Set<number>>(new Set());
@@ -427,8 +457,11 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
     });
   }, [list, q, branch, doctorSlot, doctors]);
 
-  const hasFilters = !!q || branch !== "all" || doctorSlot !== "all";
-  function resetFilters() { setQ(""); setBranch("all"); setDoctorSlot("all"); }
+  const hasFilters = !!q || branch !== "all" || doctorSlot !== "all" || sortBy !== "default";
+  function resetFilters() { setQ(""); setBranch("all"); setDoctorSlot("all"); setSortBy("default"); }
+
+  const sorted = useMemo(() => sortRows(filtered, sortBy), [filtered, sortBy]);
+  const dupPh = useMemo(() => dupPhones(sorted), [sorted]);
 
   /** Repeat case: name ends with "إعادة" and matches an earlier case by phone + first name. */
   const repeatIds = useMemo(() => {
@@ -472,6 +505,7 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
           doctorSlot={doctorSlot} setDoctorSlot={setDoctorSlot}
           doctors={doctors}
           hasFilters={hasFilters} onReset={resetFilters}
+          sortBy={sortBy} setSortBy={setSortBy}
         />
 
         <div className="overflow-x-auto rounded-xl border border-border">
@@ -487,19 +521,20 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
+              {sorted.length === 0 ? (
                 <tr><td colSpan={6} className="p-6 text-center text-xs text-muted-foreground">
                   {monthIsSettled
                     ? "تم حساب هذا الشهر — الحالات المخفية ✅"
                     : hasFilters ? "لا توجد نتائج مطابقة للفلاتر" : "لا توجد حالات مُصمَّمة في هذا الشهر"}
                 </td></tr>
-              ) : filtered.map((r, i) => {
+              ) : sorted.map((r, i) => {
                 const rep = repeatIds.has(r.id);
+                const dupPhone = dupPh.has(digits(r.patient_phone));
                 return (
                   <tr key={r.id} className={`border-t border-border ${rep ? "bg-red-500/5" : ""}`}>
                     <td className="p-2 text-xs text-muted-foreground">{i + 1}</td>
                     <td className={`p-2 font-bold ${rep ? "text-red-600" : ""}`}>{r.patient_name}</td>
-                    <td className="p-2 font-mono text-xs" dir="ltr">{r.patient_phone || "—"}</td>
+                    <td className={`p-2 font-mono text-xs ${dupPhone ? "text-red-600 font-bold" : ""}`} dir="ltr">{r.patient_phone || "—"}</td>
                     <td className="p-2 text-xs">{nameOf(r.doctor_slot)}</td>
                     <td className={`p-2 font-extrabold ${rep ? "text-red-600" : "text-gold"}`}>{teethOf(r) || "—"}</td>
                     <td className="p-2 text-xs">{fmtDate(r.design_delivered_at ?? r.design_sent_at ?? r.updated_at)}</td>
@@ -509,7 +544,7 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-gold bg-gold/10 font-extrabold">
-                <td className="p-2" colSpan={4}>المجموع — {filtered.length} حالة</td>
+                <td className="p-2" colSpan={4}>المجموع — {sorted.length} حالة</td>
                 <td className="p-2" colSpan={2}>
                   {total} سِنّ
                   {repeatTotal > 0 && <span className="text-red-600 text-xs font-bold"> (منها {repeatTotal} إعادة)</span>}
@@ -533,10 +568,11 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
   const year = now.getFullYear();
   const [month, setMonth] = useState(`${year}-${String(now.getMonth() + 1).padStart(2, "0")}`);
 
-  // Filters: patient name, branch, doctor.
+  // Filters: patient name, branch, doctor, sort.
   const [q, setQ] = useState("");
   const [branch, setBranch] = useState<"all" | "sanaa" | "ibb">("all");
   const [doctorSlot, setDoctorSlot] = useState<number | "all">("all");
+  const [sortBy, setSortBy] = useState<SortBy>("default");
 
   // Months marked as settled (حُسِبَت) — their cases are hidden from the table.
   const [settledMonths, setSettledMonths] = useState<Set<number>>(new Set());
@@ -587,8 +623,11 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
     });
   }, [list, q, branch, doctorSlot, doctors]);
 
-  const hasFilters = !!q || branch !== "all" || doctorSlot !== "all";
-  function resetFilters() { setQ(""); setBranch("all"); setDoctorSlot("all"); }
+  const hasFilters = !!q || branch !== "all" || doctorSlot !== "all" || sortBy !== "default";
+  function resetFilters() { setQ(""); setBranch("all"); setDoctorSlot("all"); setSortBy("default"); }
+
+  const sorted = useMemo(() => sortRows(filtered, sortBy), [filtered, sortBy]);
+  const dupPh = useMemo(() => dupPhones(sorted), [sorted]);
 
   const total = filtered.reduce((s, r) => s + teethOf(r), 0);
   const monthIsSettled = settledMonths.has(Number(month.split("-")[1]));
@@ -614,6 +653,7 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
           doctorSlot={doctorSlot} setDoctorSlot={setDoctorSlot}
           doctors={doctors}
           hasFilters={hasFilters} onReset={resetFilters}
+          sortBy={sortBy} setSortBy={setSortBy}
         />
 
         <div className="overflow-x-auto rounded-xl border border-border">
@@ -622,31 +662,36 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
               <tr>
                 <th className="p-2 text-right">#</th>
                 <th className="p-2 text-right">اسم المريض</th>
+                <th className="p-2 text-right">رقم الهاتف</th>
                 <th className="p-2 text-right">الطبيب</th>
                 <th className="p-2 text-right">عدد الأسنان</th>
                 <th className="p-2 text-right">تاريخ النحت الدائم</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
-                <tr><td colSpan={5} className="p-6 text-center text-xs text-muted-foreground">
+              {sorted.length === 0 ? (
+                <tr><td colSpan={6} className="p-6 text-center text-xs text-muted-foreground">
                   {monthIsSettled
                     ? "تم حساب هذا الشهر — الحالات المخفية ✅"
                     : hasFilters ? "لا توجد نتائج مطابقة للفلاتر" : "لا توجد حالات في هذا الشهر"}
                 </td></tr>
-              ) : filtered.map((r, i) => (
-                <tr key={r.id} className="border-t border-border">
-                  <td className="p-2 text-xs text-muted-foreground">{i + 1}</td>
-                  <td className="p-2 font-bold">{r.patient_name}</td>
-                  <td className="p-2 text-xs">{nameOf(r.doctor_slot)}</td>
-                  <td className="p-2 font-extrabold text-gold">{teethOf(r) || "—"}</td>
-                  <td className="p-2 text-xs">{fmtDate(r.perm_sent_at ?? r.updated_at)}</td>
-                </tr>
-              ))}
+              ) : sorted.map((r, i) => {
+                const dupPhone = dupPh.has(digits(r.patient_phone));
+                return (
+                  <tr key={r.id} className="border-t border-border">
+                    <td className="p-2 text-xs text-muted-foreground">{i + 1}</td>
+                    <td className="p-2 font-bold">{r.patient_name}</td>
+                    <td className={`p-2 font-mono text-xs ${dupPhone ? "text-red-600 font-bold" : ""}`} dir="ltr">{r.patient_phone || "—"}</td>
+                    <td className="p-2 text-xs">{nameOf(r.doctor_slot)}</td>
+                    <td className="p-2 font-extrabold text-gold">{teethOf(r) || "—"}</td>
+                    <td className="p-2 text-xs">{fmtDate(r.perm_sent_at ?? r.updated_at)}</td>
+                  </tr>
+                );
+              })}
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-gold bg-gold/10 font-extrabold">
-                <td className="p-2" colSpan={3}>المجموع — {filtered.length} حالة</td>
+                <td className="p-2" colSpan={4}>المجموع — {sorted.length} حالة</td>
                 <td className="p-2" colSpan={2}>{total} سِنّ</td>
               </tr>
             </tfoot>
@@ -663,6 +708,7 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
 
 function AccountingFilterBar({
   q, setQ, branch, setBranch, doctorSlot, setDoctorSlot, doctors, hasFilters, onReset,
+  sortBy, setSortBy,
 }: {
   q: string;
   setQ: (v: string) => void;
@@ -673,9 +719,11 @@ function AccountingFilterBar({
   doctors: Doctor[];
   hasFilters: boolean;
   onReset: () => void;
+  sortBy: SortBy;
+  setSortBy: (v: SortBy) => void;
 }) {
   return (
-    <div className="grid sm:grid-cols-3 gap-3 rounded-xl bg-muted/20 border border-border p-3">
+    <div className="grid sm:grid-cols-4 gap-3 rounded-xl bg-muted/20 border border-border p-3">
       <div className="relative">
         <Search className="size-4 absolute top-1/2 -translate-y-1/2 right-3 text-muted-foreground" />
         <input
@@ -724,6 +772,20 @@ function AccountingFilterBar({
             </button>
           )}
         </div>
+      </label>
+      <label className="block">
+        <div className="text-[10px] font-bold text-muted-foreground mb-1 flex items-center gap-1">
+          <ArrowDownUp className="size-3 text-gold" /> ترتيب
+        </div>
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as SortBy)}
+          className="w-full rounded-lg border border-input bg-background px-2 py-2 text-xs outline-none focus:border-gold"
+        >
+          <option value="default">الافتراضي (التاريخ)</option>
+          <option value="name-asc">الاسم: تصاعدي (أ→ي)</option>
+          <option value="name-desc">الاسم: تنازلي (ي→أ)</option>
+        </select>
       </label>
     </div>
   );
