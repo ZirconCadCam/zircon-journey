@@ -252,7 +252,15 @@ function DoctorPointsTable({
     () => (month === "all" ? rows : rows.filter((r) => monthKey(dateOf(r)) === month)),
     [rows, month],
   );
-  const sortedList = useMemo(() => sortRows(list, sortBy), [list, sortBy]);
+  const repeatFiltered = useMemo(
+    () => list.filter((r) =>
+      repeat === "all" ? true
+      : repeat === "special" ? isSpecialName(r.patient_name)
+      : !isSpecialName(r.patient_name),
+    ),
+    [list, repeat],
+  );
+  const sortedList = useMemo(() => sortRows(repeatFiltered, sortBy), [repeatFiltered, sortBy]);
   const dupPh = useMemo(() => dupPhones(sortedList), [sortedList]);
 
   async function loadWithdrawn() {
