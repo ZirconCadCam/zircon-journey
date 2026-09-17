@@ -487,13 +487,13 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
               </tr>
             </thead>
             <tbody>
-              {list.length === 0 ? (
+              {filtered.length === 0 ? (
                 <tr><td colSpan={6} className="p-6 text-center text-xs text-muted-foreground">
                   {monthIsSettled
                     ? "تم حساب هذا الشهر — الحالات المخفية ✅"
-                    : "لا توجد حالات مُصمَّمة في هذا الشهر"}
+                    : hasFilters ? "لا توجد نتائج مطابقة للفلاتر" : "لا توجد حالات مُصمَّمة في هذا الشهر"}
                 </td></tr>
-              ) : list.map((r, i) => {
+              ) : filtered.map((r, i) => {
                 const rep = repeatIds.has(r.id);
                 return (
                   <tr key={r.id} className={`border-t border-border ${rep ? "bg-red-500/5" : ""}`}>
