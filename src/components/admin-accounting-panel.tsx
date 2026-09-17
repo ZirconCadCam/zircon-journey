@@ -696,6 +696,7 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
 
 function AccountingFilterBar({
   q, setQ, branch, setBranch, doctorSlot, setDoctorSlot, doctors, hasFilters, onReset,
+  sortBy, setSortBy,
 }: {
   q: string;
   setQ: (v: string) => void;
@@ -706,9 +707,11 @@ function AccountingFilterBar({
   doctors: Doctor[];
   hasFilters: boolean;
   onReset: () => void;
+  sortBy: SortBy;
+  setSortBy: (v: SortBy) => void;
 }) {
   return (
-    <div className="grid sm:grid-cols-3 gap-3 rounded-xl bg-muted/20 border border-border p-3">
+    <div className="grid sm:grid-cols-4 gap-3 rounded-xl bg-muted/20 border border-border p-3">
       <div className="relative">
         <Search className="size-4 absolute top-1/2 -translate-y-1/2 right-3 text-muted-foreground" />
         <input
@@ -757,6 +760,20 @@ function AccountingFilterBar({
             </button>
           )}
         </div>
+      </label>
+      <label className="block">
+        <div className="text-[10px] font-bold text-muted-foreground mb-1 flex items-center gap-1">
+          <ArrowDownUp className="size-3 text-gold" /> ترتيب
+        </div>
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as SortBy)}
+          className="w-full rounded-lg border border-input bg-background px-2 py-2 text-xs outline-none focus:border-gold"
+        >
+          <option value="default">الافتراضي (التاريخ)</option>
+          <option value="name-asc">الاسم: تصاعدي (أ→ي)</option>
+          <option value="name-desc">الاسم: تنازلي (ي→أ)</option>
+        </select>
       </label>
     </div>
   );
