@@ -456,7 +456,11 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
             </thead>
             <tbody>
               {list.length === 0 ? (
-                <tr><td colSpan={6} className="p-6 text-center text-xs text-muted-foreground">لا توجد حالات مُصمَّمة في هذا الشهر</td></tr>
+                <tr><td colSpan={6} className="p-6 text-center text-xs text-muted-foreground">
+                  {monthIsSettled
+                    ? "تم حساب هذا الشهر — الحالات المخفية ✅"
+                    : "لا توجد حالات مُصمَّمة في هذا الشهر"}
+                </td></tr>
               ) : list.map((r, i) => {
                 const rep = repeatIds.has(r.id);
                 return (
