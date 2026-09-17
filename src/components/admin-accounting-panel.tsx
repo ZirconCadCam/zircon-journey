@@ -488,7 +488,7 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
         </div>
       </div>
 
-      <MonthsSettlement scope="designer" title="حساب شهور المصمم" />
+      <MonthsSettlement scope="designer" title="حساب شهور المصمم" onChanged={loadSettled} />
     </div>
   );
 }
