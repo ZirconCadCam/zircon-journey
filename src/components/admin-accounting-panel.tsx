@@ -515,6 +515,7 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
           doctors={doctors}
           hasFilters={hasFilters} onReset={resetFilters}
           sortBy={sortBy} setSortBy={setSortBy}
+          repeat={repeat} setRepeat={setRepeat}
         />
 
         <div className="overflow-x-auto rounded-xl border border-border">
