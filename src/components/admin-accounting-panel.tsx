@@ -583,6 +583,7 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
   const [branch, setBranch] = useState<"all" | "sanaa" | "ibb">("all");
   const [doctorSlot, setDoctorSlot] = useState<number | "all">("all");
   const [sortBy, setSortBy] = useState<SortBy>("default");
+  const [repeat, setRepeat] = useState<RepeatFilter>("all");
 
   // Months marked as settled (حُسِبَت) — their cases are hidden from the table.
   const [settledMonths, setSettledMonths] = useState<Set<number>>(new Set());
