@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   Calculator, Stethoscope, MonitorCog, Wrench, ArrowRight, Loader2,
-  RefreshCw, Coins, Check, Plus,
+  RefreshCw, Coins, Check, Plus, Search, Building2, X,
 } from "lucide-react";
 import { DoctorAvatar } from "@/components/doctor-avatar";
 import { teethOf } from "@/lib/report-build";
@@ -372,6 +372,11 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
   const year = now.getFullYear();
   const [month, setMonth] = useState(`${year}-${String(now.getMonth() + 1).padStart(2, "0")}`);
 
+  // Filters: patient name, branch, doctor.
+  const [q, setQ] = useState("");
+  const [branch, setBranch] = useState<"all" | "sanaa" | "ibb">("all");
+  const [doctorSlot, setDoctorSlot] = useState<number | "all">("all");
+
   // Months marked as settled (حُسِبَت) — their cases are hidden from the table.
   const [settledMonths, setSettledMonths] = useState<Set<number>>(new Set());
   async function loadSettled() {
@@ -406,10 +411,29 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
     [designed, month, settledMonths],
   );
 
+  // Apply filters (patient name, branch, doctor).
+  const filtered = useMemo(() => {
+    const term = norm(q);
+    const dl = new Map(doctors.map((d) => [d.slot, d]));
+    return list.filter((r) => {
+      const d = dl.get(r.doctor_slot);
+      if (branch !== "all" && d?.branch !== branch) return false;
+      if (doctorSlot !== "all" && r.doctor_slot !== doctorSlot) return false;
+      if (term) {
+        const hay = norm(`${r.patient_name} ${r.patient_phone ?? ""}`);
+        if (!hay.includes(term)) return false;
+      }
+      return true;
+    });
+  }, [list, q, branch, doctorSlot, doctors]);
+
+  const hasFilters = !!q || branch !== "all" || doctorSlot !== "all";
+  function resetFilters() { setQ(""); setBranch("all"); setDoctorSlot("all"); }
+
   /** Repeat case: name ends with "إعادة" and matches an earlier case by phone + first name. */
   const repeatIds = useMemo(() => {
     const ids = new Set<string>();
-    for (const r of list) {
+    for (const r of filtered) {
       if (!isRepeatName(r.patient_name)) continue;
       const ph = digits(r.patient_phone);
       const fn = firstName(r.patient_name);
@@ -419,10 +443,10 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
       if (match) ids.add(r.id);
     }
     return ids;
-  }, [list, rows]);
+  }, [filtered, rows]);
 
-  const total = list.reduce((s, r) => s + teethOf(r), 0);
-  const repeatTotal = list.filter((r) => repeatIds.has(r.id)).reduce((s, r) => s + teethOf(r), 0);
+  const total = filtered.reduce((s, r) => s + teethOf(r), 0);
+  const repeatTotal = filtered.filter((r) => repeatIds.has(r.id)).reduce((s, r) => s + teethOf(r), 0);
   const monthIsSettled = settledMonths.has(Number(month.split("-")[1]));
 
   return (
@@ -442,6 +466,14 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
           </select>
         </div>
 
+        <AccountingFilterBar
+          q={q} setQ={setQ}
+          branch={branch} setBranch={setBranch}
+          doctorSlot={doctorSlot} setDoctorSlot={setDoctorSlot}
+          doctors={doctors}
+          hasFilters={hasFilters} onReset={resetFilters}
+        />
+
         <div className="overflow-x-auto rounded-xl border border-border">
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-xs">
@@ -455,13 +487,13 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
               </tr>
             </thead>
             <tbody>
-              {list.length === 0 ? (
+              {filtered.length === 0 ? (
                 <tr><td colSpan={6} className="p-6 text-center text-xs text-muted-foreground">
                   {monthIsSettled
                     ? "تم حساب هذا الشهر — الحالات المخفية ✅"
-                    : "لا توجد حالات مُصمَّمة في هذا الشهر"}
+                    : hasFilters ? "لا توجد نتائج مطابقة للفلاتر" : "لا توجد حالات مُصمَّمة في هذا الشهر"}
                 </td></tr>
-              ) : list.map((r, i) => {
+              ) : filtered.map((r, i) => {
                 const rep = repeatIds.has(r.id);
                 return (
                   <tr key={r.id} className={`border-t border-border ${rep ? "bg-red-500/5" : ""}`}>
@@ -477,7 +509,7 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-gold bg-gold/10 font-extrabold">
-                <td className="p-2" colSpan={4}>المجموع — {list.length} حالة</td>
+                <td className="p-2" colSpan={4}>المجموع — {filtered.length} حالة</td>
                 <td className="p-2" colSpan={2}>
                   {total} سِنّ
                   {repeatTotal > 0 && <span className="text-red-600 text-xs font-bold"> (منها {repeatTotal} إعادة)</span>}
@@ -500,6 +532,11 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
   const now = new Date();
   const year = now.getFullYear();
   const [month, setMonth] = useState(`${year}-${String(now.getMonth() + 1).padStart(2, "0")}`);
+
+  // Filters: patient name, branch, doctor.
+  const [q, setQ] = useState("");
+  const [branch, setBranch] = useState<"all" | "sanaa" | "ibb">("all");
+  const [doctorSlot, setDoctorSlot] = useState<number | "all">("all");
 
   // Months marked as settled (حُسِبَت) — their cases are hidden from the table.
   const [settledMonths, setSettledMonths] = useState<Set<number>>(new Set());
@@ -534,7 +571,26 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
     ),
     [carved, month, settledMonths],
   );
-  const total = list.reduce((s, r) => s + teethOf(r), 0);
+  // Apply filters (patient name, branch, doctor).
+  const filtered = useMemo(() => {
+    const term = norm(q);
+    const dl = new Map(doctors.map((d) => [d.slot, d]));
+    return list.filter((r) => {
+      const d = dl.get(r.doctor_slot);
+      if (branch !== "all" && d?.branch !== branch) return false;
+      if (doctorSlot !== "all" && r.doctor_slot !== doctorSlot) return false;
+      if (term) {
+        const hay = norm(`${r.patient_name} ${r.patient_phone ?? ""}`);
+        if (!hay.includes(term)) return false;
+      }
+      return true;
+    });
+  }, [list, q, branch, doctorSlot, doctors]);
+
+  const hasFilters = !!q || branch !== "all" || doctorSlot !== "all";
+  function resetFilters() { setQ(""); setBranch("all"); setDoctorSlot("all"); }
+
+  const total = filtered.reduce((s, r) => s + teethOf(r), 0);
   const monthIsSettled = settledMonths.has(Number(month.split("-")[1]));
 
   return (
@@ -552,6 +608,14 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
           </select>
         </div>
 
+        <AccountingFilterBar
+          q={q} setQ={setQ}
+          branch={branch} setBranch={setBranch}
+          doctorSlot={doctorSlot} setDoctorSlot={setDoctorSlot}
+          doctors={doctors}
+          hasFilters={hasFilters} onReset={resetFilters}
+        />
+
         <div className="overflow-x-auto rounded-xl border border-border">
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-xs">
@@ -564,13 +628,13 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
               </tr>
             </thead>
             <tbody>
-              {list.length === 0 ? (
+              {filtered.length === 0 ? (
                 <tr><td colSpan={5} className="p-6 text-center text-xs text-muted-foreground">
                   {monthIsSettled
                     ? "تم حساب هذا الشهر — الحالات المخفية ✅"
-                    : "لا توجد حالات في هذا الشهر"}
+                    : hasFilters ? "لا توجد نتائج مطابقة للفلاتر" : "لا توجد حالات في هذا الشهر"}
                 </td></tr>
-              ) : list.map((r, i) => (
+              ) : filtered.map((r, i) => (
                 <tr key={r.id} className="border-t border-border">
                   <td className="p-2 text-xs text-muted-foreground">{i + 1}</td>
                   <td className="p-2 font-bold">{r.patient_name}</td>
@@ -582,7 +646,7 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-gold bg-gold/10 font-extrabold">
-                <td className="p-2" colSpan={3}>المجموع — {list.length} حالة</td>
+                <td className="p-2" colSpan={3}>المجموع — {filtered.length} حالة</td>
                 <td className="p-2" colSpan={2}>{total} سِنّ</td>
               </tr>
             </tfoot>
@@ -591,6 +655,76 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
       </div>
 
       <MonthsSettlement scope="technician" title="حساب شهور الفني" onChanged={loadSettled} />
+    </div>
+  );
+}
+
+/* ---------------------- shared accounting filter bar ---------------------- */
+
+function AccountingFilterBar({
+  q, setQ, branch, setBranch, doctorSlot, setDoctorSlot, doctors, hasFilters, onReset,
+}: {
+  q: string;
+  setQ: (v: string) => void;
+  branch: "all" | "sanaa" | "ibb";
+  setBranch: (v: "all" | "sanaa" | "ibb") => void;
+  doctorSlot: number | "all";
+  setDoctorSlot: (v: number | "all") => void;
+  doctors: Doctor[];
+  hasFilters: boolean;
+  onReset: () => void;
+}) {
+  return (
+    <div className="grid sm:grid-cols-3 gap-3 rounded-xl bg-muted/20 border border-border p-3">
+      <div className="relative">
+        <Search className="size-4 absolute top-1/2 -translate-y-1/2 right-3 text-muted-foreground" />
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="ابحث باسم المريض أو الهاتف…"
+          className="w-full rounded-lg border border-input bg-background pr-9 pl-3 py-2 text-xs outline-none focus:border-gold"
+        />
+      </div>
+      <label className="block">
+        <div className="text-[10px] font-bold text-muted-foreground mb-1 flex items-center gap-1">
+          <Building2 className="size-3 text-gold" /> الفرع
+        </div>
+        <select
+          value={branch}
+          onChange={(e) => setBranch(e.target.value as any)}
+          className="w-full rounded-lg border border-input bg-background px-2 py-2 text-xs outline-none focus:border-gold"
+        >
+          <option value="all">كل الفروع</option>
+          <option value="sanaa">صنعاء</option>
+          <option value="ibb">إب</option>
+        </select>
+      </label>
+      <label className="block">
+        <div className="text-[10px] font-bold text-muted-foreground mb-1 flex items-center gap-1">
+          <Stethoscope className="size-3 text-gold" /> الطبيب
+        </div>
+        <div className="flex gap-2">
+          <select
+            value={doctorSlot === "all" ? "all" : String(doctorSlot)}
+            onChange={(e) => setDoctorSlot(e.target.value === "all" ? "all" : Number(e.target.value))}
+            className="flex-1 rounded-lg border border-input bg-background px-2 py-2 text-xs outline-none focus:border-gold"
+          >
+            <option value="all">كل الأطباء</option>
+            {doctors.map((d) => (
+              <option key={d.slot} value={d.slot}>{d.name}</option>
+            ))}
+          </select>
+          {hasFilters && (
+            <button
+              onClick={onReset}
+              className="rounded-lg border border-border bg-card px-2.5 text-xs font-bold hover:border-gold transition flex items-center gap-1"
+              title="مسح الفلاتر"
+            >
+              <X className="size-3.5" />
+            </button>
+          )}
+        </div>
+      </label>
     </div>
   );
 }
