@@ -11,6 +11,7 @@ import { AdminArchiveApprovals } from "@/components/admin-archive-approvals";
 import { AdminOverdueCompletion } from "@/components/admin-overdue-completion";
 import { AdminDevicesPanel } from "@/components/admin-devices-panel";
 import { AdminAccountingPanel } from "@/components/admin-accounting-panel";
+import { AdminAccountingReport } from "@/components/admin-accounting-report";
 import { AdminVoiceListener } from "@/components/admin-voice-listener";
 import { RoleNotifications } from "@/components/role-notifications";
 import { NotificationSettings } from "@/components/notification-settings";
