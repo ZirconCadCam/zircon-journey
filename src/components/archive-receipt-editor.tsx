@@ -112,6 +112,15 @@ export function ArchiveReceiptEditor({ c, actorName, doctorName, onClose, onSent
         });
       }
 
+      // Mirror the receipt image to the clinic's Telegram group.
+      {
+        const { queueTelegram } = await import("@/lib/telegram-outbox");
+        void queueTelegram(
+          `🧾 إرسال تلقائي — سند حساب المريض\n──────────────\n👤 المريض: ${c.patient_name}\n🔖 رقم الحالة: ${c.case_code}\n🩺 الطبيب: ${doctorName}\n📤 المصدر: ${actorName}\n📁 الملف: ${file.name}`,
+          [{ bucket: "chat-attachments", path, filename: file.name }],
+        );
+      }
+
       toast.success("✅ تم إرسال طلب الأرشفة مع سند الحساب إلى الإدارة");
       onSent?.();
       onClose();
