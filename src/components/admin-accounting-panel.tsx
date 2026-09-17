@@ -731,7 +731,7 @@ function AccountingFilterBar({
   setRepeat: (v: RepeatFilter) => void;
 }) {
   return (
-    <div className="grid sm:grid-cols-4 gap-3 rounded-xl bg-muted/20 border border-border p-3">
+    <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3 rounded-xl bg-muted/20 border border-border p-3">
       <div className="relative">
         <Search className="size-4 absolute top-1/2 -translate-y-1/2 right-3 text-muted-foreground" />
         <input
