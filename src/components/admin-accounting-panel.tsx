@@ -565,7 +565,11 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
             </thead>
             <tbody>
               {list.length === 0 ? (
-                <tr><td colSpan={5} className="p-6 text-center text-xs text-muted-foreground">لا توجد حالات في هذا الشهر</td></tr>
+                <tr><td colSpan={5} className="p-6 text-center text-xs text-muted-foreground">
+                  {monthIsSettled
+                    ? "تم حساب هذا الشهر — الحالات المخفية ✅"
+                    : "لا توجد حالات في هذا الشهر"}
+                </td></tr>
               ) : list.map((r, i) => (
                 <tr key={r.id} className="border-t border-border">
                   <td className="p-2 text-xs text-muted-foreground">{i + 1}</td>
