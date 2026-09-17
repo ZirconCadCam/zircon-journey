@@ -43,6 +43,12 @@ export const firstName = (s: unknown) => norm(s).split(" ")[0] ?? "";
 const REPEAT_RE = /(اعادة|اعاده)\s*$/;
 export const isRepeatName = (s: unknown) => REPEAT_RE.test(norm(s));
 
+/** اسم مريض «معدّل/إعادة»: يحتوي «تعديل» أو إحدى صيغ «إعادة». */
+export const isSpecialName = (s: unknown) => {
+  const n = norm(s);
+  return n.includes("تعديل") || /اعاد[هة]/.test(n);
+};
+
 /** Month key ("YYYY-MM") of a date in Aden time (UTC+3). */
 export function monthKeyAden(iso?: string | null): string {
   if (!iso) return "";
