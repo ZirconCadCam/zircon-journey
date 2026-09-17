@@ -571,7 +571,9 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
 
 /* ---------------------- months settlement checkboxes ---------------------- */
 
-function MonthsSettlement({ scope, title }: { scope: "designer" | "technician"; title: string }) {
+function MonthsSettlement({
+  scope, title, onChanged,
+}: { scope: "designer" | "technician"; title: string; onChanged?: () => void }) {
   const year = new Date().getFullYear();
   const [settled, setSettled] = useState<Record<number, boolean>>({});
   const [busy, setBusy] = useState<number | null>(null);
