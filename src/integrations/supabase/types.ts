@@ -17,7 +17,7 @@ export type Database = {
       accounting_report_deliveries: {
         Row: {
           created_at: string
-          doctor_slot: number | null
+          doctor_slot: number
           error: string | null
           id: string
           month: number
@@ -29,7 +29,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          doctor_slot?: number | null
+          doctor_slot?: number
           error?: string | null
           id?: string
           month: number
@@ -41,7 +41,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          doctor_slot?: number | null
+          doctor_slot?: number
           error?: string | null
           id?: string
           month?: number
