@@ -51,6 +51,7 @@ export function ArchiveReceiptEditor({ c, actorName, doctorName, onClose, onSent
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [note, setNote] = useState("");
+  const [remaining, setRemaining] = useState("");
   const [busy, setBusy] = useState(false);
   const [drag, setDrag] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -90,6 +91,7 @@ export function ArchiveReceiptEditor({ c, actorName, doctorName, onClose, onSent
         archive_receipt_size: file.size,
         archive_receipt_sent_at: now,
         archive_request_note: note.trim() || null,
+        remaining_amount: remaining.trim() === "" ? null : Number(remaining),
         archive_approval: "pending",
         archive_reviewed_at: null,
         archive_reviewed_by: null,
@@ -154,6 +156,12 @@ export function ArchiveReceiptEditor({ c, actorName, doctorName, onClose, onSent
             className="mt-3 inline-flex items-center gap-2 rounded-lg border border-gold/60 bg-gold/5 px-3 py-2 text-xs font-bold hover:bg-gold/10">
             <Camera className="size-3.5" /> {file ? "تغيير الصورة" : "اختيار صورة سند الحساب"}
           </button>
+        </div>
+
+        <div className="mt-3">
+          <label className="text-[11px] font-bold mb-1 block">المبلغ المتبقي على المريض</label>
+          <input value={remaining} onChange={(e) => setRemaining(e.target.value)} inputMode="decimal" placeholder="0"
+            className="w-full rounded-xl border border-input bg-background px-3 py-2 text-xs font-mono outline-none focus:border-gold" />
         </div>
 
         <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3}
