@@ -498,7 +498,20 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
 function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] }) {
   const nameOf = (slot: number) => doctors.find((d) => d.slot === slot)?.name ?? `#${slot}`;
   const now = new Date();
-  const [month, setMonth] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
+  const year = now.getFullYear();
+  const [month, setMonth] = useState(`${year}-${String(now.getMonth() + 1).padStart(2, "0")}`);
+
+  // Months marked as settled (حُسِبَت) — their cases are hidden from the table.
+  const [settledMonths, setSettledMonths] = useState<Set<number>>(new Set());
+  async function loadSettled() {
+    const { data } = await supabase
+      .from("staff_month_settlements")
+      .select("month,settled")
+      .eq("scope", "technician")
+      .eq("year", year);
+    setSettledMonths(new Set((data ?? []).filter((x: any) => x.settled).map((x: any) => Number(x.month))));
+  }
+  useEffect(() => { loadSettled(); }, [year]);
 
   const carved = useMemo(() => rows.filter((r) => r.permanent_fabrication_done), [rows]);
   const dateOf = (r: Row) => r.perm_sent_at ?? r.updated_at;
@@ -509,9 +522,17 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
     return [...set].sort().reverse();
   }, [carved, month]);
 
+  // Hide cases whose month has been settled.
   const list = useMemo(
-    () => dedupe(carved.filter((r) => monthKey(dateOf(r)) === month)),
-    [carved, month],
+    () => dedupe(
+      carved.filter((r) => {
+        const mk = monthKey(dateOf(r));
+        if (mk !== month) return false;
+        const mNum = Number(mk.split("-")[1]);
+        return !settledMonths.has(mNum);
+      }),
+    ),
+    [carved, month, settledMonths],
   );
   const total = list.reduce((s, r) => s + teethOf(r), 0);
 
