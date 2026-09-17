@@ -611,8 +611,11 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
     });
   }, [list, q, branch, doctorSlot, doctors]);
 
-  const hasFilters = !!q || branch !== "all" || doctorSlot !== "all";
-  function resetFilters() { setQ(""); setBranch("all"); setDoctorSlot("all"); }
+  const hasFilters = !!q || branch !== "all" || doctorSlot !== "all" || sortBy !== "default";
+  function resetFilters() { setQ(""); setBranch("all"); setDoctorSlot("all"); setSortBy("default"); }
+
+  const sorted = useMemo(() => sortRows(filtered, sortBy), [filtered, sortBy]);
+  const dupPh = useMemo(() => dupPhones(sorted), [sorted]);
 
   const total = filtered.reduce((s, r) => s + teethOf(r), 0);
   const monthIsSettled = settledMonths.has(Number(month.split("-")[1]));
