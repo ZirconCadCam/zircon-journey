@@ -368,6 +368,7 @@ function NewSlotCase() {
         autoSendFilesToTelegram(
           caption,
           scan_path && scan_name ? [{ url: scan_path, filename: scan_name }] : [],
+          form.patient_name.trim() || null,
         );
       } catch { /* Telegram must never block the save */ }
 
