@@ -18,8 +18,29 @@ export interface AutoTelegramFile {
  * the page or losing the connection right after an upload no longer drops the
  * file: it is retried automatically until it lands in the group.
  */
-export function autoSendFilesToTelegram(caption: string, files: AutoTelegramFile[]): void {
-  const documents = files.filter((f) => !!f.url && !!f.filename).slice(0, 12);
+/**
+ * Extensions whose Telegram filename should be the patient's name so the
+ * group stays searchable by case name instead of random characters.
+ */
+const PATIENT_NAME_EXTS = new Set(["zip", "rar", "html", "htm"]);
+
+/** Rename an archive/HTML file to "<patient name>.<ext>" for Telegram search. */
+export function patientFileName(patientName: string | null | undefined, filename: string): string {
+  const ext = filename.match(/\.([a-zA-Z0-9]+)$/)?.[1]?.toLowerCase();
+  const name = patientName?.trim().replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim();
+  if (!ext || !PATIENT_NAME_EXTS.has(ext) || !name) return filename;
+  return `${name}.${ext}`;
+}
+
+export function autoSendFilesToTelegram(
+  caption: string,
+  files: AutoTelegramFile[],
+  patientName?: string | null,
+): void {
+  const documents = files
+    .filter((f) => !!f.url && !!f.filename)
+    .slice(0, 12)
+    .map((f) => ({ ...f, filename: patientFileName(patientName, f.filename) }));
   if (!caption.trim()) return;
   void (async () => {
     const { queueTelegram } = await import("@/lib/telegram-outbox");
@@ -106,7 +127,7 @@ export function autoSendFileToTelegram(opts: {
     doctorName: opts.doctorName,
     stageLabel: opts.stageLabel,
     caseId: opts.caseId,
-    filenames: [opts.filename],
+    filenames: [patientFileName(opts.patientName, opts.filename)],
   });
-  autoSendFilesToTelegram(caption, [{ url: opts.url, filename: opts.filename }]);
+  autoSendFilesToTelegram(caption, [{ url: opts.url, filename: opts.filename }], opts.patientName);
 }
