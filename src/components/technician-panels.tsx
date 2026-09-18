@@ -4,8 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   Loader2, User, Stethoscope, Calendar, Search, FileArchive, FileText,
-  Download, FileDown, Filter,
+  Download, FileDown, Filter, PackageCheck, Send,
 } from "lucide-react";
+import { queueTelegram } from "@/lib/telegram-outbox";
+
 import {
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableFooter,
 } from "@/components/ui/table";
@@ -537,6 +539,113 @@ export function TechnicianDesignFiles() {
           ))}
         </ul>
       )}
+    </section>
+  );
+}
+
+/* ================================================================== */
+/* 3) Ready zircon list (تم نحت الزركون الدائم)                        */
+/* ================================================================== */
+export function TechnicianReadyZircon() {
+  const { cases, doctorMap, loading } = useTechnicianData();
+  const [sending, setSending] = useState(false);
+
+  const rows = useMemo(
+    () =>
+      cases
+        .filter((c) => !!c.permanent_fabrication_done && !c.ready_zircon_sent_at)
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
+    [cases],
+  );
+
+  const totalTeeth = rows.reduce((s, c) => s + teethCount(c), 0);
+
+  async function sendToTelegram() {
+    if (rows.length === 0) return;
+    setSending(true);
+    try {
+      const lines = rows.map(
+        (c, i) =>
+          `${i + 1}. ${c.patient_name} — ${branchLabel(doctorMap.get(c.doctor_slot)?.branch)} — ${teethCount(c) || "—"} سِنّ`,
+      );
+      const caption = [
+        "🦷 كشف الزركون الجاهز",
+        `التاريخ: ${new Date().toLocaleDateString("ar-EG")}`,
+        "",
+        ...lines,
+        "",
+        `إجمالي المرضى: ${rows.length}`,
+        `إجمالي الأسنان: ${totalTeeth}`,
+      ].join("\n");
+
+      await queueTelegram(caption);
+
+      const now = new Date().toISOString();
+      const { error } = await supabase
+        .from("slot_cases")
+        .update({ ready_zircon_sent_at: now })
+        .in("id", rows.map((c) => c.id));
+      if (error) throw error;
+
+      toast.success("تم إرسال الكشف إلى جروب تلجرام وبدأ كشف جديد");
+    } catch (e: any) {
+      toast.error(e?.message || "تعذر إرسال الكشف");
+    }
+    setSending(false);
+  }
+
+  if (loading) return <LoadingBox />;
+
+  return (
+    <section className="space-y-4">
+      <div className="rounded-2xl bg-card border border-border overflow-hidden shadow-luxury">
+        <div className="p-4 border-b border-border font-bold text-sm flex items-center gap-2 flex-wrap">
+          <PackageCheck className="size-4 text-gold" /> كشف الزركون الجاهز
+          <span className="text-[11px] rounded-full bg-muted px-2 py-0.5 font-bold">{rows.length} حالة</span>
+        </div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-right">اسم المريض</TableHead>
+              <TableHead className="text-right">الفرع</TableHead>
+              <TableHead className="text-right">عدد الأسنان</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                  لا توجد حالات زركون جاهزة حالياً
+                </TableCell>
+              </TableRow>
+            ) : (
+              rows.map((c) => (
+                <TableRow key={c.id}>
+                  <TableCell className="font-bold">{c.patient_name}</TableCell>
+                  <TableCell>{branchLabel(doctorMap.get(c.doctor_slot)?.branch)}</TableCell>
+                  <TableCell>{teethCount(c) || "—"}</TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+          <TableFooter>
+            <TableRow>
+              <TableCell className="font-bold text-gold">الإجماليات</TableCell>
+              <TableCell className="font-extrabold">المرضى: {rows.length}</TableCell>
+              <TableCell className="font-extrabold">الأسنان: {totalTeeth}</TableCell>
+            </TableRow>
+          </TableFooter>
+        </Table>
+      </div>
+
+      <button
+        onClick={sendToTelegram}
+        disabled={sending || rows.length === 0}
+        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-gold/60 bg-gold/10 px-5 py-3 text-sm font-extrabold hover:gradient-gold hover:text-gold-foreground transition disabled:opacity-50"
+      >
+        {sending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+        إرسال الكشف إلى جروب تلجرام
+      </button>
     </section>
   );
 }
