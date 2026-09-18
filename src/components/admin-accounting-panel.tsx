@@ -164,17 +164,23 @@ export function AdminAccountingPanel() {
       </div>
 
       {loading ? (
+      <ReviewReminder doctors={doctors} />
+
+      {loading ? (
         <div className="rounded-2xl bg-card border border-border p-10 grid place-items-center shadow-luxury">
           <Loader2 className="size-6 animate-spin text-gold" />
         </div>
       ) : tab === "doctors" ? (
         <DoctorsAccounting rows={rows} doctors={doctors} onChanged={load} />
       ) : tab === "designer" ? (
-        <DesignerAccounting rows={rows} doctors={doctors} />
+        <DesignerAccounting rows={rows} doctors={doctors} onChanged={load} />
       ) : (
-        <TechnicianAccounting rows={rows} doctors={doctors} />
+        <TechnicianAccounting rows={rows} doctors={doctors} onChanged={load} />
       )}
     </div>
+  );
+}
+
   );
 }
 
