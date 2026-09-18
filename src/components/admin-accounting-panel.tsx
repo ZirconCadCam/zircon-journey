@@ -163,7 +163,6 @@ export function AdminAccountingPanel() {
         ))}
       </div>
 
-      {loading ? (
       <ReviewReminder doctors={doctors} />
 
       {loading ? (
@@ -181,8 +180,6 @@ export function AdminAccountingPanel() {
   );
 }
 
-  );
-}
 
 /* ============================ 1) الأطباء ============================ */
 
