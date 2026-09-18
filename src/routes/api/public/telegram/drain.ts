@@ -78,19 +78,28 @@ async function handle(): Promise<Response> {
       .select("id");
     if (!claimed || claimed.length === 0) continue;
 
+    let captionSent = row.caption_sent === true;
+    const pendingDocs: Doc[] = [];
+
     try {
-      // 1) The caption / case data as a text message.
-      const msgRes = await fetch(`${API}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: chat, text: String(row.caption).slice(0, 4000) }),
-      });
-      const msgJson: any = await msgRes.json().catch(() => ({}));
-      if (!msgRes.ok || !msgJson?.ok) {
-        throw new Error(String(msgJson?.description ?? `HTTP ${msgRes.status}`));
+      // 1) The caption / case data as a text message — only once per row, so a
+      //    retry caused by a single bad file never repeats the case text.
+      if (!captionSent) {
+        const msgRes = await fetch(`${API}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chat_id: chat, text: String(row.caption).slice(0, 4000) }),
+        });
+        const msgJson: any = await msgRes.json().catch(() => ({}));
+        if (!msgRes.ok || !msgJson?.ok) {
+          throw new Error(String(msgJson?.description ?? `HTTP ${msgRes.status}`));
+        }
+        captionSent = true;
       }
 
       // 2) Every attached file as a document (bytes uploaded directly).
+      //    Delivered files are dropped from the row, so a retry only re-sends
+      //    the ones that actually failed.
       const docs = (Array.isArray(row.documents) ? row.documents : []) as Doc[];
       const failed: string[] = [];
       for (const doc of docs) {
@@ -125,6 +134,7 @@ async function handle(): Promise<Response> {
           if (!res.ok || !j?.ok) throw new Error(String(j?.description ?? `HTTP ${res.status}`));
         } catch (e: any) {
           failed.push(`${doc.filename}: ${e?.message ?? "خطأ"}`);
+          pendingDocs.push(doc);
         }
       }
 
@@ -132,15 +142,27 @@ async function handle(): Promise<Response> {
 
       await supabaseAdmin
         .from("telegram_outbox")
-        .update({ status: "sent", sent_at: new Date().toISOString(), last_error: null })
+        .update({
+          status: "sent",
+          sent_at: new Date().toISOString(),
+          last_error: null,
+          caption_sent: true,
+          documents: [] as any,
+        })
         .eq("id", row.id);
       results.push({ id: row.id, ok: true });
     } catch (e: any) {
       const error = String(e?.message ?? "خطأ");
       const attempts = (row.attempts ?? 0) + 1;
+      // Keep only the files that still need delivery, so retries never duplicate.
       await supabaseAdmin
         .from("telegram_outbox")
-        .update({ status: attempts >= MAX_ATTEMPTS ? "failed" : "pending", last_error: error })
+        .update({
+          status: attempts >= MAX_ATTEMPTS ? "failed" : "pending",
+          last_error: error,
+          caption_sent: captionSent,
+          ...(captionSent ? { documents: pendingDocs as any } : {}),
+        })
         .eq("id", row.id);
       results.push({ id: row.id, ok: false, error });
     }
