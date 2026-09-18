@@ -53,6 +53,45 @@ export type Database = {
         }
         Relationships: []
       }
+      accounting_reviews: {
+        Row: {
+          created_at: string
+          doctor_slot: number
+          id: string
+          month: number
+          reviewed: boolean
+          reviewed_at: string
+          reviewed_by: string | null
+          scope: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          doctor_slot?: number
+          id?: string
+          month: number
+          reviewed?: boolean
+          reviewed_at?: string
+          reviewed_by?: string | null
+          scope: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          doctor_slot?: number
+          id?: string
+          month?: number
+          reviewed?: boolean
+          reviewed_at?: string
+          reviewed_by?: string | null
+          scope?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
       app_settings: {
         Row: {
           bool_value: boolean

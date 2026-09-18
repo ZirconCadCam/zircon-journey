@@ -4,9 +4,11 @@ import { toast } from "sonner";
 import {
   Calculator, Stethoscope, MonitorCog, Wrench, ArrowRight, Loader2,
   RefreshCw, Coins, Check, Plus, Search, Building2, X, ArrowDownUp,
+  Pencil, Trash2, BadgeCheck, AlertTriangle, Send,
 } from "lucide-react";
 import { DoctorAvatar } from "@/components/doctor-avatar";
 import { teethOf } from "@/lib/report-build";
+
 
 /* ------------------------------ helpers ------------------------------ */
 
@@ -161,6 +163,8 @@ export function AdminAccountingPanel() {
         ))}
       </div>
 
+      <ReviewReminder doctors={doctors} />
+
       {loading ? (
         <div className="rounded-2xl bg-card border border-border p-10 grid place-items-center shadow-luxury">
           <Loader2 className="size-6 animate-spin text-gold" />
@@ -168,13 +172,14 @@ export function AdminAccountingPanel() {
       ) : tab === "doctors" ? (
         <DoctorsAccounting rows={rows} doctors={doctors} onChanged={load} />
       ) : tab === "designer" ? (
-        <DesignerAccounting rows={rows} doctors={doctors} />
+        <DesignerAccounting rows={rows} doctors={doctors} onChanged={load} />
       ) : (
-        <TechnicianAccounting rows={rows} doctors={doctors} />
+        <TechnicianAccounting rows={rows} doctors={doctors} onChanged={load} />
       )}
     </div>
   );
 }
+
 
 /* ============================ 1) الأطباء ============================ */
 
@@ -352,11 +357,12 @@ function DoctorPointsTable({
               <th className="p-2 text-right">عدد النقاط</th>
               <th className="p-2 text-right">تاريخ الأرشفة</th>
               <th className="p-2 text-right">المبلغ المتبقي</th>
+              <th className="p-2 text-right">إجراءات</th>
             </tr>
           </thead>
           <tbody>
             {sortedList.length === 0 ? (
-              <tr><td colSpan={6} className="p-6 text-center text-xs text-muted-foreground">لا توجد حالات مؤرشفة في هذه الفترة</td></tr>
+              <tr><td colSpan={7} className="p-6 text-center text-xs text-muted-foreground">لا توجد حالات مؤرشفة في هذه الفترة</td></tr>
             ) : sortedList.map((r, i) => {
               const dupPhone = dupPh.has(digits(r.patient_phone));
               return (
@@ -376,6 +382,7 @@ function DoctorPointsTable({
                       className="w-24 rounded-lg border border-input bg-background px-2 py-1 text-xs font-mono outline-none focus:border-gold"
                     />
                   </td>
+                  <td className="p-2"><RowActions row={r} onChanged={onChanged} /></td>
                 </tr>
               );
             })}
@@ -386,8 +393,10 @@ function DoctorPointsTable({
               <td className="p-2">{totalPoints} نقطة</td>
               <td className="p-2 text-xs">—</td>
               <td className="p-2 font-mono">{totalAmount || 0}</td>
+              <td className="p-2">—</td>
             </tr>
           </tfoot>
+
         </table>
       </div>
 
@@ -405,6 +414,8 @@ function DoctorPointsTable({
           <div className="text-xl font-extrabold text-gold">{remainingPoints}</div>
         </div>
       </div>
+
+      <ReviewBar scope="doctors" doctorSlot={doctor.slot} month={month} />
 
       <div className="flex items-end gap-2 flex-wrap rounded-xl border border-border bg-muted/20 p-3">
         <div>
@@ -425,7 +436,7 @@ function DoctorPointsTable({
 
 /* ============================ 2) المصمم ============================ */
 
-function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] }) {
+function DesignerAccounting({ rows, doctors, onChanged }: { rows: Row[]; doctors: Doctor[]; onChanged: () => void }) {
   const nameOf = (slot: number) => doctors.find((d) => d.slot === slot)?.name ?? `#${slot}`;
   const now = new Date();
   const year = now.getFullYear();
@@ -552,11 +563,12 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
                 <th className="p-2 text-right">الطبيب</th>
                 <th className="p-2 text-right">عدد الأسنان</th>
                 <th className="p-2 text-right">التاريخ</th>
+                <th className="p-2 text-right">إجراءات</th>
               </tr>
             </thead>
             <tbody>
               {sorted.length === 0 ? (
-                <tr><td colSpan={6} className="p-6 text-center text-xs text-muted-foreground">
+                <tr><td colSpan={7} className="p-6 text-center text-xs text-muted-foreground">
                   {monthIsSettled
                     ? "تم حساب هذا الشهر — الحالات المخفية ✅"
                     : hasFilters ? "لا توجد نتائج مطابقة للفلاتر" : "لا توجد حالات مُصمَّمة في هذا الشهر"}
@@ -572,6 +584,7 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
                     <td className="p-2 text-xs">{nameOf(r.doctor_slot)}</td>
                     <td className={`p-2 font-extrabold ${rep ? "text-red-600" : "text-gold"}`}>{teethOf(r) || "—"}</td>
                     <td className="p-2 text-xs">{fmtDate(r.design_delivered_at ?? r.design_sent_at ?? r.updated_at)}</td>
+                    <td className="p-2"><RowActions row={r} onChanged={onChanged} /></td>
                   </tr>
                 );
               })}
@@ -579,7 +592,7 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
             <tfoot>
               <tr className="border-t-2 border-gold bg-gold/10 font-extrabold">
                 <td className="p-2" colSpan={4}>المجموع — {sorted.length} حالة</td>
-                <td className="p-2" colSpan={2}>
+                <td className="p-2" colSpan={3}>
                   {total} سِنّ
                   {repeatTotal > 0 && <span className="text-red-600 text-xs font-bold"> (منها {repeatTotal} إعادة)</span>}
                 </td>
@@ -589,6 +602,8 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
         </div>
       </div>
 
+      <ReviewBar scope="designer" month={month} />
+
       <MonthsSettlement scope="designer" title="حساب شهور المصمم" onChanged={loadSettled} />
     </div>
   );
@@ -596,7 +611,7 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
 
 /* ============================ 3) الفني ============================ */
 
-function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] }) {
+function TechnicianAccounting({ rows, doctors, onChanged }: { rows: Row[]; doctors: Doctor[]; onChanged: () => void }) {
   const nameOf = (slot: number) => doctors.find((d) => d.slot === slot)?.name ?? `#${slot}`;
   const now = new Date();
   const year = now.getFullYear();
@@ -704,11 +719,12 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
                 <th className="p-2 text-right">الطبيب</th>
                 <th className="p-2 text-right">عدد الأسنان</th>
                 <th className="p-2 text-right">تاريخ النحت الدائم</th>
+                <th className="p-2 text-right">إجراءات</th>
               </tr>
             </thead>
             <tbody>
               {sorted.length === 0 ? (
-                <tr><td colSpan={6} className="p-6 text-center text-xs text-muted-foreground">
+                <tr><td colSpan={7} className="p-6 text-center text-xs text-muted-foreground">
                   {monthIsSettled
                     ? "تم حساب هذا الشهر — الحالات المخفية ✅"
                     : hasFilters ? "لا توجد نتائج مطابقة للفلاتر" : "لا توجد حالات في هذا الشهر"}
@@ -723,6 +739,7 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
                     <td className="p-2 text-xs">{nameOf(r.doctor_slot)}</td>
                     <td className="p-2 font-extrabold text-gold">{teethOf(r) || "—"}</td>
                     <td className="p-2 text-xs">{fmtDate(r.perm_sent_at ?? r.updated_at)}</td>
+                    <td className="p-2"><RowActions row={r} onChanged={onChanged} /></td>
                   </tr>
                 );
               })}
@@ -730,12 +747,14 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
             <tfoot>
               <tr className="border-t-2 border-gold bg-gold/10 font-extrabold">
                 <td className="p-2" colSpan={4}>المجموع — {sorted.length} حالة</td>
-                <td className="p-2" colSpan={2}>{total} سِنّ</td>
+                <td className="p-2" colSpan={3}>{total} سِنّ</td>
               </tr>
             </tfoot>
           </table>
         </div>
       </div>
+
+      <ReviewBar scope="technician" month={month} />
 
       <MonthsSettlement scope="technician" title="حساب شهور الفني" onChanged={loadSettled} />
     </div>
@@ -917,6 +936,251 @@ function MonthsSettlement({
             </button>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+/* ==================== صلاحيات الإدارة: تعديل/حذف صف ==================== */
+
+/**
+ * أزرار الإدارة على كل صف في جداول الحسابات:
+ * تعديل بيانات المريض وعدد النقاط (الأسنان) والمبلغ المتبقي، أو حذف الصف.
+ */
+function RowActions({ row, onChanged }: { row: Row; onChanged: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [name, setName] = useState(row.patient_name ?? "");
+  const [phone, setPhone] = useState(row.patient_phone ?? "");
+  const [teeth, setTeeth] = useState(String(teethOf(row) || ""));
+  const [amount, setAmount] = useState(row.remaining_amount == null ? "" : String(row.remaining_amount));
+
+  function openEditor() {
+    setName(row.patient_name ?? "");
+    setPhone(row.patient_phone ?? "");
+    setTeeth(String(teethOf(row) || ""));
+    setAmount(row.remaining_amount == null ? "" : String(row.remaining_amount));
+    setOpen(true);
+  }
+
+  async function save() {
+    if (!name.trim()) { toast.error("اسم المريض مطلوب"); return; }
+    const t = teeth.trim() === "" ? null : Number(teeth);
+    if (t !== null && (isNaN(t) || t < 0)) { toast.error("عدد النقاط غير صحيح"); return; }
+    const amt = amount.trim() === "" ? null : Number(amount);
+    if (amt !== null && isNaN(amt)) { toast.error("المبلغ غير صحيح"); return; }
+    setBusy(true);
+    const { error } = await supabase.from("slot_cases").update({
+      patient_name: name.trim(),
+      patient_phone: phone.trim() || null,
+      teeth_count: t === null ? null : String(t),
+      remaining_amount: amt,
+    } as any).eq("id", row.id);
+    setBusy(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("تم تعديل البيانات");
+    setOpen(false);
+    onChanged();
+  }
+
+  async function remove() {
+    if (!confirm(`حذف صف «${row.patient_name}» من الحسابات نهائياً؟`)) return;
+    setBusy(true);
+    const { error } = await supabase.from("slot_cases").delete().eq("id", row.id);
+    setBusy(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("تم حذف الصف");
+    setOpen(false);
+    onChanged();
+  }
+
+  return (
+    <>
+      <div className="flex items-center gap-1.5">
+        <button onClick={openEditor} title="تعديل البيانات وعدد النقاط"
+          className="rounded-lg border border-border bg-background p-1.5 hover:border-gold transition">
+          <Pencil className="size-3.5 text-gold" />
+        </button>
+        <button onClick={remove} disabled={busy} title="حذف الصف"
+          className="rounded-lg border border-border bg-background p-1.5 hover:border-red-500 transition disabled:opacity-50">
+          <Trash2 className="size-3.5 text-red-600" />
+        </button>
+      </div>
+
+      {open && (
+        <div className="fixed inset-0 z-[80] grid place-items-center bg-black/50 p-4" onClick={() => setOpen(false)}>
+          <div className="w-full max-w-md rounded-2xl bg-card border border-border p-5 shadow-luxury space-y-3"
+            onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-2">
+              <Pencil className="size-4 text-gold" />
+              <div className="font-extrabold">تعديل بيانات الصف</div>
+              <button onClick={() => setOpen(false)} className="ms-auto rounded-lg p-1.5 hover:bg-muted/40">
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <label className="block">
+              <div className="text-[11px] font-bold mb-1">اسم المريض</div>
+              <input value={name} onChange={(e) => setName(e.target.value)}
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-gold" />
+            </label>
+            <label className="block">
+              <div className="text-[11px] font-bold mb-1">رقم الهاتف</div>
+              <input value={phone} onChange={(e) => setPhone(e.target.value)} dir="ltr" inputMode="tel"
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm font-mono outline-none focus:border-gold" />
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block">
+                <div className="text-[11px] font-bold mb-1">عدد النقاط (الأسنان)</div>
+                <input value={teeth} onChange={(e) => setTeeth(e.target.value)} inputMode="numeric"
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm font-mono outline-none focus:border-gold" />
+              </label>
+              <label className="block">
+                <div className="text-[11px] font-bold mb-1">المبلغ المتبقي</div>
+                <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal"
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm font-mono outline-none focus:border-gold" />
+              </label>
+            </div>
+
+            <div className="flex items-center gap-2 pt-1">
+              <button onClick={save} disabled={busy}
+                className="rounded-lg gradient-brown px-4 py-2 text-xs font-bold shadow-luxury disabled:opacity-50 flex items-center gap-1.5">
+                {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />} حفظ التعديل
+              </button>
+              <button onClick={remove} disabled={busy}
+                className="ms-auto rounded-lg border border-red-500/60 text-red-600 px-4 py-2 text-xs font-bold hover:bg-red-500/10 disabled:opacity-50 flex items-center gap-1.5">
+                <Trash2 className="size-3.5" /> حذف الصف
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+/* ==================== مراجعة الكشف قبل الإرسال التلقائي ==================== */
+
+const ADEN_OFFSET_MS = 3 * 3600_000;
+function adenNow(): Date { return new Date(Date.now() + ADEN_OFFSET_MS); }
+function adenMonthKey(): string {
+  const d = adenNow();
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+/** الأيام المتبقية حتى آخر يوم من الشهر الحالي (بتوقيت عدن). */
+function daysLeftInMonth(): number {
+  const d = adenNow();
+  const last = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+  return last - d.getUTCDate();
+}
+
+/**
+ * زر «تمت المراجعة» في نهاية الجدول — يعتمد الكشف فيصبح جاهزاً للإرسال
+ * التلقائي إلى جروب تلجرام في آخر يوم من الشهر الساعة 11:59 مساءً.
+ */
+function ReviewBar({
+  scope, doctorSlot = -1, month,
+}: { scope: "doctors" | "designer" | "technician"; doctorSlot?: number; month: string }) {
+  const [reviewed, setReviewed] = useState<boolean | null>(null);
+  const [at, setAt] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const valid = /^\d{4}-\d{2}$/.test(month);
+  const [y, m] = valid ? month.split("-").map(Number) : [0, 0];
+
+  async function load() {
+    if (!valid) { setReviewed(null); return; }
+    const { data } = await supabase.from("accounting_reviews")
+      .select("reviewed,reviewed_at")
+      .eq("scope", scope).eq("doctor_slot", doctorSlot)
+      .eq("year", y as number).eq("month", m as number)
+      .maybeSingle();
+    setReviewed(!!(data as any)?.reviewed);
+    setAt((data as any)?.reviewed_at ?? null);
+  }
+  useEffect(() => { load(); }, [scope, doctorSlot, month]);
+
+  async function toggle() {
+    if (!valid) { toast.error("اختر شهراً محدداً قبل المراجعة"); return; }
+    const next = !reviewed;
+    setBusy(true);
+    const { error } = await supabase.from("accounting_reviews").upsert({
+      scope, doctor_slot: doctorSlot, year: y, month: m,
+      reviewed: next, reviewed_at: new Date().toISOString(), reviewed_by: "admin",
+    } as any, { onConflict: "scope,doctor_slot,year,month" });
+    setBusy(false);
+    if (error) { toast.error(error.message); return; }
+    setReviewed(next);
+    setAt(new Date().toISOString());
+    toast.success(next
+      ? "تمت المراجعة — الكشف جاهز للإرسال التلقائي إلى جروب تلجرام"
+      : "تم إلغاء المراجعة — لن يُرسَل الكشف تلقائياً");
+  }
+
+  return (
+    <div className={`rounded-xl border p-3 flex items-center gap-3 flex-wrap ${
+      reviewed ? "border-emerald-500/60 bg-emerald-500/10" : "border-border bg-muted/20"
+    }`}>
+      <div className="min-w-0">
+        <div className="text-xs font-extrabold flex items-center gap-1.5">
+          {reviewed ? <BadgeCheck className="size-4 text-emerald-600" /> : <Send className="size-4 text-gold" />}
+          {reviewed ? "تمت مراجعة هذا الكشف ✅" : "بانتظار مراجعة الإدارة"}
+        </div>
+        <div className="text-[11px] text-muted-foreground mt-0.5">
+          {reviewed
+            ? `جاهز للإرسال التلقائي إلى جروب تلجرام في آخر يوم من الشهر 11:59 م${at ? ` • تمت المراجعة ${fmtDate(at)}` : ""}`
+            : "لن يُرسَل الكشف تلقائياً حتى تضغط «تمت المراجعة»"}
+        </div>
+      </div>
+      <button onClick={toggle} disabled={busy || !valid}
+        className={`ms-auto rounded-lg px-4 py-2 text-xs font-bold shadow-luxury disabled:opacity-50 flex items-center gap-1.5 ${
+          reviewed ? "border border-border bg-background" : "gradient-brown"
+        }`}>
+        {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
+        {reviewed ? "إلغاء المراجعة" : "تمت المراجعة"}
+      </button>
+    </div>
+  );
+}
+
+/** تنبيه للإدارة قبل نهاية الشهر بيومين لمراجعة الكشوف غير المعتمدة. */
+function ReviewReminder({ doctors }: { doctors: Doctor[] }) {
+  const [pending, setPending] = useState<string[]>([]);
+  const left = daysLeftInMonth();
+  const mk = adenMonthKey();
+  const [y, m] = mk.split("-").map(Number);
+
+  useEffect(() => {
+    if (left > 2) return;
+    (async () => {
+      const { data } = await supabase.from("accounting_reviews")
+        .select("scope,doctor_slot,reviewed")
+        .eq("year", y as number).eq("month", m as number);
+      const ok = new Set((data ?? []).filter((r: any) => r.reviewed).map((r: any) => `${r.scope}|${r.doctor_slot}`));
+      const miss: string[] = [];
+      if (!ok.has("designer|-1")) miss.push("حساب المصمم");
+      if (!ok.has("technician|-1")) miss.push("حساب الفني");
+      const docMiss = doctors.filter((d) => d.active && !ok.has(`doctors|${d.slot}`));
+      if (docMiss.length) miss.push(`نقاط ${docMiss.length} طبيب`);
+      setPending(miss);
+      if (miss.length) {
+        toast.warning(`تنبيه: تبقّى ${left} يوم لنهاية الشهر — راجع الكشوف قبل الإرسال التلقائي`, { duration: 8000 });
+      }
+    })();
+  }, [left, mk, doctors.length]);
+
+  if (left > 2 || pending.length === 0) return null;
+
+  return (
+    <div className="rounded-2xl border border-amber-500/60 bg-amber-500/10 p-4 flex items-start gap-3">
+      <AlertTriangle className="size-5 text-amber-600 shrink-0 mt-0.5" />
+      <div className="text-sm">
+        <div className="font-extrabold text-amber-700">
+          تنبيه مراجعة الحسابات — تبقّى {left === 0 ? "اليوم الأخير" : `${left} يوم`} لنهاية الشهر
+        </div>
+        <div className="text-[12px] text-muted-foreground mt-1">
+          راجع الكشوف التالية واضغط «تمت المراجعة» في نهاية كل جدول ليُرسَل تلقائياً إلى جروب تلجرام آخر يوم الساعة 11:59 مساءً:
+          {" "}<span className="font-bold text-foreground">{pending.join(" • ")}</span>
+        </div>
       </div>
     </div>
   );

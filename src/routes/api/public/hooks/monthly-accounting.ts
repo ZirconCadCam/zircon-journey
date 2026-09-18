@@ -154,6 +154,18 @@ export const Route = createFileRoute("/api/public/hooks/monthly-accounting")({
         const { data: delivered } = await supabaseAdmin
           .from("accounting_report_deliveries")
           .select("scope,doctor_slot,year,month,ok");
+        // كشوف اعتمدتها الإدارة («تمت المراجعة») — الإرسال التلقائي لا يعمل بدونها.
+        const { data: reviews } = await supabaseAdmin
+          .from("accounting_reviews")
+          .select("scope,doctor_slot,year,month,reviewed");
+        const reviewedKey = new Set(
+          (reviews ?? [])
+            .filter((r: any) => r.reviewed)
+            .map((r: any) => `${r.scope}|${r.doctor_slot}|${r.year}|${r.month}`),
+        );
+        const isReviewed = (scope: string, slot: number, y: number, m: number) =>
+          reviewedKey.has(`${scope}|${slot}|${y}|${m}`);
+
         const doneKey = new Set(
           (delivered ?? [])
             .filter((d: any) => d.ok)
@@ -200,6 +212,10 @@ export const Route = createFileRoute("/api/public/hooks/monthly-accounting")({
             const slot = Number(d.slot);
             const key = `doctor|${slot}|${year}|${month}`;
             if (!force && doneKey.has(key)) continue;
+            if (!force && !isReviewed("doctors", slot, year, month)) {
+              results.push({ scope: "doctor", doctor: d.name, month: mk, skipped: "بانتظار مراجعة الإدارة" });
+              continue;
+            }
             const list = dedupe(
               archived.filter(
                 (r) => Number(r.doctor_slot) === slot && monthKeyAden(doctorDateOf(r)) === mk,
@@ -244,7 +260,9 @@ export const Route = createFileRoute("/api/public/hooks/monthly-accounting")({
           }
 
           /* ---------------- 2) حساب المصمم ---------------- */
-          if (force || !doneKey.has(`designer|-1|${year}|${month}`)) {
+          if (!force && !isReviewed("designer", -1, year, month)) {
+            results.push({ scope: "designer", month: mk, skipped: "بانتظار مراجعة الإدارة" });
+          } else if (force || !doneKey.has(`designer|-1|${year}|${month}`)) {
             const list = dedupe(
               rows.filter((r) => !!r.design_done && monthKeyAden(designerDateOf(r)) === mk),
             );
@@ -290,7 +308,9 @@ export const Route = createFileRoute("/api/public/hooks/monthly-accounting")({
           }
 
           /* ---------------- 3) حساب الفني ---------------- */
-          if (force || !doneKey.has(`technician|-1|${year}|${month}`)) {
+          if (!force && !isReviewed("technician", -1, year, month)) {
+            results.push({ scope: "technician", month: mk, skipped: "بانتظار مراجعة الإدارة" });
+          } else if (force || !doneKey.has(`technician|-1|${year}|${month}`)) {
             const list = dedupe(
               rows.filter(
                 (r) => !!r.permanent_fabrication_done && monthKeyAden(technicianDateOf(r)) === mk,
