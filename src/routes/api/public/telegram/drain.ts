@@ -58,13 +58,21 @@ async function handle(): Promise<Response> {
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+  // Abandon anything older than a day: only today's uploads matter for the group.
+  const staleBefore = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  await supabaseAdmin
+    .from("telegram_outbox")
+    .update({ status: "failed", last_error: "تم تجاهلها (قديمة)" })
+    .eq("status", "pending")
+    .lt("created_at", staleBefore);
+
   const { data: rows } = await supabaseAdmin
     .from("telegram_outbox")
     .select("*")
     .eq("status", "pending")
     .lt("attempts", MAX_ATTEMPTS)
     .order("created_at", { ascending: true })
-    .limit(5);
+    .limit(10);
 
   const results: { id: string; ok: boolean; error?: string }[] = [];
 
