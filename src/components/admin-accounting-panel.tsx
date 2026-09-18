@@ -4,9 +4,11 @@ import { toast } from "sonner";
 import {
   Calculator, Stethoscope, MonitorCog, Wrench, ArrowRight, Loader2,
   RefreshCw, Coins, Check, Plus, Search, Building2, X, ArrowDownUp,
+  Pencil, Trash2, BadgeCheck, AlertTriangle, Send,
 } from "lucide-react";
 import { DoctorAvatar } from "@/components/doctor-avatar";
 import { teethOf } from "@/lib/report-build";
+
 
 /* ------------------------------ helpers ------------------------------ */
 
