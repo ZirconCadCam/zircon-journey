@@ -41,10 +41,12 @@ export async function queueTelegram(caption: string, documents: OutboxDoc[] = []
       .insert({ caption: text.slice(0, 3900), documents: docs as any });
     if (error) {
       console.warn("[telegram-outbox] تعذر إضافة الرسالة للطابور", error.message);
+      toast.warning("تعذر جدولة إرسال الملفات إلى جروب تلجرام — أعد المحاولة");
       return;
     }
     kickTelegramDrain();
   } catch (e: any) {
     console.warn("[telegram-outbox] خطأ غير متوقع", e?.message ?? e);
+    toast.warning("تعذر جدولة إرسال الملفات إلى جروب تلجرام — أعد المحاولة");
   }
 }
