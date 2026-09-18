@@ -134,6 +134,7 @@ async function handle(): Promise<Response> {
           if (!res.ok || !j?.ok) throw new Error(String(j?.description ?? `HTTP ${res.status}`));
         } catch (e: any) {
           failed.push(`${doc.filename}: ${e?.message ?? "خطأ"}`);
+          pendingDocs.push(doc);
         }
       }
 
@@ -141,16 +142,26 @@ async function handle(): Promise<Response> {
 
       await supabaseAdmin
         .from("telegram_outbox")
-        .update({ status: "sent", sent_at: new Date().toISOString(), last_error: null })
+        .update({
+          status: "sent",
+          sent_at: new Date().toISOString(),
+          last_error: null,
+          caption_sent: true,
+          documents: [] as any,
+        })
         .eq("id", row.id);
       results.push({ id: row.id, ok: true });
     } catch (e: any) {
       const error = String(e?.message ?? "خطأ");
       const attempts = (row.attempts ?? 0) + 1;
-      await supabaseAdmin
-        .from("telegram_outbox")
-        .update({ status: attempts >= MAX_ATTEMPTS ? "failed" : "pending", last_error: error })
-        .eq("id", row.id);
+      const patch: Record<string, any> = {
+        status: attempts >= MAX_ATTEMPTS ? "failed" : "pending",
+        last_error: error,
+        caption_sent: captionSent,
+      };
+      // Keep only the files that still need delivery, so retries never duplicate.
+      if (captionSent) patch["documents"] = pendingDocs as any;
+      await supabaseAdmin.from("telegram_outbox").update(patch).eq("id", row.id);
       results.push({ id: row.id, ok: false, error });
     }
   }
