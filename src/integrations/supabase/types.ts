@@ -846,6 +846,7 @@ export type Database = {
           permanent_received_by_secretary: boolean
           permanent_shipped_to_secretary: boolean
           pinned: boolean
+          ready_zircon_sent_at: string | null
           received_permanent: boolean
           received_temporary: boolean
           remaining_amount: number | null
@@ -939,6 +940,7 @@ export type Database = {
           permanent_received_by_secretary?: boolean
           permanent_shipped_to_secretary?: boolean
           pinned?: boolean
+          ready_zircon_sent_at?: string | null
           received_permanent?: boolean
           received_temporary?: boolean
           remaining_amount?: number | null
@@ -1032,6 +1034,7 @@ export type Database = {
           permanent_received_by_secretary?: boolean
           permanent_shipped_to_secretary?: boolean
           pinned?: boolean
+          ready_zircon_sent_at?: string | null
           received_permanent?: boolean
           received_temporary?: boolean
           remaining_amount?: number | null

@@ -1,0 +1,1 @@
+ALTER TABLE public.slot_cases ADD COLUMN IF NOT EXISTS ready_zircon_sent_at TIMESTAMPTZ;
