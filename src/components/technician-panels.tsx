@@ -4,8 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   Loader2, User, Stethoscope, Calendar, Search, FileArchive, FileText,
-  Download, FileDown, Filter,
+  Download, FileDown, Filter, PackageCheck, Send,
 } from "lucide-react";
+import { queueTelegram } from "@/lib/telegram-outbox";
+
 import {
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableFooter,
 } from "@/components/ui/table";
