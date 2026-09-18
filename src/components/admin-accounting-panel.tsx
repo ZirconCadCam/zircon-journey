@@ -415,6 +415,8 @@ function DoctorPointsTable({
         </div>
       </div>
 
+      <ReviewBar scope="doctors" doctorSlot={doctor.slot} month={month} />
+
       <div className="flex items-end gap-2 flex-wrap rounded-xl border border-border bg-muted/20 p-3">
         <div>
           <label className="text-[11px] font-bold mb-1 block flex items-center gap-1">
@@ -434,7 +436,7 @@ function DoctorPointsTable({
 
 /* ============================ 2) المصمم ============================ */
 
-function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] }) {
+function DesignerAccounting({ rows, doctors, onChanged }: { rows: Row[]; doctors: Doctor[]; onChanged: () => void }) {
   const nameOf = (slot: number) => doctors.find((d) => d.slot === slot)?.name ?? `#${slot}`;
   const now = new Date();
   const year = now.getFullYear();
@@ -561,11 +563,12 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
                 <th className="p-2 text-right">الطبيب</th>
                 <th className="p-2 text-right">عدد الأسنان</th>
                 <th className="p-2 text-right">التاريخ</th>
+                <th className="p-2 text-right">إجراءات</th>
               </tr>
             </thead>
             <tbody>
               {sorted.length === 0 ? (
-                <tr><td colSpan={6} className="p-6 text-center text-xs text-muted-foreground">
+                <tr><td colSpan={7} className="p-6 text-center text-xs text-muted-foreground">
                   {monthIsSettled
                     ? "تم حساب هذا الشهر — الحالات المخفية ✅"
                     : hasFilters ? "لا توجد نتائج مطابقة للفلاتر" : "لا توجد حالات مُصمَّمة في هذا الشهر"}
@@ -581,6 +584,7 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
                     <td className="p-2 text-xs">{nameOf(r.doctor_slot)}</td>
                     <td className={`p-2 font-extrabold ${rep ? "text-red-600" : "text-gold"}`}>{teethOf(r) || "—"}</td>
                     <td className="p-2 text-xs">{fmtDate(r.design_delivered_at ?? r.design_sent_at ?? r.updated_at)}</td>
+                    <td className="p-2"><RowActions row={r} onChanged={onChanged} /></td>
                   </tr>
                 );
               })}
@@ -588,7 +592,7 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
             <tfoot>
               <tr className="border-t-2 border-gold bg-gold/10 font-extrabold">
                 <td className="p-2" colSpan={4}>المجموع — {sorted.length} حالة</td>
-                <td className="p-2" colSpan={2}>
+                <td className="p-2" colSpan={3}>
                   {total} سِنّ
                   {repeatTotal > 0 && <span className="text-red-600 text-xs font-bold"> (منها {repeatTotal} إعادة)</span>}
                 </td>
@@ -598,6 +602,8 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
         </div>
       </div>
 
+      <ReviewBar scope="designer" month={month} />
+
       <MonthsSettlement scope="designer" title="حساب شهور المصمم" onChanged={loadSettled} />
     </div>
   );
@@ -605,7 +611,7 @@ function DesignerAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] 
 
 /* ============================ 3) الفني ============================ */
 
-function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[] }) {
+function TechnicianAccounting({ rows, doctors, onChanged }: { rows: Row[]; doctors: Doctor[]; onChanged: () => void }) {
   const nameOf = (slot: number) => doctors.find((d) => d.slot === slot)?.name ?? `#${slot}`;
   const now = new Date();
   const year = now.getFullYear();
@@ -713,11 +719,12 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
                 <th className="p-2 text-right">الطبيب</th>
                 <th className="p-2 text-right">عدد الأسنان</th>
                 <th className="p-2 text-right">تاريخ النحت الدائم</th>
+                <th className="p-2 text-right">إجراءات</th>
               </tr>
             </thead>
             <tbody>
               {sorted.length === 0 ? (
-                <tr><td colSpan={6} className="p-6 text-center text-xs text-muted-foreground">
+                <tr><td colSpan={7} className="p-6 text-center text-xs text-muted-foreground">
                   {monthIsSettled
                     ? "تم حساب هذا الشهر — الحالات المخفية ✅"
                     : hasFilters ? "لا توجد نتائج مطابقة للفلاتر" : "لا توجد حالات في هذا الشهر"}
@@ -732,6 +739,7 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
                     <td className="p-2 text-xs">{nameOf(r.doctor_slot)}</td>
                     <td className="p-2 font-extrabold text-gold">{teethOf(r) || "—"}</td>
                     <td className="p-2 text-xs">{fmtDate(r.perm_sent_at ?? r.updated_at)}</td>
+                    <td className="p-2"><RowActions row={r} onChanged={onChanged} /></td>
                   </tr>
                 );
               })}
@@ -739,12 +747,14 @@ function TechnicianAccounting({ rows, doctors }: { rows: Row[]; doctors: Doctor[
             <tfoot>
               <tr className="border-t-2 border-gold bg-gold/10 font-extrabold">
                 <td className="p-2" colSpan={4}>المجموع — {sorted.length} حالة</td>
-                <td className="p-2" colSpan={2}>{total} سِنّ</td>
+                <td className="p-2" colSpan={3}>{total} سِنّ</td>
               </tr>
             </tfoot>
           </table>
         </div>
       </div>
+
+      <ReviewBar scope="technician" month={month} />
 
       <MonthsSettlement scope="technician" title="حساب شهور الفني" onChanged={loadSettled} />
     </div>
