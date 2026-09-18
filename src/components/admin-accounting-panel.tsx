@@ -357,11 +357,12 @@ function DoctorPointsTable({
               <th className="p-2 text-right">عدد النقاط</th>
               <th className="p-2 text-right">تاريخ الأرشفة</th>
               <th className="p-2 text-right">المبلغ المتبقي</th>
+              <th className="p-2 text-right">إجراءات</th>
             </tr>
           </thead>
           <tbody>
             {sortedList.length === 0 ? (
-              <tr><td colSpan={6} className="p-6 text-center text-xs text-muted-foreground">لا توجد حالات مؤرشفة في هذه الفترة</td></tr>
+              <tr><td colSpan={7} className="p-6 text-center text-xs text-muted-foreground">لا توجد حالات مؤرشفة في هذه الفترة</td></tr>
             ) : sortedList.map((r, i) => {
               const dupPhone = dupPh.has(digits(r.patient_phone));
               return (
@@ -381,6 +382,7 @@ function DoctorPointsTable({
                       className="w-24 rounded-lg border border-input bg-background px-2 py-1 text-xs font-mono outline-none focus:border-gold"
                     />
                   </td>
+                  <td className="p-2"><RowActions row={r} onChanged={onChanged} /></td>
                 </tr>
               );
             })}
@@ -391,8 +393,10 @@ function DoctorPointsTable({
               <td className="p-2">{totalPoints} نقطة</td>
               <td className="p-2 text-xs">—</td>
               <td className="p-2 font-mono">{totalAmount || 0}</td>
+              <td className="p-2">—</td>
             </tr>
           </tfoot>
+
         </table>
       </div>
 
