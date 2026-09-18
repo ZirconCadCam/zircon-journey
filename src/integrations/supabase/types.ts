@@ -1136,6 +1136,7 @@ export type Database = {
         Row: {
           attempts: number
           caption: string
+          caption_sent: boolean
           created_at: string
           documents: Json
           id: string
@@ -1146,6 +1147,7 @@ export type Database = {
         Insert: {
           attempts?: number
           caption: string
+          caption_sent?: boolean
           created_at?: string
           documents?: Json
           id?: string
@@ -1156,6 +1158,7 @@ export type Database = {
         Update: {
           attempts?: number
           caption?: string
+          caption_sent?: boolean
           created_at?: string
           documents?: Json
           id?: string

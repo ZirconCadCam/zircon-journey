@@ -1,0 +1,1 @@
+ALTER TABLE public.telegram_outbox ADD COLUMN IF NOT EXISTS caption_sent BOOLEAN NOT NULL DEFAULT false;
