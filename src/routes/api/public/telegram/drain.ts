@@ -78,19 +78,28 @@ async function handle(): Promise<Response> {
       .select("id");
     if (!claimed || claimed.length === 0) continue;
 
+    let captionSent = row.caption_sent === true;
+    const pendingDocs: Doc[] = [];
+
     try {
-      // 1) The caption / case data as a text message.
-      const msgRes = await fetch(`${API}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: chat, text: String(row.caption).slice(0, 4000) }),
-      });
-      const msgJson: any = await msgRes.json().catch(() => ({}));
-      if (!msgRes.ok || !msgJson?.ok) {
-        throw new Error(String(msgJson?.description ?? `HTTP ${msgRes.status}`));
+      // 1) The caption / case data as a text message — only once per row, so a
+      //    retry caused by a single bad file never repeats the case text.
+      if (!captionSent) {
+        const msgRes = await fetch(`${API}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chat_id: chat, text: String(row.caption).slice(0, 4000) }),
+        });
+        const msgJson: any = await msgRes.json().catch(() => ({}));
+        if (!msgRes.ok || !msgJson?.ok) {
+          throw new Error(String(msgJson?.description ?? `HTTP ${msgRes.status}`));
+        }
+        captionSent = true;
       }
 
       // 2) Every attached file as a document (bytes uploaded directly).
+      //    Delivered files are dropped from the row, so a retry only re-sends
+      //    the ones that actually failed.
       const docs = (Array.isArray(row.documents) ? row.documents : []) as Doc[];
       const failed: string[] = [];
       for (const doc of docs) {
