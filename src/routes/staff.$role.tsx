@@ -392,10 +392,15 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
             )}
             {role === "technician" && (
               <>
+                <button onClick={() => setTab("readyzircon")}
+                  className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "readyzircon" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
+                  <PackageCheck className="size-4" /> الزركون الجاهز
+                </button>
                 <button onClick={() => setTab("reports")}
                   className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "reports" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
                   <FileText className="size-4" /> الكشوفات
                 </button>
+
                 <button onClick={() => setTab("designfiles")}
                   className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "designfiles" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
                   <FileArchive className="size-4" /> ملفات التصاميم
