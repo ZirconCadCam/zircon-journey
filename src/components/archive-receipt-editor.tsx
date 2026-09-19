@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Loader2, X, Camera, Send, Archive, ImageIcon, Clock, Check, AlertTriangle } from "lucide-react";
 import { ROLE_LABEL, type RoleKey } from "@/lib/chat";
 import { ImageLightbox } from "@/components/image-lightbox";
+import { signPrivateUrl } from "@/lib/secure-storage";
 
 export interface ArchiveReceiptCase {
   id: string;
@@ -204,8 +205,8 @@ export function ArchiveRequestStatus({ c }: { c: ArchiveReceiptCase }) {
     let alive = true;
     (async () => {
       if (!path) return;
-      const { data } = await supabase.storage.from("chat-attachments").createSignedUrl(path, 3600);
-      if (alive) setUrl(data?.signedUrl ?? null);
+      const signedUrl = await signPrivateUrl("chat-attachments", path, 3600);
+      if (alive) setUrl(signedUrl);
     })();
     return () => { alive = false; };
   }, [path]);

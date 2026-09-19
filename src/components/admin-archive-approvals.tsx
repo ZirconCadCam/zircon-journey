@@ -9,6 +9,7 @@ import {
 
 import { DoctorAvatar } from "@/components/doctor-avatar";
 import { ImageLightbox } from "@/components/image-lightbox";
+import { signPrivateUrl } from "@/lib/secure-storage";
 
 interface Row {
   id: string;
@@ -234,9 +235,8 @@ function ApprovalCard({ r, doctor, onDone }: { r: Row; doctor?: DoctorMini; onDo
     let alive = true;
     (async () => {
       if (!r.archive_receipt_path) return;
-      const { data } = await supabase.storage.from("chat-attachments")
-        .createSignedUrl(r.archive_receipt_path, 3600);
-      if (alive) setUrl(data?.signedUrl ?? null);
+      const signedUrl = await signPrivateUrl("chat-attachments", r.archive_receipt_path, 3600);
+      if (alive) setUrl(signedUrl);
     })();
     return () => { alive = false; };
   }, [r.archive_receipt_path]);

@@ -5,6 +5,7 @@ import { DoctorAvatar } from "@/components/doctor-avatar";
 import { getStage, deriveStageKey } from "@/lib/case-stages";
 import { Camera, Sparkles, Inbox, Loader2, Download, RefreshCw, Phone, Hash } from "lucide-react";
 import type { RoleKey } from "@/lib/chat";
+import { signPrivateUrl } from "@/lib/secure-storage";
 
 interface PhotoRow {
   id: string;
@@ -125,8 +126,8 @@ export function SecretaryPhotoInbox({ role }: { role: RoleKey }) {
       const missing = items.filter(i => !urls[i.path]).slice(0, 60);
       if (missing.length === 0) return;
       const entries = await Promise.all(missing.map(async (i) => {
-        const { data } = await supabase.storage.from("chat-attachments").createSignedUrl(i.path, 3600);
-        return [i.path, data?.signedUrl ?? ""] as const;
+        const url = await signPrivateUrl("chat-attachments", i.path, 3600);
+        return [i.path, url ?? ""] as const;
       }));
       if (!alive) return;
       setUrls(prev => {

@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Camera, Loader2, Check, Sparkles, BellRing } from "lucide-react";
 import { ROLE_LABEL, type RoleKey } from "@/lib/chat";
 import { ImageLightbox } from "@/components/image-lightbox";
+import { signPrivateUrl } from "@/lib/secure-storage";
 
 export interface PhotoAlertCase {
   id: string;
@@ -133,15 +134,14 @@ function PhotoAlertCard({ c, phase, actorName, doctorName }: {
 
       // Auto-forward the photo to the clinic's Telegram group (fire-and-forget).
       try {
-        const { data: signed } = await supabase.storage.from("chat-attachments")
-          .createSignedUrl(path, 60 * 60 * 24 * 365);
-        if (signed?.signedUrl) {
+        const signedUrl = await signPrivateUrl("chat-attachments", path, 60 * 60 * 24 * 365);
+        if (signedUrl) {
           const { autoSendFileToTelegram } = await import("@/lib/telegram-auto");
           autoSendFileToTelegram({
             kind: "image",
             from: `الطبيب (${actorName}) — ${LABEL[phase]}`,
             caseCode: c.case_code, patientName: c.patient_name, caseId: c.id,
-            url: signed.signedUrl, filename: file.name,
+            url: signedUrl, filename: file.name,
           });
         }
       } catch { /* telegram failure must not block the flow */ }
@@ -199,8 +199,8 @@ function SentBadge({ c, phase }: { c: PhotoAlertCase; phase: Phase }) {
     let alive = true;
     (async () => {
       if (!path) return;
-      const { data } = await supabase.storage.from("chat-attachments").createSignedUrl(path, 3600);
-      if (alive) setUrl(data?.signedUrl ?? null);
+      const signed = await signPrivateUrl("chat-attachments", path, 3600);
+      if (alive) setUrl(signed);
     })();
     return () => { alive = false; };
   }, [path]);

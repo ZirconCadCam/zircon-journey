@@ -5,6 +5,7 @@ import { useAuth, STATUS_LABELS, STATUS_PROGRESS, BRANCH_LABELS } from "@/hooks/
 import { DashboardShell, ProgressBar } from "@/components/dashboard-shell";
 import { Upload, Send, FileText, Download } from "lucide-react";
 import { toast } from "sonner";
+import { signPrivateUrl } from "@/lib/secure-storage";
 
 export const Route = createFileRoute("/cases/$id")({
   component: CaseDetail,
@@ -99,9 +100,9 @@ function CaseDetail() {
   }
 
   async function downloadFile(p: string, n: string) {
-    const { data, error } = await supabase.storage.from("case-files").createSignedUrl(p, 60);
-    if (error || !data) { toast.error("تعذر تحميل الملف"); return; }
-    const a = document.createElement("a"); a.href = data.signedUrl; a.download = n; a.click();
+    const url = await signPrivateUrl("case-files", p, 60);
+    if (!url) { toast.error("تعذر تحميل الملف"); return; }
+    const a = document.createElement("a"); a.href = url; a.download = n; a.click();
   }
 
   if (loading || !c) return <div className="min-h-screen grid place-items-center">جارِ التحميل...</div>;

@@ -15,6 +15,7 @@ import { ImageAnnotator } from "@/components/image-annotator";
 import { ImageLightbox } from "@/components/image-lightbox";
 import { PatientPhotoAlerts } from "@/components/patient-photo-alerts";
 import { ArchiveReceiptEditor, ArchiveRequestStatus } from "@/components/archive-receipt-editor";
+import { signPrivateUrl } from "@/lib/secure-storage";
 
 
 
@@ -222,9 +223,8 @@ async function uploadAttachment(file: File, c: WorkflowCase, phase: string): Pro
         },
         onSuccess: async () => {
           task.done();
-          const { data: signed } = await supabase.storage.from("chat-attachments")
-            .createSignedUrl(path, 60 * 60 * 24 * 365);
-          if (!settled) { settled = true; resolve({ url: signed?.signedUrl ?? path, path }); }
+          const signedUrl = await signPrivateUrl("chat-attachments", path, 60 * 60 * 24 * 365);
+          if (!settled) { settled = true; resolve({ url: signedUrl ?? path, path }); }
         },
       });
     } catch (e: any) {
