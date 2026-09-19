@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { teethOf } from "@/lib/report-build";
 import { printHtmlDocument } from "@/lib/print-report";
 import {
+import { listPointWithdrawals } from "@/lib/secure-ops.functions";
   FileSpreadsheet, Loader2, RefreshCw, Printer, Stethoscope, MonitorCog, Wrench,
 } from "lucide-react";
 
@@ -104,11 +105,12 @@ export function AdminAccountingReport() {
 
   async function load() {
     setLoading(true);
-    const [cases, docs, wd] = await Promise.all([
+    const [cases, docs, wdRows] = await Promise.all([
       supabase.from("slot_cases").select(SELECT).order("created_at", { ascending: true }),
       supabase.from("doctor_profiles").select("slot,name,branch").order("slot"),
-      supabase.from("doctor_point_withdrawals").select("doctor_slot,points"),
+      listPointWithdrawals({ data: {} }).catch(() => [] as any[]),
     ]);
+    const wd = { data: wdRows };
     setRows((cases.data ?? []) as unknown as Row[]);
     setDoctors((docs.data ?? []) as Doctor[]);
     const map: Record<number, number> = {};
