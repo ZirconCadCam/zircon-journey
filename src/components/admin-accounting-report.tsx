@@ -3,9 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { teethOf } from "@/lib/report-build";
 import { printHtmlDocument } from "@/lib/print-report";
 import {
-import { listPointWithdrawals } from "@/lib/secure-ops.functions";
   FileSpreadsheet, Loader2, RefreshCw, Printer, Stethoscope, MonitorCog, Wrench,
 } from "lucide-react";
+import { listPointWithdrawals } from "@/lib/secure-ops.functions";
+
 
 /* ------------------------------ helpers ------------------------------ */
 
