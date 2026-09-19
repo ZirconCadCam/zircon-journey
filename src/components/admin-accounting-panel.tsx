@@ -8,6 +8,15 @@ import {
 } from "lucide-react";
 import { DoctorAvatar } from "@/components/doctor-avatar";
 import { teethOf } from "@/lib/report-build";
+import {
+  listPointWithdrawals,
+  addPointWithdrawal,
+  listMonthSettlements,
+  setMonthSettlement,
+  getAccountingReview,
+  setAccountingReview,
+  listAccountingReviews,
+} from "@/lib/secure-ops.functions";
 
 
 /* ------------------------------ helpers ------------------------------ */
@@ -269,10 +278,7 @@ function DoctorPointsTable({
   const dupPh = useMemo(() => dupPhones(sortedList), [sortedList]);
 
   async function loadWithdrawn() {
-    const { data } = await supabase
-      .from("doctor_point_withdrawals")
-      .select("points")
-      .eq("doctor_slot", doctor.slot);
+    const data = await listPointWithdrawals({ data: { doctorSlot: doctor.slot } }).catch(() => []);
     setWithdrawn((data ?? []).reduce((s: number, x: any) => s + (Number(x.points) || 0), 0));
   }
   useEffect(() => { loadWithdrawn(); }, [doctor.slot]);
@@ -308,10 +314,9 @@ function DoctorPointsTable({
     const n = Number(addPts);
     if (!n || isNaN(n)) { toast.error("أدخل عدد النقاط المسحوبة"); return; }
     setSaving(true);
-    const { error } = await supabase.from("doctor_point_withdrawals")
-      .insert({ doctor_slot: doctor.slot, points: Math.round(n) } as any);
+    const res = await addPointWithdrawal({ data: { doctorSlot: doctor.slot, points: Math.round(n) } }).catch((e: any) => ({ ok: false, error: e?.message }));
     setSaving(false);
-    if (error) { toast.error(error.message); return; }
+    if (!res?.ok) { toast.error(res?.error ?? "تعذر الحفظ"); return; }
     setAddPts("");
     toast.success("تم تسجيل النقاط المسحوبة");
     loadWithdrawn();
@@ -452,11 +457,7 @@ function DesignerAccounting({ rows, doctors, onChanged }: { rows: Row[]; doctors
   // Months marked as settled (حُسِبَت) — their cases are hidden from the table.
   const [settledMonths, setSettledMonths] = useState<Set<number>>(new Set());
   async function loadSettled() {
-    const { data } = await supabase
-      .from("staff_month_settlements")
-      .select("month,settled")
-      .eq("scope", "designer")
-      .eq("year", year);
+    const data = await listMonthSettlements({ data: { scope: "designer", year } }).catch(() => []);
     setSettledMonths(new Set((data ?? []).filter((x: any) => x.settled).map((x: any) => Number(x.month))));
   }
   useEffect(() => { loadSettled(); }, [year]);
@@ -627,11 +628,7 @@ function TechnicianAccounting({ rows, doctors, onChanged }: { rows: Row[]; docto
   // Months marked as settled (حُسِبَت) — their cases are hidden from the table.
   const [settledMonths, setSettledMonths] = useState<Set<number>>(new Set());
   async function loadSettled() {
-    const { data } = await supabase
-      .from("staff_month_settlements")
-      .select("month,settled")
-      .eq("scope", "technician")
-      .eq("year", year);
+    const data = await listMonthSettlements({ data: { scope: "technician", year } }).catch(() => []);
     setSettledMonths(new Set((data ?? []).filter((x: any) => x.settled).map((x: any) => Number(x.month))));
   }
   useEffect(() => { loadSettled(); }, [year]);
@@ -874,11 +871,7 @@ function MonthsSettlement({
   const [busy, setBusy] = useState<number | null>(null);
 
   async function load() {
-    const { data } = await supabase
-      .from("staff_month_settlements")
-      .select("month,settled")
-      .eq("scope", scope)
-      .eq("year", year);
+    const data = await listMonthSettlements({ data: { scope, year } }).catch(() => []);
     const m: Record<number, boolean> = {};
     for (const r of (data ?? []) as any[]) m[Number(r.month)] = !!r.settled;
     setSettled(m);
@@ -888,11 +881,9 @@ function MonthsSettlement({
   async function toggle(month: number) {
     const next = !settled[month];
     setBusy(month);
-    const { error } = await supabase
-      .from("staff_month_settlements")
-      .upsert({ scope, year, month, settled: next } as any, { onConflict: "scope,year,month" });
+    const res = await setMonthSettlement({ data: { scope, year, month, settled: next } }).catch((e: any) => ({ ok: false, error: e?.message }));
     setBusy(null);
-    if (error) { toast.error(error.message); return; }
+    if (!res?.ok) { toast.error(res?.error ?? "تعذر الحفظ"); return; }
     setSettled((s) => ({ ...s, [month]: next }));
     toast.success(next ? `تم تأكيد حساب ${AR_MONTHS[month - 1]}` : `تم إلغاء حساب ${AR_MONTHS[month - 1]}`);
     onChanged?.();
@@ -1089,11 +1080,7 @@ function ReviewBar({
 
   async function load() {
     if (!valid) { setReviewed(null); return; }
-    const { data } = await supabase.from("accounting_reviews")
-      .select("reviewed,reviewed_at")
-      .eq("scope", scope).eq("doctor_slot", doctorSlot)
-      .eq("year", y as number).eq("month", m as number)
-      .maybeSingle();
+    const data = await getAccountingReview({ data: { scope, doctorSlot, year: y as number, month: m as number } }).catch(() => null);
     setReviewed(!!(data as any)?.reviewed);
     setAt((data as any)?.reviewed_at ?? null);
   }
@@ -1103,12 +1090,9 @@ function ReviewBar({
     if (!valid) { toast.error("اختر شهراً محدداً قبل المراجعة"); return; }
     const next = !reviewed;
     setBusy(true);
-    const { error } = await supabase.from("accounting_reviews").upsert({
-      scope, doctor_slot: doctorSlot, year: y, month: m,
-      reviewed: next, reviewed_at: new Date().toISOString(), reviewed_by: "admin",
-    } as any, { onConflict: "scope,doctor_slot,year,month" });
+    const res = await setAccountingReview({ data: { scope, doctorSlot, year: y as number, month: m as number, reviewed: next } }).catch((e: any) => ({ ok: false, error: e?.message }));
     setBusy(false);
-    if (error) { toast.error(error.message); return; }
+    if (!res?.ok) { toast.error(res?.error ?? "تعذر الحفظ"); return; }
     setReviewed(next);
     setAt(new Date().toISOString());
     toast.success(next
@@ -1152,9 +1136,7 @@ function ReviewReminder({ doctors }: { doctors: Doctor[] }) {
   useEffect(() => {
     if (left > 2) return;
     (async () => {
-      const { data } = await supabase.from("accounting_reviews")
-        .select("scope,doctor_slot,reviewed")
-        .eq("year", y as number).eq("month", m as number);
+      const data = await listAccountingReviews({ data: { year: y as number, month: m as number } }).catch(() => []);
       const ok = new Set((data ?? []).filter((r: any) => r.reviewed).map((r: any) => `${r.scope}|${r.doctor_slot}`));
       const miss: string[] = [];
       if (!ok.has("designer|-1")) miss.push("حساب المصمم");

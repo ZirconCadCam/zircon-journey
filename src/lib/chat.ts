@@ -70,8 +70,8 @@ export const ATTACHMENTS_BUCKET = "chat-attachments";
 
 /** Generate a short-lived signed URL just-in-time for download/preview. */
 export async function getSignedUrl(path: string, seconds = 300): Promise<string | null> {
-  const { data } = await supabase.storage.from(ATTACHMENTS_BUCKET).createSignedUrl(path, seconds);
-  return data?.signedUrl ?? null;
+  const { signPrivateUrl } = await import("@/lib/secure-storage");
+  return signPrivateUrl(ATTACHMENTS_BUCKET, path, seconds);
 }
 
 export function summarizeParticipants(participants: RoleKey[]): string {

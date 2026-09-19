@@ -19,6 +19,7 @@ import { Progress } from "@/components/ui/progress";
 import { compareByCreatedAt, formatChatTime, formatChatFull, formatDayLabel, isNewDay } from "@/lib/time";
 import { getDoctorAvatar } from "@/lib/doctor-avatars";
 import { getOverrideUrl, roleSubject, useAvatarVersion } from "@/lib/avatar-store";
+import { removePrivateObjects } from "@/lib/secure-storage";
 
 
 
@@ -634,7 +635,7 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
       return;
     }
     if (m.attachment_path) {
-      await supabase.storage.from(ATTACHMENTS_BUCKET).remove([m.attachment_path]);
+      await removePrivateObjects("chat-attachments", [m.attachment_path]);
     }
     const { error } = await supabase.from("chat_messages").delete().eq("id", m.id);
     if (error) toast.error(error.message);
