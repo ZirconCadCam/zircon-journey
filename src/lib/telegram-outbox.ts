@@ -10,7 +10,7 @@
  * picks the row up minutes later — no file is ever lost.
  */
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { queueTelegramOutbox } from "@/lib/secure-ops.functions";
 
 export interface OutboxDoc {
   url?: string | null;
@@ -36,11 +36,9 @@ export async function queueTelegram(caption: string, documents: OutboxDoc[] = []
     .filter((d) => !!d.filename && (!!d.url || (!!d.bucket && !!d.path)))
     .slice(0, 12);
   try {
-    const { error } = await supabase
-      .from("telegram_outbox")
-      .insert({ caption: text.slice(0, 3900), documents: docs as any });
-    if (error) {
-      console.warn("[telegram-outbox] تعذر إضافة الرسالة للطابور", error.message);
+    const res = await queueTelegramOutbox({ data: { caption: text.slice(0, 3900), documents: docs } });
+    if (!res?.ok) {
+      console.warn("[telegram-outbox] تعذر إضافة الرسالة للطابور", res?.error);
       toast.warning("تعذر جدولة إرسال الملفات إلى جروب تلجرام — أعد المحاولة");
       return;
     }
