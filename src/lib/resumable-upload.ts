@@ -36,9 +36,12 @@ export async function startResumableUpload(opts: ResumableOptions): Promise<Resu
     const upload = new tus.Upload(opts.file as File, {
       endpoint: `${SUPABASE_URL}/storage/v1/upload/resumable`,
       retryDelays: [0, 1000, 3000, 5000, 10000, 20000],
+      // NOTE: no "x-upsert" header — overwriting requires read access to the
+      // private buckets, which the browser no longer has. Paths are unique
+      // (timestamped), so overwriting is never needed and upsert only caused
+      // every upload to be rejected with a permissions error.
       headers: {
         authorization: `Bearer ${token}`,
-        "x-upsert": "true",
       },
       uploadDataDuringCreation: true,
       removeFingerprintOnSuccess: true,
