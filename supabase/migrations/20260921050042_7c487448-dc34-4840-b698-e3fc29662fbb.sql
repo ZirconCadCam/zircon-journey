@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "chat-attachments update for upload" ON storage.objects;
