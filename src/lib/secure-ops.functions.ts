@@ -41,6 +41,22 @@ export const signStoredUrl = createServerFn({ method: "POST" })
     return { url: signed?.signedUrl ?? null, error: null as string | null };
   });
 
+/**
+ * One-time signed upload ticket for a private bucket. The browser can no longer
+ * write to these buckets directly (RLS only allows authenticated sessions, and
+ * staff screens run anonymously), so the server mints an upload token instead.
+ */
+export const createPrivateUploadUrl = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ bucket: bucketSchema, path: pathSchema }).parse(d))
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const { data: signed, error } = await db.storage
+      .from(data.bucket)
+      .createSignedUploadUrl(data.path);
+    if (error || !signed) return { token: null as string | null, error: error?.message ?? "no token" };
+    return { token: signed.token as string, error: null as string | null };
+  });
+
 export const removeStoredObjects = createServerFn({ method: "POST" })
   .inputValidator((d) =>
     z.object({ bucket: bucketSchema, paths: z.array(pathSchema).min(1).max(50) }).parse(d),

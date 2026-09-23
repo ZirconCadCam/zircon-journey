@@ -5,7 +5,7 @@ import { useAuth, STATUS_LABELS, STATUS_PROGRESS, BRANCH_LABELS } from "@/hooks/
 import { DashboardShell, ProgressBar } from "@/components/dashboard-shell";
 import { Upload, Send, FileText, Download } from "lucide-react";
 import { toast } from "sonner";
-import { signPrivateUrl } from "@/lib/secure-storage";
+import { signPrivateUrl, uploadPrivateFile } from "@/lib/secure-storage";
 
 export const Route = createFileRoute("/cases/$id")({
   component: CaseDetail,
@@ -79,8 +79,10 @@ function CaseDetail() {
     const f = e.target.files?.[0];
     if (!f || !session) return;
     const path = `${id}/${Date.now()}-${f.name}`;
-    const { error: upErr } = await supabase.storage.from("case-files").upload(path, f);
-    if (upErr) { toast.error(upErr.message); return; }
+    // Private bucket: the browser cannot write directly, so upload via a
+    // server-issued one-time ticket.
+    const up = await uploadPrivateFile("case-files", path, f);
+    if (!up.ok) { toast.error(up.error ?? "تعذر رفع الملف"); return; }
     const kind = /\.(stl|obj|ply)$/i.test(f.name) ? "scan" : "image";
     const { error } = await supabase.from("case_files").insert({
       case_id: id, uploader_id: session.user.id, file_name: f.name, file_path: path, file_type: f.type, file_kind: kind, size_bytes: f.size,

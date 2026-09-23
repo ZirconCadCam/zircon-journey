@@ -28,10 +28,17 @@ export function kickTelegramDrain(): void {
   }
 }
 
-/** Queue a caption + files for delivery to the Telegram group. */
-export async function queueTelegram(caption: string, documents: OutboxDoc[] = []): Promise<void> {
+/**
+ * Queue a caption + files for delivery to the Telegram group.
+ * Returns true only when the row really landed in the queue, so callers that
+ * clear local state afterwards can abort instead of losing data silently.
+ */
+export async function queueTelegram(
+  caption: string,
+  documents: OutboxDoc[] = [],
+): Promise<boolean> {
   const text = caption.trim();
-  if (!text) return;
+  if (!text) return false;
   const docs = documents
     .filter((d) => !!d.filename && (!!d.url || (!!d.bucket && !!d.path)))
     .slice(0, 12);
@@ -40,11 +47,13 @@ export async function queueTelegram(caption: string, documents: OutboxDoc[] = []
     if (!res?.ok) {
       console.warn("[telegram-outbox] تعذر إضافة الرسالة للطابور", res?.error);
       toast.warning("تعذر جدولة إرسال الملفات إلى جروب تلجرام — أعد المحاولة");
-      return;
+      return false;
     }
     kickTelegramDrain();
+    return true;
   } catch (e: any) {
     console.warn("[telegram-outbox] خطأ غير متوقع", e?.message ?? e);
     toast.warning("تعذر جدولة إرسال الملفات إلى جروب تلجرام — أعد المحاولة");
+    return false;
   }
 }
