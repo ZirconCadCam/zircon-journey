@@ -578,7 +578,13 @@ export function TechnicianReadyZircon() {
         `إجمالي الأسنان: ${totalTeeth}`,
       ].join("\n");
 
-      await queueTelegram(caption);
+      // Only clear the list when the message really entered the outbox queue,
+      // otherwise the finished cases would disappear without ever being sent.
+      const queued = await queueTelegram(caption);
+      if (!queued) {
+        setSending(false);
+        return;
+      }
 
       const now = new Date().toISOString();
       const { error } = await supabase

@@ -47,11 +47,13 @@ export async function queueTelegram(
     if (!res?.ok) {
       console.warn("[telegram-outbox] تعذر إضافة الرسالة للطابور", res?.error);
       toast.warning("تعذر جدولة إرسال الملفات إلى جروب تلجرام — أعد المحاولة");
-      return;
+      return false;
     }
     kickTelegramDrain();
+    return true;
   } catch (e: any) {
     console.warn("[telegram-outbox] خطأ غير متوقع", e?.message ?? e);
     toast.warning("تعذر جدولة إرسال الملفات إلى جروب تلجرام — أعد المحاولة");
+    return false;
   }
 }
