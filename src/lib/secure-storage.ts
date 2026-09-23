@@ -4,7 +4,12 @@
  * These buckets no longer allow the browser to read or delete objects, so
  * download links and deletions are produced on the server after validation.
  */
-import { signStoredUrl, removeStoredObjects } from "@/lib/secure-ops.functions";
+import {
+  signStoredUrl,
+  removeStoredObjects,
+  createPrivateUploadUrl,
+} from "@/lib/secure-ops.functions";
+import { supabase } from "@/integrations/supabase/client";
 
 export type PrivateBucket = "chat-attachments" | "case-files";
 
