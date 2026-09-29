@@ -13,5 +13,12 @@ export default defineConfig({
   tanstackStart: {
     server: { entry: "server" },
   },
-  vite: { plugins: [mcpPlugin()] },
+  vite: {
+    plugins: [mcpPlugin()],
+    build: {
+      rollupOptions: {
+        external: ["cloudflare:workers"],
+      },
+    },
+  },
 });
