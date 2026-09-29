@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "sdk_version": "3.0.4",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://hiuhuuykimowpxmyfrcn.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "zircon-flow",
+      "version": "0.1.0",
+      "title": "Zircon Flow"
+    },
+    "tools": [
+      {
+        "name": "list_cases",
+        "title": "List cases",
+        "description": "List the most recent lab cases, optionally filtered by patient name or doctor slot.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "search": {
+              "description": "Part of the patient name.",
+              "type": "string",
+              "maxLength": 100
+            },
+            "doctor_slot": {
+              "description": "Doctor slot number.",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "limit": {
+              "default": 20,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          "additionalProperties": false
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_case",
+        "title": "Get case",
+        "description": "Get one lab case by its case code (for example ZJ-260920-26eb).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "case_code": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 60
+            }
+          },
+          "required": [
+            "case_code"
+          ],
+          "additionalProperties": false
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
