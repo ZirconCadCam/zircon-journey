@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as McpRouteImport } from './routes/mcp'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
@@ -22,12 +23,19 @@ import { Route as CasesIdRouteImport } from './routes/cases.$id'
 import { Route as ApiTtsRouteImport } from './routes/api/tts'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminArchiveRouteImport } from './routes/admin.archive'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as DoctorsSlotNewCaseRouteImport } from './routes/doctors_.$slot.new-case'
 import { Route as ApiPublicPushDispatchRouteImport } from './routes/api/public/push-dispatch'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as ApiPublicTelegramDrainRouteImport } from './routes/api/public/telegram/drain'
 import { Route as ApiPublicHooksMonthlyReportsRouteImport } from './routes/api/public/hooks/monthly-reports'
 import { Route as ApiPublicHooksMonthlyAccountingRouteImport } from './routes/api/public/hooks/monthly-accounting'
 
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -93,6 +101,12 @@ const AdminArchiveRoute = AdminArchiveRouteImport.update({
   path: '/admin/archive',
   getParentRoute: () => rootRouteImport,
 } as any)
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const DoctorsSlotNewCaseRoute = DoctorsSlotNewCaseRouteImport.update({
   id: '/doctors_/$slot/new-case',
   path: '/doctors/$slot/new-case',
@@ -101,6 +115,11 @@ const DoctorsSlotNewCaseRoute = DoctorsSlotNewCaseRouteImport.update({
 const ApiPublicPushDispatchRoute = ApiPublicPushDispatchRouteImport.update({
   id: '/api/public/push-dispatch',
   path: '/api/public/push-dispatch',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicTelegramDrainRoute = ApiPublicTelegramDrainRouteImport.update({
@@ -125,6 +144,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/mcp': typeof McpRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin/archive': typeof AdminArchiveRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/tts': typeof ApiTtsRoute
@@ -135,6 +156,7 @@ export interface FileRoutesByFullPath {
   '/staff/$role': typeof StaffRoleRoute
   '/doctors/': typeof DoctorsIndexRoute
   '/help/': typeof HelpIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/public/push-dispatch': typeof ApiPublicPushDispatchRoute
   '/doctors/$slot/new-case': typeof DoctorsSlotNewCaseRoute
   '/api/public/hooks/monthly-accounting': typeof ApiPublicHooksMonthlyAccountingRoute
@@ -145,6 +167,8 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/mcp': typeof McpRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin/archive': typeof AdminArchiveRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/tts': typeof ApiTtsRoute
@@ -155,6 +179,7 @@ export interface FileRoutesByTo {
   '/staff/$role': typeof StaffRoleRoute
   '/doctors': typeof DoctorsIndexRoute
   '/help': typeof HelpIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/public/push-dispatch': typeof ApiPublicPushDispatchRoute
   '/doctors/$slot/new-case': typeof DoctorsSlotNewCaseRoute
   '/api/public/hooks/monthly-accounting': typeof ApiPublicHooksMonthlyAccountingRoute
@@ -166,6 +191,8 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/mcp': typeof McpRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin/archive': typeof AdminArchiveRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/tts': typeof ApiTtsRoute
@@ -176,6 +203,7 @@ export interface FileRoutesById {
   '/staff/$role': typeof StaffRoleRoute
   '/doctors/': typeof DoctorsIndexRoute
   '/help/': typeof HelpIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/public/push-dispatch': typeof ApiPublicPushDispatchRoute
   '/doctors_/$slot/new-case': typeof DoctorsSlotNewCaseRoute
   '/api/public/hooks/monthly-accounting': typeof ApiPublicHooksMonthlyAccountingRoute
@@ -188,6 +216,8 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/login'
+    | '/mcp'
+    | '/.well-known/oauth-protected-resource'
     | '/admin/archive'
     | '/admin/users'
     | '/api/tts'
@@ -198,6 +228,7 @@ export interface FileRouteTypes {
     | '/staff/$role'
     | '/doctors/'
     | '/help/'
+    | '/.lovable/oauth/consent'
     | '/api/public/push-dispatch'
     | '/doctors/$slot/new-case'
     | '/api/public/hooks/monthly-accounting'
@@ -208,6 +239,8 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/login'
+    | '/mcp'
+    | '/.well-known/oauth-protected-resource'
     | '/admin/archive'
     | '/admin/users'
     | '/api/tts'
@@ -218,6 +251,7 @@ export interface FileRouteTypes {
     | '/staff/$role'
     | '/doctors'
     | '/help'
+    | '/.lovable/oauth/consent'
     | '/api/public/push-dispatch'
     | '/doctors/$slot/new-case'
     | '/api/public/hooks/monthly-accounting'
@@ -228,6 +262,8 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/login'
+    | '/mcp'
+    | '/.well-known/oauth-protected-resource'
     | '/admin/archive'
     | '/admin/users'
     | '/api/tts'
@@ -238,6 +274,7 @@ export interface FileRouteTypes {
     | '/staff/$role'
     | '/doctors/'
     | '/help/'
+    | '/.lovable/oauth/consent'
     | '/api/public/push-dispatch'
     | '/doctors_/$slot/new-case'
     | '/api/public/hooks/monthly-accounting'
@@ -249,6 +286,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
+  McpRoute: typeof McpRoute
+  Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   AdminArchiveRoute: typeof AdminArchiveRoute
   AdminUsersRoute: typeof AdminUsersRoute
   ApiTtsRoute: typeof ApiTtsRoute
@@ -259,6 +298,7 @@ export interface RootRouteChildren {
   StaffRoleRoute: typeof StaffRoleRoute
   DoctorsIndexRoute: typeof DoctorsIndexRoute
   HelpIndexRoute: typeof HelpIndexRoute
+  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   ApiPublicPushDispatchRoute: typeof ApiPublicPushDispatchRoute
   DoctorsSlotNewCaseRoute: typeof DoctorsSlotNewCaseRoute
   ApiPublicHooksMonthlyAccountingRoute: typeof ApiPublicHooksMonthlyAccountingRoute
@@ -268,6 +308,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -359,6 +406,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminArchiveRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/doctors_/$slot/new-case': {
       id: '/doctors_/$slot/new-case'
       path: '/doctors/$slot/new-case'
@@ -371,6 +425,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/push-dispatch'
       fullPath: '/api/public/push-dispatch'
       preLoaderRoute: typeof ApiPublicPushDispatchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/telegram/drain': {
@@ -401,6 +462,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
+  McpRoute: McpRoute,
+  Char91DotwellKnownChar93OauthProtectedResourceRoute:
+    Char91DotwellKnownChar93OauthProtectedResourceRoute,
   AdminArchiveRoute: AdminArchiveRoute,
   AdminUsersRoute: AdminUsersRoute,
   ApiTtsRoute: ApiTtsRoute,
@@ -411,6 +475,7 @@ const rootRouteChildren: RootRouteChildren = {
   StaffRoleRoute: StaffRoleRoute,
   DoctorsIndexRoute: DoctorsIndexRoute,
   HelpIndexRoute: HelpIndexRoute,
+  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   ApiPublicPushDispatchRoute: ApiPublicPushDispatchRoute,
   DoctorsSlotNewCaseRoute: DoctorsSlotNewCaseRoute,
   ApiPublicHooksMonthlyAccountingRoute: ApiPublicHooksMonthlyAccountingRoute,
