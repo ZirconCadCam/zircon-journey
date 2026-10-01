@@ -9,36 +9,31 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as DashboardRouteImport } from './routes/dashboard'
-import { Route as LoginRouteImport } from './routes/login'
 import { Route as McpRouteImport } from './routes/mcp'
-import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
-import { Route as AdminArchiveRouteImport } from './routes/admin.archive'
-import { Route as AdminUsersRouteImport } from './routes/admin.users'
-import { Route as ApiTtsRouteImport } from './routes/api/tts'
-import { Route as CasesIdRouteImport } from './routes/cases.$id'
-import { Route as CasesNewRouteImport } from './routes/cases.new'
-import { Route as DoctorsIndexRouteImport } from './routes/doctors.index'
-import { Route as DoctorsSlotRouteImport } from './routes/doctors.$slot'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as HelpIndexRouteImport } from './routes/help.index'
-import { Route as HelpRoleRouteImport } from './routes/help.$role'
+import { Route as DoctorsIndexRouteImport } from './routes/doctors.index'
 import { Route as StaffRoleRouteImport } from './routes/staff.$role'
-import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
-import { Route as ApiPublicPushDispatchRouteImport } from './routes/api/public/push-dispatch'
+import { Route as HelpRoleRouteImport } from './routes/help.$role'
+import { Route as DoctorsSlotRouteImport } from './routes/doctors.$slot'
+import { Route as CasesNewRouteImport } from './routes/cases.new'
+import { Route as CasesIdRouteImport } from './routes/cases.$id'
+import { Route as ApiTtsRouteImport } from './routes/api/tts'
+import { Route as AdminUsersRouteImport } from './routes/admin.users'
+import { Route as AdminArchiveRouteImport } from './routes/admin.archive'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as DoctorsSlotNewCaseRouteImport } from './routes/doctors_.$slot.new-case'
-import { Route as ApiPublicHooksMonthlyAccountingRouteImport } from './routes/api/public/hooks/monthly-accounting'
-import { Route as ApiPublicHooksMonthlyReportsRouteImport } from './routes/api/public/hooks/monthly-reports'
+import { Route as ApiPublicPushDispatchRouteImport } from './routes/api/public/push-dispatch'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as ApiPublicTelegramDrainRouteImport } from './routes/api/public/telegram/drain'
+import { Route as ApiPublicHooksMonthlyReportsRouteImport } from './routes/api/public/hooks/monthly-reports'
+import { Route as ApiPublicHooksMonthlyAccountingRouteImport } from './routes/api/public/hooks/monthly-accounting'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DashboardRoute = DashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -46,9 +41,64 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const McpRoute = McpRouteImport.update({
-  id: '/mcp',
-  path: '/mcp',
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HelpIndexRoute = HelpIndexRouteImport.update({
+  id: '/help/',
+  path: '/help/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DoctorsIndexRoute = DoctorsIndexRouteImport.update({
+  id: '/doctors/',
+  path: '/doctors/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StaffRoleRoute = StaffRoleRouteImport.update({
+  id: '/staff/$role',
+  path: '/staff/$role',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HelpRoleRoute = HelpRoleRouteImport.update({
+  id: '/help/$role',
+  path: '/help/$role',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DoctorsSlotRoute = DoctorsSlotRouteImport.update({
+  id: '/doctors/$slot',
+  path: '/doctors/$slot',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CasesNewRoute = CasesNewRouteImport.update({
+  id: '/cases/new',
+  path: '/cases/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CasesIdRoute = CasesIdRouteImport.update({
+  id: '/cases/$id',
+  path: '/cases/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiTtsRoute = ApiTtsRouteImport.update({
+  id: '/api/tts',
+  path: '/api/tts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/admin/users',
+  path: '/admin/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminArchiveRoute = AdminArchiveRouteImport.update({
+  id: '/admin/archive',
+  path: '/admin/archive',
   getParentRoute: () => rootRouteImport,
 } as any)
 const Char91DotwellKnownChar93OauthProtectedResourceRoute =
@@ -57,59 +107,9 @@ const Char91DotwellKnownChar93OauthProtectedResourceRoute =
     path: '/.well-known/oauth-protected-resource',
     getParentRoute: () => rootRouteImport,
   } as any)
-const AdminArchiveRoute = AdminArchiveRouteImport.update({
-  id: '/admin/archive',
-  path: '/admin/archive',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminUsersRoute = AdminUsersRouteImport.update({
-  id: '/admin/users',
-  path: '/admin/users',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiTtsRoute = ApiTtsRouteImport.update({
-  id: '/api/tts',
-  path: '/api/tts',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CasesIdRoute = CasesIdRouteImport.update({
-  id: '/cases/$id',
-  path: '/cases/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CasesNewRoute = CasesNewRouteImport.update({
-  id: '/cases/new',
-  path: '/cases/new',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DoctorsIndexRoute = DoctorsIndexRouteImport.update({
-  id: '/doctors/',
-  path: '/doctors/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DoctorsSlotRoute = DoctorsSlotRouteImport.update({
-  id: '/doctors/$slot',
-  path: '/doctors/$slot',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HelpIndexRoute = HelpIndexRouteImport.update({
-  id: '/help/',
-  path: '/help/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HelpRoleRoute = HelpRoleRouteImport.update({
-  id: '/help/$role',
-  path: '/help/$role',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const StaffRoleRoute = StaffRoleRouteImport.update({
-  id: '/staff/$role',
-  path: '/staff/$role',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
-  id: '/.lovable/oauth/consent',
-  path: '/.lovable/oauth/consent',
+const DoctorsSlotNewCaseRoute = DoctorsSlotNewCaseRouteImport.update({
+  id: '/doctors_/$slot/new-case',
+  path: '/doctors/$slot/new-case',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicPushDispatchRoute = ApiPublicPushDispatchRouteImport.update({
@@ -117,28 +117,28 @@ const ApiPublicPushDispatchRoute = ApiPublicPushDispatchRouteImport.update({
   path: '/api/public/push-dispatch',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DoctorsSlotNewCaseRoute = DoctorsSlotNewCaseRouteImport.update({
-  id: '/doctors_/$slot/new-case',
-  path: '/doctors/$slot/new-case',
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicHooksMonthlyAccountingRoute =
-  ApiPublicHooksMonthlyAccountingRouteImport.update({
-    id: '/api/public/hooks/monthly-accounting',
-    path: '/api/public/hooks/monthly-accounting',
-    getParentRoute: () => rootRouteImport,
-  } as any)
+const ApiPublicTelegramDrainRoute = ApiPublicTelegramDrainRouteImport.update({
+  id: '/api/public/telegram/drain',
+  path: '/api/public/telegram/drain',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksMonthlyReportsRoute =
   ApiPublicHooksMonthlyReportsRouteImport.update({
     id: '/api/public/hooks/monthly-reports',
     path: '/api/public/hooks/monthly-reports',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicTelegramDrainRoute = ApiPublicTelegramDrainRouteImport.update({
-  id: '/api/public/telegram/drain',
-  path: '/api/public/telegram/drain',
-  getParentRoute: () => rootRouteImport,
-} as any)
+const ApiPublicHooksMonthlyAccountingRoute =
+  ApiPublicHooksMonthlyAccountingRouteImport.update({
+    id: '/api/public/hooks/monthly-accounting',
+    path: '/api/public/hooks/monthly-accounting',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -308,18 +308,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dashboard': {
-      id: '/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardRouteImport
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -329,67 +322,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/mcp': {
-      id: '/mcp'
-      path: '/mcp'
-      fullPath: '/mcp'
-      preLoaderRoute: typeof McpRouteImport
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/.well-known/oauth-protected-resource': {
-      id: '/.well-known/oauth-protected-resource'
-      path: '/.well-known/oauth-protected-resource'
-      fullPath: '/.well-known/oauth-protected-resource'
-      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/archive': {
-      id: '/admin/archive'
-      path: '/admin/archive'
-      fullPath: '/admin/archive'
-      preLoaderRoute: typeof AdminArchiveRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/users': {
-      id: '/admin/users'
-      path: '/admin/users'
-      fullPath: '/admin/users'
-      preLoaderRoute: typeof AdminUsersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/tts': {
-      id: '/api/tts'
-      path: '/api/tts'
-      fullPath: '/api/tts'
-      preLoaderRoute: typeof ApiTtsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/cases/$id': {
-      id: '/cases/$id'
-      path: '/cases/$id'
-      fullPath: '/cases/$id'
-      preLoaderRoute: typeof CasesIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/cases/new': {
-      id: '/cases/new'
-      path: '/cases/new'
-      fullPath: '/cases/new'
-      preLoaderRoute: typeof CasesNewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/doctors/': {
-      id: '/doctors/'
-      path: '/doctors'
-      fullPath: '/doctors/'
-      preLoaderRoute: typeof DoctorsIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/doctors/$slot': {
-      id: '/doctors/$slot'
-      path: '/doctors/$slot'
-      fullPath: '/doctors/$slot'
-      preLoaderRoute: typeof DoctorsSlotRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/help/': {
@@ -399,11 +343,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HelpIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/help/$role': {
-      id: '/help/$role'
-      path: '/help/$role'
-      fullPath: '/help/$role'
-      preLoaderRoute: typeof HelpRoleRouteImport
+    '/doctors/': {
+      id: '/doctors/'
+      path: '/doctors'
+      fullPath: '/doctors/'
+      preLoaderRoute: typeof DoctorsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/staff/$role': {
@@ -413,18 +357,60 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StaffRoleRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/.lovable/oauth/consent': {
-      id: '/.lovable/oauth/consent'
-      path: '/.lovable/oauth/consent'
-      fullPath: '/.lovable/oauth/consent'
-      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+    '/help/$role': {
+      id: '/help/$role'
+      path: '/help/$role'
+      fullPath: '/help/$role'
+      preLoaderRoute: typeof HelpRoleRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/push-dispatch': {
-      id: '/api/public/push-dispatch'
-      path: '/api/public/push-dispatch'
-      fullPath: '/api/public/push-dispatch'
-      preLoaderRoute: typeof ApiPublicPushDispatchRouteImport
+    '/doctors/$slot': {
+      id: '/doctors/$slot'
+      path: '/doctors/$slot'
+      fullPath: '/doctors/$slot'
+      preLoaderRoute: typeof DoctorsSlotRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cases/new': {
+      id: '/cases/new'
+      path: '/cases/new'
+      fullPath: '/cases/new'
+      preLoaderRoute: typeof CasesNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cases/$id': {
+      id: '/cases/$id'
+      path: '/cases/$id'
+      fullPath: '/cases/$id'
+      preLoaderRoute: typeof CasesIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/tts': {
+      id: '/api/tts'
+      path: '/api/tts'
+      fullPath: '/api/tts'
+      preLoaderRoute: typeof ApiTtsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/archive': {
+      id: '/admin/archive'
+      path: '/admin/archive'
+      fullPath: '/admin/archive'
+      preLoaderRoute: typeof AdminArchiveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/doctors_/$slot/new-case': {
@@ -434,11 +420,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DoctorsSlotNewCaseRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/hooks/monthly-accounting': {
-      id: '/api/public/hooks/monthly-accounting'
-      path: '/api/public/hooks/monthly-accounting'
-      fullPath: '/api/public/hooks/monthly-accounting'
-      preLoaderRoute: typeof ApiPublicHooksMonthlyAccountingRouteImport
+    '/api/public/push-dispatch': {
+      id: '/api/public/push-dispatch'
+      path: '/api/public/push-dispatch'
+      fullPath: '/api/public/push-dispatch'
+      preLoaderRoute: typeof ApiPublicPushDispatchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/telegram/drain': {
+      id: '/api/public/telegram/drain'
+      path: '/api/public/telegram/drain'
+      fullPath: '/api/public/telegram/drain'
+      preLoaderRoute: typeof ApiPublicTelegramDrainRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/hooks/monthly-reports': {
@@ -448,11 +448,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksMonthlyReportsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/telegram/drain': {
-      id: '/api/public/telegram/drain'
-      path: '/api/public/telegram/drain'
-      fullPath: '/api/public/telegram/drain'
-      preLoaderRoute: typeof ApiPublicTelegramDrainRouteImport
+    '/api/public/hooks/monthly-accounting': {
+      id: '/api/public/hooks/monthly-accounting'
+      path: '/api/public/hooks/monthly-accounting'
+      fullPath: '/api/public/hooks/monthly-accounting'
+      preLoaderRoute: typeof ApiPublicHooksMonthlyAccountingRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
