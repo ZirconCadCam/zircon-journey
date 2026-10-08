@@ -12,6 +12,7 @@ import { AdminOverdueCompletion } from "@/components/admin-overdue-completion";
 import { AdminDevicesPanel } from "@/components/admin-devices-panel";
 import { AdminAccountingPanel } from "@/components/admin-accounting-panel";
 import { AdminAccountingReport } from "@/components/admin-accounting-report";
+import { AdminSystemStatus } from "@/components/admin-system-status";
 import { AdminVoiceListener } from "@/components/admin-voice-listener";
 import { RoleNotifications } from "@/components/role-notifications";
 import { NotificationSettings } from "@/components/notification-settings";
@@ -22,7 +23,7 @@ import { SecretaryPhotoInbox } from "@/components/secretary-photo-inbox";
 import { ROLE_LABEL, STAFF_PASSWORDS, type RoleKey } from "@/lib/chat";
 import { saveStaffSession, hasValidStaffSession, clearStaffSession } from "@/lib/staff-session";
 import { getStage, deriveStageKey } from "@/lib/case-stages";
-import { Sparkles, ArrowRight, Lock, Stethoscope, MessageSquare, ClipboardList, Settings, Archive, FileArchive, FileText, Search, Bell, BellRing, Camera, RefreshCw, Timer, MonitorSmartphone, Eye, EyeOff, Calculator, FileSpreadsheet, PackageCheck } from "lucide-react";
+import { Sparkles, ArrowRight, Lock, Stethoscope, MessageSquare, ClipboardList, Settings, Archive, FileArchive, FileText, Search, Bell, BellRing, Camera, RefreshCw, Timer, MonitorSmartphone, Eye, EyeOff, Calculator, FileSpreadsheet, PackageCheck, Activity } from "lucide-react";
 import { DesignerFollowupPanel } from "@/components/designer-followup-panel";
 import { useNewRevisionRounds } from "@/lib/revision-round-alerts";
 import { toast } from "sonner";
@@ -245,7 +246,7 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
   const [unread, setUnread] = useState<Record<number, number>>({});
   // Default tab: roles with a case list land on "cases"; admin stays on "chat".
   const initialTab: "chat" | "cases" | "settings" = role === "admin" ? "chat" : "cases";
-  const [tab, setTab] = useState<"chat" | "cases" | "settings" | "archive" | "designfiles" | "reports" | "search" | "notify" | "photos" | "followup" | "archiveapprovals" | "overdue" | "devices" | "accounts" | "accreport" | "readyzircon">(initialTab);
+  const [tab, setTab] = useState<"chat" | "cases" | "settings" | "archive" | "designfiles" | "reports" | "search" | "notify" | "photos" | "followup" | "archiveapprovals" | "overdue" | "devices" | "accounts" | "accreport" | "readyzircon" | "status">(initialTab);
   const { count: newRounds, clear: clearRounds } = useNewRevisionRounds(role === "technician" ? "technician" : "designer");
 
   useEffect(() => {
@@ -439,6 +440,12 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
               </button>
             )}
             {role === "admin" && (
+              <button onClick={() => setTab("status")}
+                className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "status" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
+                <Activity className="size-4" /> حالة النظام
+              </button>
+            )}
+            {role === "admin" && (
               <button onClick={() => setTab("overdue")}
                 className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "overdue" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
                 <Timer className="size-4" /> إكمال المتأخرة
@@ -485,6 +492,8 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
             <SecretaryPhotoInbox role={role} />
           ) : tab === "archiveapprovals" && role === "admin" ? (
             <AdminArchiveApprovals />
+          ) : tab === "status" && role === "admin" ? (
+            <AdminSystemStatus />
           ) : tab === "overdue" && role === "admin" ? (
             <AdminOverdueCompletion />
           ) : tab === "devices" && role === "admin" ? (
