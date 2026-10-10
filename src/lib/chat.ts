@@ -29,7 +29,7 @@ export const ROLE_BORDER: Record<RoleKey, string> = {
   admin: "border-rose-700",
 };
 
-export const STAFF_ROLES: RoleKey[] = ["designer", "technician", "secretary_sanaa", "secretary_ibb", "admin"];
+export const STAFF_ROLES: RoleKey[] = ["designer", "technician", "admin"];
 
 // Hardcoded gate passwords for staff portals (consistent with doctor portal pattern).
 export const STAFF_PASSWORDS: Record<Exclude<RoleKey, "doctor">, string> = {

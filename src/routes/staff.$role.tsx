@@ -32,7 +32,7 @@ export const Route = createFileRoute("/staff/$role")({
   component: StaffPortal,
 });
 
-const VALID: RoleKey[] = ["designer", "technician", "secretary_sanaa", "secretary_ibb", "admin"];
+const VALID: RoleKey[] = ["designer", "technician", "admin"]; // secretary pages removed
 
 // Roles whose login is bound to a single device (logging in elsewhere signs the
 // previous device out).
