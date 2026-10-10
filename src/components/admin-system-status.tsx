@@ -24,7 +24,7 @@ export function AdminSystemStatus() {
       setCheckedAt(new Date().toISOString());
     } finally { setBusy(false); }
   }
-  useEffect(() => { check(); const t = setInterval(check, 60000); return () => clearInterval(t); }, []);
+  useEffect(() => { check(); }, []); // manual «فحص الآن» only — no polling
 
   const down = (probes ?? []).filter((p) => p.state !== "ok");
   const cloudDown = down.some((p) => ["database", "auth", "storage"].includes(p.key));

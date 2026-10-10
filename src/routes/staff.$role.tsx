@@ -133,8 +133,10 @@ function StaffPortal() {
     const ch = supabase.channel(`staff-session-${role}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "staff_sessions" }, verify)
       .subscribe();
-    const interval = window.setInterval(verify, 30000);
-    return () => { cancelled = true; supabase.removeChannel(ch); window.clearInterval(interval); };
+    // No polling: re-verify only when the tab becomes visible again.
+    const onVis = () => { if (document.visibilityState === "visible") void verify(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { cancelled = true; supabase.removeChannel(ch); document.removeEventListener("visibilitychange", onVis); };
   }, [authed, role]);
 
   if (!VALID.includes(role)) {
