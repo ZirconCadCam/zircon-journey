@@ -13,7 +13,6 @@ import { CaseFileActivityLog } from "@/components/case-file-activity-log";
 import { ShadeConfirm, ShadePicker, CaseShadeConfirm } from "@/components/shade-confirm";
 import { ImageAnnotator } from "@/components/image-annotator";
 import { ImageLightbox } from "@/components/image-lightbox";
-import { PatientPhotoAlerts } from "@/components/patient-photo-alerts";
 import { ArchiveReceiptEditor, ArchiveRequestStatus } from "@/components/archive-receipt-editor";
 import { signPrivateUrl } from "@/lib/secure-storage";
 
@@ -1372,7 +1371,6 @@ function DoctorControls({ c, actorName, doctorName }: {
         <DoctorNotesComposer c={c} actorName={actorName} doctorName={doctorName} />
       )}
 
-      <PatientPhotoAlerts c={c as any} actorName={actorName} doctorName={doctorName} />
 
 
 
