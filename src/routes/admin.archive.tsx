@@ -130,10 +130,7 @@ function Inner({ onLogout }: { onLogout: () => void }) {
 
   useEffect(() => {
     load();
-    const ch = supabase.channel("admin-archive")
-      .on("postgres_changes", { event: "*", schema: "public", table: "chat_conversations" }, load)
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    // Live updates removed to save database usage — data loads on open.
   }, []);
 
   const filtered = useMemo(() => conversations.filter(c => {

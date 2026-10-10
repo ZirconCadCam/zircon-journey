@@ -74,10 +74,7 @@ export function DoctorReportsPanel({ doctor }: { doctor: { slot: number; name: s
 
   useEffect(() => {
     load();
-    const ch = supabase.channel(`reports-${doctor.slot}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "slot_cases", filter: `doctor_slot=eq.${doctor.slot}` }, load)
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    // Live updates removed to save database usage — data loads on open.
   }, [doctor.slot, load]);
 
   const filtered = useMemo(() => {
