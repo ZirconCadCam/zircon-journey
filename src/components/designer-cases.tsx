@@ -194,7 +194,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
 
     return () => {
       supabase.removeChannel(ch);
-      window.clearInterval(interval);
+      void interval;
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onFocus);
     };
