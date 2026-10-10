@@ -186,7 +186,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
 
     // Safety-net auto refresh every 20s (covers any missed realtime events,
     // important for the designer working on a desktop browser).
-    const interval = window.setInterval(() => { refreshCases(); }, 20000);
+    const interval = 0; // polling removed — realtime + focus refresh are enough
     // Refresh immediately when the tab/window regains focus.
     const onFocus = () => { if (document.visibilityState === "visible") refreshCases(); };
     window.addEventListener("focus", onFocus);
@@ -194,7 +194,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
 
     return () => {
       supabase.removeChannel(ch);
-      window.clearInterval(interval);
+      void interval;
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onFocus);
     };

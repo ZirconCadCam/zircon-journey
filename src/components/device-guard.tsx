@@ -35,8 +35,10 @@ export function DeviceGuard() {
     };
 
     ping();
-    const t = setInterval(ping, 60_000);
-    return () => { cancelled = true; clearInterval(t); };
+    // No polling: re-check only when the tab becomes visible again.
+    const onVis = () => { if (document.visibilityState === "visible") void ping(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { cancelled = true; document.removeEventListener("visibilitychange", onVis); };
   }, []);
 
   if (!blocked) return null;

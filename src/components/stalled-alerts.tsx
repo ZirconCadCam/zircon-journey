@@ -62,8 +62,9 @@ export function useStalledCases() {
       setRows(out);
     }
     void load();
-    const t = window.setInterval(load, 120_000);
-    return () => { alive = false; window.clearInterval(t); };
+    const onVis = () => { if (document.visibilityState === "visible") void load(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { alive = false; document.removeEventListener("visibilitychange", onVis); };
   }, []);
 
   return rows;
