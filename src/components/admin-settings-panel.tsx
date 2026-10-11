@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { DoctorAvatar } from "@/components/doctor-avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { addDoctor } from "@/lib/secure-ops.functions";
 import { Settings, UserPlus, Archive, Stethoscope, RefreshCw, Save, HardDrive, Trash2, Loader2, FolderOpen } from "lucide-react";
 import {
   getCacheStats,
@@ -234,8 +235,6 @@ function AddDoctorCard({ doctors, onDone }: { doctors: Doctor[]; onDone: () => v
 
   // إيجاد أول خانة شاغرة (غير مفعّلة) أو إضافة خانة جديدة
   const nextSlot = (() => {
-    const inactive = doctors.find((d) => !d.active);
-    if (inactive) return inactive.slot;
     const max = doctors.reduce((m, d) => Math.max(m, d.slot), 0);
     return max + 1;
   })();
@@ -249,31 +248,13 @@ function AddDoctorCard({ doctors, onDone }: { doctors: Doctor[]; onDone: () => v
     if (!confirm(`هل أنت متأكد من إضافة الطبيب "${name}" في الخانة #${nextSlot}؟`)) return;
 
     setSaving(true);
-    // Save non-secret fields, then set the password into the locked secrets table.
-    const { error } = await supabase.rpc("upsert_doctor", {
-      p_slot: nextSlot,
-      p_name: name.trim(),
-      p_branch: (branch || null) as string,
-      p_active: true,
-    });
-    if (!error) {
-      const sec = await supabase.rpc("set_doctor_secret", {
-        p_slot: nextSlot,
-        p_password: password.trim(),
-      });
-      if (sec.error) {
-        setSaving(false);
-        toast.error(sec.error.message);
-        return;
-      }
-    }
-
+    const res = await addDoctor({ data: { name: name.trim(), branch: branch || null, password: password.trim() } }).catch((e) => ({ slot: null, error: String(e?.message ?? e) }));
     setSaving(false);
-    if (error) {
-      toast.error(error.message);
+    if (res.error || !res.slot) {
+      toast.error(res.error ?? "تعذّرت الإضافة");
       return;
     }
-    toast.success(`تمت إضافة "${name}" بنجاح في الخانة #${nextSlot}`);
+    toast.success(`تمت إضافة "${name}" بنجاح في الخانة #${res.slot}`);
     setName("");
     setBranch("");
     setPassword("");

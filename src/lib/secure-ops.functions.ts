@@ -304,3 +304,54 @@ export const listAccountingReviews = createServerFn({ method: "POST" })
       .eq("month", data.month);
     return (rows ?? []) as { scope: string; doctor_slot: number; reviewed: boolean }[];
   });
+
+/* ------------------------------------------------------------------ doctors */
+
+/**
+ * Adds a new doctor in a brand-new slot (never reuses an inactive slot, so an
+ * old doctor's cases are not reassigned). Writes the profile and the password
+ * together and rolls the profile back if the password cannot be saved.
+ */
+export const addDoctor = createServerFn({ method: "POST" })
+  .inputValidator((d) =>
+    z
+      .object({
+        name: z.string().trim().min(2).max(120),
+        branch: z.enum(["sanaa", "ibb"]).nullable(),
+        password: z.string().trim().min(1).max(120),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const { data: dup } = await db
+      .from("doctor_profiles")
+      .select("slot")
+      .eq("name", data.name)
+      .eq("active", true)
+      .maybeSingle();
+    if (dup) return { slot: null as number | null, error: "يوجد طبيب مفعّل بنفس الاسم" };
+
+    const { data: last, error: maxErr } = await db
+      .from("doctor_profiles")
+      .select("slot")
+      .order("slot", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (maxErr) return { slot: null as number | null, error: maxErr.message };
+    const slot = (last?.slot ?? 0) + 1;
+
+    const { error: insErr } = await db
+      .from("doctor_profiles")
+      .insert({ slot, name: data.name, branch: data.branch, active: true } as never);
+    if (insErr) return { slot: null as number | null, error: insErr.message };
+
+    const { error: secErr } = await db
+      .from("doctor_secrets")
+      .upsert({ slot, password: data.password } as never, { onConflict: "slot" });
+    if (secErr) {
+      await db.from("doctor_profiles").delete().eq("slot", slot);
+      return { slot: null as number | null, error: secErr.message };
+    }
+    return { slot, error: null as string | null };
+  });

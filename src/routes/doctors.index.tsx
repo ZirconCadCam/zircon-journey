@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Sparkles, ArrowRight, Stethoscope, Plus, Pencil, Search } from "lucide-react";
 import { BRANCH_LABELS } from "@/hooks/use-auth";
 import { toast } from "sonner";
+import { addDoctor } from "@/lib/secure-ops.functions";
 import { DoctorAvatar } from "@/components/doctor-avatar";
 import { getDoctorAvatar } from "@/lib/doctor-avatars";
 import { StalledDoctorBadge, useStalledCases, type StalledCase } from "@/components/stalled-alerts";
@@ -261,19 +262,10 @@ function AddDialog({ nextSlot, onClose, onSaved }: { nextSlot: number; onClose: 
     if (trimmed.length < 2) { toast.error("الرجاء إدخال اسم الطبيب"); return; }
     if (!password.trim()) { toast.error("الرجاء إدخال كلمة مرور"); return; }
     setSaving(true);
-    const { error } = await supabase.rpc("upsert_doctor", {
-      p_slot: nextSlot,
-      p_name: trimmed,
-      p_branch: (branch || null) as string,
-      p_active: true,
-    });
-    if (!error) {
-      const sec = await supabase.rpc("set_doctor_secret", { p_slot: nextSlot, p_password: password.trim() });
-      if (sec.error) { setSaving(false); toast.error(sec.error.message); return; }
-    }
+    const res = await addDoctor({ data: { name: trimmed, branch: (branch || null) as "sanaa" | "ibb" | null, password: password.trim() } }).catch((e) => ({ slot: null, error: String(e?.message ?? e) }));
     setSaving(false);
-    if (error) toast.error(error.message);
-    else { toast.success(`تمت إضافة الطبيب في الخانة #${nextSlot}`); onSaved(); }
+    if (res.error || !res.slot) toast.error(res.error ?? "تعذّرت الإضافة");
+    else { toast.success(`تمت إضافة الطبيب في الخانة #${res.slot}`); onSaved(); }
   }
 
   return (
