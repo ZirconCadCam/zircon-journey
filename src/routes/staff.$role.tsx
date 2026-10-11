@@ -247,7 +247,7 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
   const [selected, setSelected] = useState<Doctor | null>(null);
   const [unread, setUnread] = useState<Record<number, number>>({});
   // Default tab: roles with a case list land on "cases"; admin stays on "chat".
-  const initialTab: "chat" | "cases" | "settings" = role === "admin" ? "chat" : "cases";
+  const initialTab: "chat" | "cases" | "settings" = "cases";
   const [tab, setTab] = useState<"chat" | "cases" | "settings" | "archive" | "designfiles" | "reports" | "search" | "notify" | "photos" | "followup" | "archiveapprovals" | "overdue" | "devices" | "accounts" | "accreport" | "readyzircon" | "status">(initialTab);
   const { count: newRounds, clear: clearRounds } = useNewRevisionRounds(role === "technician" ? "technician" : "designer");
 
@@ -260,7 +260,7 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
 
   // unread badges per doctor
   useEffect(() => {
-    if (doctors.length === 0) return;
+    if (doctors.length === 0 || role === "admin") return;
     let active = true;
     const refresh = async () => {
       const { data: convs } = await supabase.from("chat_conversations").select("id,doctor_slot,participants");
@@ -313,11 +313,6 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
             دليل الاستخدام
           </Link>
         )}
-        {role === "admin" && (
-          <Link to="/admin/archive" className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-bold hover:border-gold transition">
-            أرشيف الإدارة
-          </Link>
-        )}
         <button onClick={onLogout} className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-bold hover:bg-destructive hover:text-destructive-foreground transition">
           خروج
         </button>
@@ -361,12 +356,6 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
               className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "search" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
               <Search className="size-4" /> بحث
             </button>
-            {role === "admin" && (
-              <button onClick={() => setTab("chat")}
-                className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "chat" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
-                <MessageSquare className="size-4" /> المحادثات
-              </button>
-            )}
             {role !== "admin" && (
               <button onClick={() => setTab("cases")}
                 className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "cases" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
@@ -375,14 +364,6 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
             )}
             {role === "designer" && (
               <>
-                <button onClick={() => setTab("archive")}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "archive" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
-                  <Archive className="size-4" /> الأرشيف
-                </button>
-                <button onClick={() => setTab("designfiles")}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "designfiles" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
-                  <FileArchive className="size-4" /> ملفات التصاميم
-                </button>
                 <button onClick={() => setTab("reports")}
                   className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "reports" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
                   <FileText className="size-4" /> الكشوفات
@@ -404,10 +385,6 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
                   <FileText className="size-4" /> الكشوفات
                 </button>
 
-                <button onClick={() => setTab("designfiles")}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "designfiles" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
-                  <FileArchive className="size-4" /> ملفات التصاميم
-                </button>
                 <button onClick={() => { setTab("followup"); clearRounds(); }}
                   className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "followup" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
                   <RefreshCw className="size-4" /> متابعة
@@ -451,12 +428,6 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
               <button onClick={() => setTab("overdue")}
                 className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "overdue" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
                 <Timer className="size-4" /> إكمال المتأخرة
-              </button>
-            )}
-            {role === "admin" && (
-              <button onClick={() => setTab("devices")}
-                className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "devices" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
-                <MonitorSmartphone className="size-4" /> عناوين الأجهزة
               </button>
             )}
             {role === "admin" && (

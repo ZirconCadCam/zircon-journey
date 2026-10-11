@@ -14,7 +14,6 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
-import { Route as AdminArchiveRouteImport } from './routes/admin.archive'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as ApiTtsRouteImport } from './routes/api/tts'
 import { Route as CasesIdRouteImport } from './routes/cases.$id'
@@ -57,11 +56,6 @@ const Char91DotwellKnownChar93OauthProtectedResourceRoute =
     path: '/.well-known/oauth-protected-resource',
     getParentRoute: () => rootRouteImport,
   } as any)
-const AdminArchiveRoute = AdminArchiveRouteImport.update({
-  id: '/admin/archive',
-  path: '/admin/archive',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AdminUsersRoute = AdminUsersRouteImport.update({
   id: '/admin/users',
   path: '/admin/users',
@@ -146,7 +140,6 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
-  '/admin/archive': typeof AdminArchiveRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/tts': typeof ApiTtsRoute
   '/cases/$id': typeof CasesIdRoute
@@ -169,7 +162,6 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
-  '/admin/archive': typeof AdminArchiveRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/tts': typeof ApiTtsRoute
   '/cases/$id': typeof CasesIdRoute
@@ -193,7 +185,6 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
-  '/admin/archive': typeof AdminArchiveRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/tts': typeof ApiTtsRoute
   '/cases/$id': typeof CasesIdRoute
@@ -218,7 +209,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/mcp'
     | '/.well-known/oauth-protected-resource'
-    | '/admin/archive'
     | '/admin/users'
     | '/api/tts'
     | '/cases/$id'
@@ -241,7 +231,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/mcp'
     | '/.well-known/oauth-protected-resource'
-    | '/admin/archive'
     | '/admin/users'
     | '/api/tts'
     | '/cases/$id'
@@ -264,7 +253,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/mcp'
     | '/.well-known/oauth-protected-resource'
-    | '/admin/archive'
     | '/admin/users'
     | '/api/tts'
     | '/cases/$id'
@@ -288,7 +276,6 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   McpRoute: typeof McpRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
-  AdminArchiveRoute: typeof AdminArchiveRoute
   AdminUsersRoute: typeof AdminUsersRoute
   ApiTtsRoute: typeof ApiTtsRoute
   CasesIdRoute: typeof CasesIdRoute
@@ -341,13 +328,6 @@ declare module '@tanstack/react-router' {
       path: '/.well-known/oauth-protected-resource'
       fullPath: '/.well-known/oauth-protected-resource'
       preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/archive': {
-      id: '/admin/archive'
-      path: '/admin/archive'
-      fullPath: '/admin/archive'
-      preLoaderRoute: typeof AdminArchiveRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/users': {
@@ -465,7 +445,6 @@ const rootRouteChildren: RootRouteChildren = {
   McpRoute: McpRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
-  AdminArchiveRoute: AdminArchiveRoute,
   AdminUsersRoute: AdminUsersRoute,
   ApiTtsRoute: ApiTtsRoute,
   CasesIdRoute: CasesIdRoute,
