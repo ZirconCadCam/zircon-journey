@@ -4,12 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { ChatModule } from "@/components/chat-module";
 import { DesignerCases } from "@/components/designer-cases";
 import { CaseSearch } from "@/components/case-search";
-import { DesignerArchive, DesignerDesignFiles, DesignerReports } from "@/components/designer-panels";
-import { TechnicianReports, TechnicianDesignFiles, TechnicianReadyZircon } from "@/components/technician-panels";
+import { DesignerReports } from "@/components/designer-panels";
+import { TechnicianReports, TechnicianReadyZircon } from "@/components/technician-panels";
 import { AdminSettingsPanel } from "@/components/admin-settings-panel";
 import { AdminArchiveApprovals } from "@/components/admin-archive-approvals";
 import { AdminOverdueCompletion } from "@/components/admin-overdue-completion";
-import { AdminDevicesPanel } from "@/components/admin-devices-panel";
 import { AdminAccountingPanel } from "@/components/admin-accounting-panel";
 import { AdminAccountingReport } from "@/components/admin-accounting-report";
 import { AdminSystemStatus } from "@/components/admin-system-status";
@@ -17,7 +16,6 @@ import { AdminVoiceListener } from "@/components/admin-voice-listener";
 import { RoleNotifications } from "@/components/role-notifications";
 import { NotificationSettings } from "@/components/notification-settings";
 import { DoctorAvatar } from "@/components/doctor-avatar";
-import { SecretaryPhotoInbox } from "@/components/secretary-photo-inbox";
 
 
 import { ROLE_LABEL, STAFF_PASSWORDS, type RoleKey } from "@/lib/chat";
@@ -461,16 +459,12 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
         <div className="mt-6">
           {tab === "notify" ? (
             <NotificationSettings />
-          ) : tab === "photos" && (role === "secretary_sanaa" || role === "secretary_ibb") ? (
-            <SecretaryPhotoInbox role={role} />
           ) : tab === "archiveapprovals" && role === "admin" ? (
             <AdminArchiveApprovals />
           ) : tab === "status" && role === "admin" ? (
             <AdminSystemStatus />
           ) : tab === "overdue" && role === "admin" ? (
             <AdminOverdueCompletion />
-          ) : tab === "devices" && role === "admin" ? (
-            <AdminDevicesPanel />
           ) : tab === "accounts" && role === "admin" ? (
             <AdminAccountingPanel />
           ) : tab === "accreport" && role === "admin" ? (
@@ -481,10 +475,6 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
             <AdminSettingsPanel />
           ) : role === "designer" && tab === "followup" ? (
             <DesignerFollowupPanel />
-          ) : role === "designer" && tab === "archive" ? (
-            <DesignerArchive />
-          ) : role === "designer" && tab === "designfiles" ? (
-            <DesignerDesignFiles />
           ) : role === "designer" && tab === "reports" ? (
             <DesignerReports />
           ) : role === "technician" && tab === "followup" ? (
@@ -493,8 +483,6 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
             <TechnicianReadyZircon />
           ) : role === "technician" && tab === "reports" ? (
             <TechnicianReports />
-          ) : role === "technician" && tab === "designfiles" ? (
-            <TechnicianDesignFiles />
           ) : role === "admin" && tab === "reports" ? (
             <div className="space-y-8">
               <div>
