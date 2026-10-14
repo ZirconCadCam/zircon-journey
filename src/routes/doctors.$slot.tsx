@@ -1,3 +1,4 @@
+import { ToolGate } from "@/components/tool-gate";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -266,7 +267,7 @@ function Portal({ doctor, actor, actorName, onLogout }: { doctor: Doctor; actor:
       </>
     }>
       <main className="container mx-auto px-4 sm:px-6 py-6">
-        {actor === "doctor" && <RoleNotifications role="doctor" slot={doctor.slot} />}
+        {actor === "doctor" && <ToolGate id="notifications"><RoleNotifications role="doctor" slot={doctor.slot} /></ToolGate>}
 
         <div className="rounded-3xl gradient-brown text-primary-foreground p-6 sm:p-8 shadow-luxury flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-4">
