@@ -13,6 +13,8 @@ import { AdminAccountingPanel } from "@/components/admin-accounting-panel";
 import { AdminAccountingReport } from "@/components/admin-accounting-report";
 import { AdminSystemStatus } from "@/components/admin-system-status";
 import { AdminVoiceListener } from "@/components/admin-voice-listener";
+import { ToolGate } from "@/components/tool-gate";
+import { Gauge } from "lucide-react";
 import { RoleNotifications } from "@/components/role-notifications";
 import { NotificationSettings } from "@/components/notification-settings";
 import { DoctorAvatar } from "@/components/doctor-avatar";
@@ -317,12 +319,12 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
       </>
     }>
       <main className="container mx-auto px-4 sm:px-6 py-6">
-        {role === "admin" && <AdminVoiceListener />}
+        {role === "admin" && <ToolGate id="voice"><AdminVoiceListener /></ToolGate>}
         {(role === "designer" ||
           role === "technician" ||
           role === "secretary_sanaa" ||
           role === "secretary_ibb" ||
-          role === "admin") && <RoleNotifications role={role} />}
+          role === "admin") && <ToolGate id="notifications"><RoleNotifications role={role} /></ToolGate>}
 
 
         <div className="rounded-3xl gradient-brown text-primary-foreground p-6 sm:p-8 shadow-luxury flex items-center justify-between flex-wrap gap-4">
@@ -441,6 +443,12 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
               </button>
             )}
 
+            {role === "admin" && (
+              <Link to="/admin/usage"
+                className="px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition hover:bg-muted/40">
+                <Gauge className="size-4" /> تفاصيل الاستهلاك
+              </Link>
+            )}
             {role === "admin" && (
               <button onClick={() => setTab("settings")}
                 className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "settings" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
