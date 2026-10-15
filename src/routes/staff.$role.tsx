@@ -14,7 +14,7 @@ import { AdminAccountingReport } from "@/components/admin-accounting-report";
 import { AdminSystemStatus } from "@/components/admin-system-status";
 import { AdminVoiceListener } from "@/components/admin-voice-listener";
 import { ToolGate } from "@/components/tool-gate";
-import { Gauge } from "lucide-react";
+import { Gauge, Receipt } from "lucide-react";
 import { RoleNotifications } from "@/components/role-notifications";
 import { NotificationSettings } from "@/components/notification-settings";
 import { DoctorAvatar } from "@/components/doctor-avatar";
@@ -447,6 +447,12 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
               <Link to="/admin/usage"
                 className="px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition hover:bg-muted/40">
                 <Gauge className="size-4" /> تفاصيل الاستهلاك
+              </Link>
+            )}
+            {role === "admin" && (
+              <Link to="/admin/expenses"
+                className="px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition hover:bg-muted/40">
+                <Receipt className="size-4" /> المصروفات
               </Link>
             )}
             {role === "admin" && (

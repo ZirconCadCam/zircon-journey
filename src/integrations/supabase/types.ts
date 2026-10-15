@@ -656,6 +656,57 @@ export type Database = {
         }
         Relationships: []
       }
+      expenses: {
+        Row: {
+          amount: number | null
+          category: string
+          created_at: string
+          currency: string | null
+          description: string | null
+          error: string | null
+          expense_date: string | null
+          file_mime: string | null
+          file_name: string
+          file_path: string
+          id: string
+          invoice_number: string | null
+          status: string
+          vendor: string | null
+        }
+        Insert: {
+          amount?: number | null
+          category?: string
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          error?: string | null
+          expense_date?: string | null
+          file_mime?: string | null
+          file_name: string
+          file_path: string
+          id?: string
+          invoice_number?: string | null
+          status?: string
+          vendor?: string | null
+        }
+        Update: {
+          amount?: number | null
+          category?: string
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          error?: string | null
+          expense_date?: string | null
+          file_mime?: string | null
+          file_name?: string
+          file_path?: string
+          id?: string
+          invoice_number?: string | null
+          status?: string
+          vendor?: string | null
+        }
+        Relationships: []
+      }
       file_activity: {
         Row: {
           action: string
