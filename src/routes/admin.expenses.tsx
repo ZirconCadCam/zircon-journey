@@ -66,7 +66,7 @@ function ExpensesPage() {
     if (inputRef.current) inputRef.current.value = "";
   }
 
-  async function patch(id: string, p: Parameters<typeof updateExpense>[0]["data"]["patch"]) {
+  async function patch(id: string, p: Partial<Pick<Row, "vendor" | "expense_date" | "amount" | "currency" | "description">> & { category?: (typeof EXPENSE_CATEGORIES)[number] }) {
     setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...p } as Row : r)));
     const r = await updateExpense({ data: { id, patch: p } });
     if (!r.ok) toast.error(r.error ?? "تعذر الحفظ");
