@@ -450,6 +450,12 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
               </Link>
             )}
             {role === "admin" && (
+              <Link to="/admin/expenses"
+                className="px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition hover:bg-muted/40">
+                <Receipt className="size-4" /> المصروفات
+              </Link>
+            )}
+            {role === "admin" && (
               <button onClick={() => setTab("settings")}
                 className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "settings" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
                 <Settings className="size-4" /> الإعدادات
