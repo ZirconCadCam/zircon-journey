@@ -14,7 +14,7 @@ import { AdminAccountingReport } from "@/components/admin-accounting-report";
 import { AdminSystemStatus } from "@/components/admin-system-status";
 import { AdminVoiceListener } from "@/components/admin-voice-listener";
 import { ToolGate } from "@/components/tool-gate";
-import { Gauge } from "lucide-react";
+import { Gauge, Receipt } from "lucide-react";
 import { RoleNotifications } from "@/components/role-notifications";
 import { NotificationSettings } from "@/components/notification-settings";
 import { DoctorAvatar } from "@/components/doctor-avatar";
