@@ -12,7 +12,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
-    "check:ts2304": "bash scripts/check-ts2304.sh"
+    "check:ts2304": "bash scripts/check-ts2304.sh",
     "build:vercel": "bun run build"
 
   },
