@@ -181,3 +181,35 @@ export const expenseFileUrl = createServerFn({ method: "POST" })
     const { data: s } = await db.storage.from(BUCKET).createSignedUrl(row.file_path, 300);
     return { url: s?.signedUrl ?? null };
   });
+
+function bytesToBase64(bytes: Uint8Array) {
+  let s = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+
+/** Re-run AI extraction for a stored receipt (e.g. one that failed before). */
+export const retryExpense = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const { data: row } = await db.from("expenses").select("file_path,file_name,file_mime").eq("id", data.id).maybeSingle();
+    if (!row) return { ok: false, error: "المصروف غير موجود" };
+    const { data: blob, error: dlErr } = await db.storage.from(BUCKET).download(row.file_path);
+    if (dlErr || !blob) return { ok: false, error: "تعذر تحميل الملف الأصلي" };
+    const mime = row.file_mime ?? blob.type ?? "image/jpeg";
+    try {
+      const r = await readWithAI(bytesToBase64(new Uint8Array(await blob.arrayBuffer())), mime, row.file_name);
+      const date = r.date && /^\d{4}-\d{2}-\d{2}$/.test(r.date) ? r.date : null;
+      const { error } = await db.from("expenses").update({
+        vendor: r.vendor, expense_date: date, amount: r.amount, currency: r.currency,
+        category: (EXPENSE_CATEGORIES as readonly string[]).includes(r.category) ? r.category : "أخرى",
+        description: r.description, invoice_number: r.invoice_number, status: "done", error: null,
+      } as never).eq("id", data.id);
+      return { ok: !error, error: error?.message ?? null };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "فشل التحليل";
+      await db.from("expenses").update({ status: "failed", error: msg } as never).eq("id", data.id);
+      return { ok: false, error: msg };
+    }
+  });
