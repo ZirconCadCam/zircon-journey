@@ -1,10 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Download, FileText, Loader2, Receipt, Trash2, Upload, Eye } from "lucide-react";
+import { RotateCw, ArrowRight, Download, FileText, Loader2, Receipt, Trash2, Upload, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { hasValidStaffSession } from "@/lib/staff-session";
 import {
-  EXPENSE_CATEGORIES, uploadExpense, listExpenses, updateExpense, deleteExpense, expenseFileUrl,
+  EXPENSE_CATEGORIES, uploadExpense, listExpenses, updateExpense, deleteExpense, expenseFileUrl, retryExpense,
 } from "@/lib/expenses.functions";
 
 export const Route = createFileRoute("/admin/expenses")({
@@ -96,6 +96,20 @@ function ExpensesPage() {
     URL.revokeObjectURL(a.href);
   }
 
+  async function retry(id: string) {
+    setBusy((b) => [...b, id]);
+    try {
+      const r = await retryExpense({ data: { id } });
+      if (r.ok) toast.success("تمت إعادة القراءة بنجاح"); else toast.error(r.error ?? "تعذرت القراءة");
+    } catch (e) { toast.error(e instanceof Error ? e.message : "تعذرت القراءة"); }
+    setBusy((b) => b.filter((x) => x !== id));
+    await load();
+  }
+
+  async function retryAllFailed() {
+    for (const r of rows.filter((x) => x.status === "failed")) await retry(r.id);
+  }
+
   async function view(id: string) {
     const { url } = await expenseFileUrl({ data: { id } });
     if (url) window.open(url, "_blank", "noopener"); else toast.error("تعذر فتح الملف");
@@ -128,7 +142,7 @@ function ExpensesPage() {
         <div className="text-sm text-muted-foreground">صور أو PDF حتى 10 ميجا — تُقرأ وتُصنّف تلقائياً</div>
         {busy.length > 0 && (
           <div className="mt-3 text-sm flex items-center justify-center gap-2 text-primary">
-            <Loader2 className="size-4 animate-spin" /> جارٍ قراءة: {busy.join("، ")}
+            <Loader2 className="size-4 animate-spin" /> جارٍ القراءة…
           </div>
         )}
       </label>
@@ -145,6 +159,12 @@ function ExpensesPage() {
           className="px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 bg-primary text-primary-foreground disabled:opacity-50">
           <Download className="size-4" /> تصدير Excel (CSV)
         </button>
+        {rows.some((r) => r.status === "failed") && (
+          <button onClick={retryAllFailed} disabled={busy.length > 0}
+            className="px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 border border-border hover:bg-muted disabled:opacity-50">
+            <RotateCw className="size-4" /> إعادة قراءة كل المتعذّرة ({rows.filter((r) => r.status === "failed").length})
+          </button>
+        )}
         <div className="text-sm text-muted-foreground ms-auto">
           {filtered.length} مصروف{totals.length > 0 && " — الإجمالي: "}
           {totals.map(([c, v]) => `${v.toLocaleString("ar")} ${c}`).join(" + ")}
@@ -176,6 +196,12 @@ function ExpensesPage() {
                 <td className="p-2"><input defaultValue={r.description ?? ""} className={inp}
                   onBlur={(e) => e.target.value !== (r.description ?? "") && patch(r.id, { description: e.target.value || null })} /></td>
                 <td className="p-2 whitespace-nowrap">
+                  {(r.status === "failed" || busy.includes(r.id)) && (
+                    <button onClick={() => retry(r.id)} disabled={busy.includes(r.id)} title="إعادة القراءة بالذكاء الاصطناعي"
+                      className="p-1.5 rounded hover:bg-muted text-primary disabled:opacity-50">
+                      <RotateCw className={`size-4 ${busy.includes(r.id) ? "animate-spin" : ""}`} />
+                    </button>
+                  )}
                   <button onClick={() => view(r.id)} title={r.file_name} className="p-1.5 rounded hover:bg-muted">
                     {r.file_mime === "application/pdf" ? <FileText className="size-4" /> : <Eye className="size-4" />}
                   </button>
