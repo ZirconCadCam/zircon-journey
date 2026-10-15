@@ -14,7 +14,6 @@
     "typecheck": "tsc --noEmit",
     "check:ts2304": "bash scripts/check-ts2304.sh",
     "build:vercel": "bun run build"
-
   },
   "dependencies": {
     "@capacitor-community/file-opener": "^8.0.1",
