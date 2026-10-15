@@ -14,6 +14,7 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as AdminExpensesRouteImport } from './routes/admin.expenses'
 import { Route as AdminUsageRouteImport } from './routes/admin.usage'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as ApiTtsRouteImport } from './routes/api/tts'
@@ -57,6 +58,11 @@ const Char91DotwellKnownChar93OauthProtectedResourceRoute =
     path: '/.well-known/oauth-protected-resource',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AdminExpensesRoute = AdminExpensesRouteImport.update({
+  id: '/admin/expenses',
+  path: '/admin/expenses',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminUsageRoute = AdminUsageRouteImport.update({
   id: '/admin/usage',
   path: '/admin/usage',
@@ -146,6 +152,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/admin/expenses': typeof AdminExpensesRoute
   '/admin/usage': typeof AdminUsageRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/tts': typeof ApiTtsRoute
@@ -169,6 +176,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/admin/expenses': typeof AdminExpensesRoute
   '/admin/usage': typeof AdminUsageRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/tts': typeof ApiTtsRoute
@@ -193,6 +201,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/admin/expenses': typeof AdminExpensesRoute
   '/admin/usage': typeof AdminUsageRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/tts': typeof ApiTtsRoute
@@ -218,6 +227,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/mcp'
     | '/.well-known/oauth-protected-resource'
+    | '/admin/expenses'
     | '/admin/usage'
     | '/admin/users'
     | '/api/tts'
@@ -241,6 +251,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/mcp'
     | '/.well-known/oauth-protected-resource'
+    | '/admin/expenses'
     | '/admin/usage'
     | '/admin/users'
     | '/api/tts'
@@ -264,6 +275,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/mcp'
     | '/.well-known/oauth-protected-resource'
+    | '/admin/expenses'
     | '/admin/usage'
     | '/admin/users'
     | '/api/tts'
@@ -288,6 +300,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   McpRoute: typeof McpRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  AdminExpensesRoute: typeof AdminExpensesRoute
   AdminUsageRoute: typeof AdminUsageRoute
   AdminUsersRoute: typeof AdminUsersRoute
   ApiTtsRoute: typeof ApiTtsRoute
@@ -341,6 +354,13 @@ declare module '@tanstack/react-router' {
       path: '/.well-known/oauth-protected-resource'
       fullPath: '/.well-known/oauth-protected-resource'
       preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/expenses': {
+      id: '/admin/expenses'
+      path: '/admin/expenses'
+      fullPath: '/admin/expenses'
+      preLoaderRoute: typeof AdminExpensesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/usage': {
@@ -465,6 +485,7 @@ const rootRouteChildren: RootRouteChildren = {
   McpRoute: McpRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  AdminExpensesRoute: AdminExpensesRoute,
   AdminUsageRoute: AdminUsageRoute,
   AdminUsersRoute: AdminUsersRoute,
   ApiTtsRoute: ApiTtsRoute,
