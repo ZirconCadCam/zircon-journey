@@ -355,3 +355,55 @@ export const addDoctor = createServerFn({ method: "POST" })
     }
     return { slot, error: null as string | null };
   });
+
+/** Edit a doctor's name, branch and (optionally) password. */
+export const updateDoctor = createServerFn({ method: "POST" })
+  .inputValidator((d) =>
+    z
+      .object({
+        slot: z.number().int().min(1),
+        name: z.string().trim().min(2).max(120),
+        branch: z.enum(["sanaa", "ibb"]).nullable(),
+        password: z.string().trim().max(120).optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const { data: dup } = await db
+      .from("doctor_profiles")
+      .select("slot")
+      .eq("name", data.name)
+      .eq("active", true)
+      .neq("slot", data.slot)
+      .maybeSingle();
+    if (dup) return { ok: false, error: "يوجد طبيب مفعّل آخر بنفس الاسم" };
+    const { error } = await db
+      .from("doctor_profiles")
+      .update({ name: data.name, branch: data.branch, updated_at: new Date().toISOString() } as never)
+      .eq("slot", data.slot);
+    if (error) return { ok: false, error: error.message };
+    if (data.password) {
+      const { error: e2 } = await db
+        .from("doctor_secrets")
+        .upsert({ slot: data.slot, password: data.password } as never, { onConflict: "slot" });
+      if (e2) return { ok: false, error: e2.message };
+    }
+    return { ok: true, error: null as string | null };
+  });
+
+/** Permanently delete a doctor, only when they have no cases (otherwise archive). */
+export const deleteDoctor = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ slot: z.number().int().min(1) }).parse(d))
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const { count } = await db
+      .from("slot_cases")
+      .select("id", { count: "exact", head: true })
+      .eq("doctor_slot", data.slot);
+    if ((count ?? 0) > 0)
+      return { ok: false, error: `لدى الطبيب ${count} حالة؛ لا يمكن الحذف النهائي، استخدم الأرشفة بدلاً من ذلك` };
+    await db.from("doctor_secrets").delete().eq("slot", data.slot);
+    const { error } = await db.from("doctor_profiles").delete().eq("slot", data.slot);
+    return { ok: !error, error: error?.message ?? null };
+  });

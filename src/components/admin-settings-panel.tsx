@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { DoctorAvatar } from "@/components/doctor-avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { addDoctor } from "@/lib/secure-ops.functions";
-import { Settings, UserPlus, Archive, Stethoscope, RefreshCw, Save, HardDrive, Trash2, Loader2, FolderOpen } from "lucide-react";
+import { addDoctor, updateDoctor, deleteDoctor } from "@/lib/secure-ops.functions";
+import { Pencil, Settings, UserPlus, Archive, Stethoscope, RefreshCw, Save, HardDrive, Trash2, Loader2, FolderOpen } from "lucide-react";
 import {
   getCacheStats,
   clearCenterCache,
@@ -72,6 +72,8 @@ export function AdminSettingsPanel() {
         <AddDoctorCard doctors={doctors} onDone={load} />
         <ArchiveDoctorCard doctors={doctors} loading={loading} onDone={load} />
       </div>
+
+      <EditDoctorCard doctors={doctors} onDone={load} />
 
       <PasswordManagerPanel />
 
@@ -590,5 +592,81 @@ function Toggle({
         />
       </button>
     </label>
+  );
+}
+
+/* -------------------- حذف / تعديل بيانات الطبيب -------------------- */
+function EditDoctorCard({ doctors, onDone }: { doctors: Doctor[]; onDone: () => void }) {
+  const [slot, setSlot] = useState<number | "">("");
+  const [name, setName] = useState("");
+  const [branch, setBranch] = useState<"" | "sanaa" | "ibb">("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  function pick(v: string) {
+    const d = doctors.find((x) => x.slot === Number(v));
+    setSlot(d ? d.slot : "");
+    setName(d?.name ?? "");
+    setBranch((d?.branch as "sanaa" | "ibb") ?? "");
+    setPassword("");
+  }
+
+  async function save() {
+    if (slot === "" || name.trim().length < 2) return toast.error("اختر طبيباً واكتب اسماً صحيحاً");
+    setBusy(true);
+    const r = await updateDoctor({ data: { slot, name: name.trim(), branch: branch || null, password: password.trim() || undefined } })
+      .catch((e) => ({ ok: false, error: String(e?.message ?? e) }));
+    setBusy(false);
+    if (!r.ok) return toast.error(r.error || "تعذّر الحفظ");
+    toast.success("تم تحديث بيانات الطبيب");
+    setPassword("");
+    onDone();
+  }
+
+  async function remove() {
+    if (slot === "") return;
+    if (!confirm(`حذف الطبيب «${name}» نهائياً؟ لا يمكن التراجع.`)) return;
+    setBusy(true);
+    const r = await deleteDoctor({ data: { slot } }).catch((e) => ({ ok: false, error: String(e?.message ?? e) }));
+    setBusy(false);
+    if (!r.ok) return toast.error(r.error || "تعذّر الحذف");
+    toast.success("تم حذف الطبيب");
+    pick("");
+    onDone();
+  }
+
+  const input = "w-full rounded-xl border border-input bg-background px-3 py-2 text-sm";
+  return (
+    <div className="rounded-3xl bg-card border border-border p-5 shadow-luxury space-y-3">
+      <div className="flex items-center gap-2 font-extrabold">
+        <Pencil className="size-5 text-primary" /> حذف / تعديل بيانات الطبيب
+      </div>
+      <select value={slot} onChange={(e) => pick(e.target.value)} className={input}>
+        <option value="">— اختر الطبيب —</option>
+        {doctors.map((d) => (
+          <option key={d.slot} value={d.slot}>{d.name}{d.active ? "" : " (مؤرشف)"}</option>
+        ))}
+      </select>
+      {slot !== "" && (
+        <div className="grid md:grid-cols-3 gap-3">
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="اسم الطبيب" className={input} />
+          <select value={branch} onChange={(e) => setBranch(e.target.value as any)} className={input}>
+            <option value="">— بدون فرع —</option>
+            <option value="sanaa">فرع صنعاء</option>
+            <option value="ibb">فرع إب</option>
+          </select>
+          <input value={password} onChange={(e) => setPassword(e.target.value)} placeholder="كلمة مرور جديدة (اختياري)" className={input} />
+          <div className="md:col-span-3 flex gap-2 justify-end">
+            <button disabled={busy} onClick={remove} className="inline-flex items-center gap-1 rounded-xl border border-destructive text-destructive px-4 py-2 text-sm font-bold disabled:opacity-50">
+              <Trash2 className="size-4" /> حذف نهائي
+            </button>
+            <button disabled={busy} onClick={save} className="inline-flex items-center gap-1 rounded-xl gradient-brown text-primary-foreground px-4 py-2 text-sm font-bold disabled:opacity-50">
+              {busy ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />} حفظ التعديلات
+            </button>
+          </div>
+          <p className="md:col-span-3 text-[11px] text-muted-foreground">الحذف النهائي متاح فقط للطبيب الذي ليست لديه حالات؛ غير ذلك استخدم الأرشفة.</p>
+        </div>
+      )}
+    </div>
   );
 }
