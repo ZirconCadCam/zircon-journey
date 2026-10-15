@@ -180,7 +180,7 @@ function ExpensesPage() {
             {loading && <tr><td colSpan={7} className="p-6 text-center text-muted-foreground"><Loader2 className="size-5 animate-spin inline" /></td></tr>}
             {!loading && !filtered.length && <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">لا توجد مصروفات بعد</td></tr>}
             {filtered.map((r) => (
-              <tr key={r.id} className="border-t border-border align-top">
+              <tr key={`${r.id}-${r.status}-${r.amount ?? ""}-${r.vendor ?? ""}`} className="border-t border-border align-top">
                 <td className="p-2 w-36"><input type="date" defaultValue={r.expense_date ?? ""} className={inp}
                   onBlur={(e) => e.target.value !== (r.expense_date ?? "") && patch(r.id, { expense_date: e.target.value || null })} /></td>
                 <td className="p-2"><input defaultValue={r.vendor ?? ""} className={inp}
