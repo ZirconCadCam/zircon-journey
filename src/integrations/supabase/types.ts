@@ -918,6 +918,7 @@ export type Database = {
           extra_zip_size: number | null
           fabrication_done: boolean
           fabrication_file_sent: boolean
+          files_purged_at: string | null
           final_archived: boolean
           id: string
           idempotency_key: string | null
@@ -1013,6 +1014,7 @@ export type Database = {
           extra_zip_size?: number | null
           fabrication_done?: boolean
           fabrication_file_sent?: boolean
+          files_purged_at?: string | null
           final_archived?: boolean
           id?: string
           idempotency_key?: string | null
@@ -1108,6 +1110,7 @@ export type Database = {
           extra_zip_size?: number | null
           fabrication_done?: boolean
           fabrication_file_sent?: boolean
+          files_purged_at?: string | null
           final_archived?: boolean
           id?: string
           idempotency_key?: string | null
@@ -1228,6 +1231,39 @@ export type Database = {
           device_id?: string
           role?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      telegram_file_links: {
+        Row: {
+          bucket: string | null
+          chat_id: string
+          created_at: string
+          file_name: string
+          id: string
+          link: string
+          message_id: number
+          object_path: string
+        }
+        Insert: {
+          bucket?: string | null
+          chat_id: string
+          created_at?: string
+          file_name: string
+          id?: string
+          link: string
+          message_id: number
+          object_path: string
+        }
+        Update: {
+          bucket?: string | null
+          chat_id?: string
+          created_at?: string
+          file_name?: string
+          id?: string
+          link?: string
+          message_id?: number
+          object_path?: string
         }
         Relationships: []
       }
