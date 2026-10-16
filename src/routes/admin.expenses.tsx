@@ -6,6 +6,8 @@ import { hasValidStaffSession } from "@/lib/staff-session";
 import {
   EXPENSE_CATEGORIES, uploadExpense, listExpenses, updateExpense, deleteExpense, expenseFileUrl, retryExpense,
 } from "@/lib/expenses.functions";
+import { batchTrash } from "@/lib/secure-ops.functions";
+import { BatchToolbar, RowCheck, useBatchSelection } from "@/components/batch-toolbar";
 
 export const Route = createFileRoute("/admin/expenses")({
   head: () => ({
