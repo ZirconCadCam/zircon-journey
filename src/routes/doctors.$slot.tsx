@@ -702,23 +702,24 @@ function CasesPanel({ doctor, me, myName }: { doctor: Doctor; me: RoleKey; myNam
     if (r.ok) toast.success("تم النقل إلى سلة المهملات"); else toast.error(r.error ?? "تعذر الحذف");
   }
 
-  if (loading) return <div className="p-12 text-center text-muted-foreground text-sm">جارِ تحميل الحالات...</div>;
-
   // Doctor page shows only active cases. Archiving lives in the technician + admin pages.
   const activeCases = cases.filter(c => !c.archived && !c.final_archived);
-  const revisionCount = activeCases.filter(c => c.doctor_decision === "revision").length;
-  const visible = stageFilter === "all"
+  const visibleForSel = stageFilter === "all"
     ? activeCases
     : stageFilter === "revision"
       ? activeCases.filter(c => c.doctor_decision === "revision")
       : activeCases.filter(c => getStage(deriveStageKey(c)).key === stageFilter);
+  const sel = useBatchSelection(visibleForSel.map(c => c.id));
+
+  if (loading) return <div className="p-12 text-center text-muted-foreground text-sm">جارِ تحميل الحالات...</div>;
+
+  const revisionCount = activeCases.filter(c => c.doctor_decision === "revision").length;
+  const visible = visibleForSel;
   const stageCounts = new Map<CaseStage, number>();
   for (const c of activeCases) {
     const key = getStage(deriveStageKey(c)).key;
     stageCounts.set(key, (stageCounts.get(key) ?? 0) + 1);
   }
-
-  const sel = useBatchSelection(visible.map(c => c.id));
 
   async function pinSelected(ids: string[], pinned: boolean) {
     const r = await batchPinCases({ data: { ids, pinned } });
