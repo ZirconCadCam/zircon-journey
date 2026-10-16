@@ -22,6 +22,13 @@
       "when": 1792167842920,
       "tag": "0002_telegram_outbox_log",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792170431849,
+      "tag": "0003_telegram_file_links",
+      "breakpoints": true
     }
   ]
 }
