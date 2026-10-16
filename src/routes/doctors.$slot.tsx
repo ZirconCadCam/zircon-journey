@@ -714,7 +714,6 @@ function CasesPanel({ doctor, me, myName }: { doctor: Doctor; me: RoleKey; myNam
   if (loading) return <div className="p-12 text-center text-muted-foreground text-sm">جارِ تحميل الحالات...</div>;
 
   const revisionCount = activeCases.filter(c => c.doctor_decision === "revision").length;
-  const revisionCount = activeCases.filter(c => c.doctor_decision === "revision").length;
   const visible = visibleForSel;
   const stageCounts = new Map<CaseStage, number>();
   for (const c of activeCases) {
