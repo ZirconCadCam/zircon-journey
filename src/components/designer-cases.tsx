@@ -211,48 +211,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     return m;
   }, [doctors]);
 
-  const sel = useBatchSelection(displayed.map(c => c.id));
 
-  async function batchTrashCases(ids: string[]) {
-    if (!confirm(`نقل ${ids.length} حالة إلى سلة المهملات؟ تُحذف نهائياً بعد 7 أيام.`)) return;
-    const r = await batchTrash({ data: { table: "slot_cases", ids } });
-    if (r.ok) { toast.success("تم النقل إلى سلة المهملات"); sel.clear(); refreshCases(); }
-    else toast.error(r.error ?? "تعذر الحذف");
-  }
-  async function batchPin(ids: string[], pinned: boolean) {
-    const r = await batchPinCases({ data: { ids, pinned } });
-    if (r.ok) { toast.success(pinned ? "تم التثبيت" : "تم إلغاء التثبيت"); sel.clear(); refreshCases(); }
-    else toast.error(r.error ?? "تعذر التثبيت");
-  }
-  async function batchTelegram(ids: string[]) {
-    const r = await batchCasesToTelegram({ data: { ids } });
-    if (r.ok) { toast.success("أُرسلت الدفعة إلى تلجرام"); sel.clear(); }
-    else toast.error(r.error ?? "تعذر الإرسال");
-  }
-  async function batchMove(ids: string[]) {
-    const input = prompt("رقم خانة الطبيب الجديد (slot):");
-    const slot = Number(input);
-    if (!input || !Number.isInteger(slot) || slot < 1) return;
-    const r = await batchMoveCases({ data: { ids, doctorSlot: slot } });
-    if (r.ok) { toast.success("تم نقل الحالات"); sel.clear(); refreshCases(); }
-    else toast.error(r.error ?? "تعذر النقل");
-  }
-  async function batchShade(ids: string[]) {
-    const shade = prompt("اللون الجديد (مثال A2):");
-    if (!shade) return;
-    const r = await batchUpdateCases({ data: { ids, patch: { shade } } });
-    if (r.ok) { toast.success("تم تحديث اللون"); sel.clear(); refreshCases(); }
-    else toast.error(r.error ?? "تعذر التعديل");
-  }
-
-  const batchActions = [
-    { key: "pin", label: "تثبيت", onClick: (ids: string[]) => batchPin(ids, true) },
-    { key: "unpin", label: "إلغاء التثبيت", onClick: (ids: string[]) => batchPin(ids, false) },
-    { key: "shade", label: "تعديل اللون", onClick: batchShade },
-    { key: "move", label: "نقل لطبيب", onClick: batchMove },
-    { key: "telegram", label: "إرسال للتلجرام", onClick: batchTelegram },
-    { key: "trash", label: "حذف (سلة المهملات)", danger: true, onClick: batchTrashCases },
-  ];
 
   /** Build the device-folder location (role/doctor/case) for a case file. */
   function locFor(c: Case, category?: import("@/lib/case-folders").FileCategory): import("@/lib/case-folders").CaseFileLocation {
@@ -411,6 +370,49 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     if (stageFilter === "revision") return needsRevision;
     return visibleForActor.filter(c => deriveStageKey(c) === stageFilter);
   }, [visibleForActor, stageFilter, needsRevision]);
+
+  const sel = useBatchSelection(displayed.map(c => c.id));
+
+  async function batchTrashCases(ids: string[]) {
+    if (!confirm(`نقل ${ids.length} حالة إلى سلة المهملات؟ تُحذف نهائياً بعد 7 أيام.`)) return;
+    const r = await batchTrash({ data: { table: "slot_cases", ids } });
+    if (r.ok) { toast.success("تم النقل إلى سلة المهملات"); sel.clear(); refreshCases(); }
+    else toast.error(r.error ?? "تعذر الحذف");
+  }
+  async function batchPin(ids: string[], pinned: boolean) {
+    const r = await batchPinCases({ data: { ids, pinned } });
+    if (r.ok) { toast.success(pinned ? "تم التثبيت" : "تم إلغاء التثبيت"); sel.clear(); refreshCases(); }
+    else toast.error(r.error ?? "تعذر التثبيت");
+  }
+  async function batchTelegram(ids: string[]) {
+    const r = await batchCasesToTelegram({ data: { ids } });
+    if (r.ok) { toast.success("أُرسلت الدفعة إلى تلجرام"); sel.clear(); }
+    else toast.error(r.error ?? "تعذر الإرسال");
+  }
+  async function batchMove(ids: string[]) {
+    const input = prompt("رقم خانة الطبيب الجديد (slot):");
+    const slot = Number(input);
+    if (!input || !Number.isInteger(slot) || slot < 1) return;
+    const r = await batchMoveCases({ data: { ids, doctorSlot: slot } });
+    if (r.ok) { toast.success("تم نقل الحالات"); sel.clear(); refreshCases(); }
+    else toast.error(r.error ?? "تعذر النقل");
+  }
+  async function batchShade(ids: string[]) {
+    const shade = prompt("اللون الجديد (مثال A2):");
+    if (!shade) return;
+    const r = await batchUpdateCases({ data: { ids, patch: { shade } } });
+    if (r.ok) { toast.success("تم تحديث اللون"); sel.clear(); refreshCases(); }
+    else toast.error(r.error ?? "تعذر التعديل");
+  }
+
+  const batchActions = [
+    { key: "pin", label: "تثبيت", onClick: (ids: string[]) => batchPin(ids, true) },
+    { key: "unpin", label: "إلغاء التثبيت", onClick: (ids: string[]) => batchPin(ids, false) },
+    { key: "shade", label: "تعديل اللون", onClick: batchShade },
+    { key: "move", label: "نقل لطبيب", onClick: batchMove },
+    { key: "telegram", label: "إرسال للتلجرام", onClick: batchTelegram },
+    { key: "trash", label: "حذف (سلة المهملات)", danger: true, onClick: batchTrashCases },
+  ];
 
 
 
