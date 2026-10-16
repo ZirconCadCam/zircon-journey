@@ -1237,6 +1237,7 @@ export type Database = {
           caption: string
           caption_sent: boolean
           created_at: string
+          docs_total: number | null
           documents: Json
           id: string
           last_error: string | null
@@ -1248,6 +1249,7 @@ export type Database = {
           caption: string
           caption_sent?: boolean
           created_at?: string
+          docs_total?: number | null
           documents?: Json
           id?: string
           last_error?: string | null
@@ -1259,11 +1261,42 @@ export type Database = {
           caption?: string
           caption_sent?: boolean
           created_at?: string
+          docs_total?: number | null
           documents?: Json
           id?: string
           last_error?: string | null
           sent_at?: string | null
           status?: string
+        }
+        Relationships: []
+      }
+      telegram_outbox_log: {
+        Row: {
+          action: string
+          actor: string | null
+          created_at: string
+          error: string | null
+          id: string
+          outbox_id: string
+          result: string | null
+        }
+        Insert: {
+          action: string
+          actor?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          outbox_id: string
+          result?: string | null
+        }
+        Update: {
+          action?: string
+          actor?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          outbox_id?: string
+          result?: string | null
         }
         Relationships: []
       }

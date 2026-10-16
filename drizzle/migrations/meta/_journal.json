@@ -15,6 +15,13 @@
       "when": 1792149065040,
       "tag": "0001_add_trash_soft_delete",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792167842920,
+      "tag": "0002_telegram_outbox_log",
+      "breakpoints": true
     }
   ]
 }
