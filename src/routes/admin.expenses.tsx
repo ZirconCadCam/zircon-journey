@@ -79,6 +79,15 @@ function ExpensesPage() {
     (!from || (r.expense_date ?? r.created_at.slice(0, 10)) >= from) &&
     (!to || (r.expense_date ?? r.created_at.slice(0, 10)) <= to)), [rows, cat, from, to]);
 
+  const sel = useBatchSelection(filtered.map((r) => r.id));
+
+  async function trashSelected(ids: string[]) {
+    if (!confirm(`نقل ${ids.length} مصروف إلى سلة المهملات؟ يُحذف نهائياً بعد 7 أيام.`)) return;
+    const r = await batchTrash({ data: { table: "expenses", ids } });
+    if (r.ok) { toast.success("تم النقل إلى سلة المهملات"); sel.clear(); await load(); }
+    else toast.error(r.error ?? "تعذر الحذف");
+  }
+
   const totals = useMemo(() => {
     const m = new Map<string, number>();
     for (const r of filtered) if (r.amount != null) m.set(r.currency ?? "—", (m.get(r.currency ?? "—") ?? 0) + Number(r.amount));
