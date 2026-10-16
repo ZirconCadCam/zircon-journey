@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { batchTrash, batchPinCases, batchCasesToTelegram, batchMoveCases, batchUpdateCases } from "@/lib/secure-ops.functions";
+import { BatchToolbar, RowCheck, useBatchSelection } from "@/components/batch-toolbar";
 import { toast } from "sonner";
 import {
   Stethoscope, FileText, Download, Share2, Loader2,
