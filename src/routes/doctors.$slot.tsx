@@ -715,18 +715,12 @@ function CasesPanel({ doctor, me, myName }: { doctor: Doctor; me: RoleKey; myNam
 
   const revisionCount = activeCases.filter(c => c.doctor_decision === "revision").length;
   const revisionCount = activeCases.filter(c => c.doctor_decision === "revision").length;
-  const visible = stageFilter === "all"
-    ? activeCases
-    : stageFilter === "revision"
-      ? activeCases.filter(c => c.doctor_decision === "revision")
-      : activeCases.filter(c => getStage(deriveStageKey(c)).key === stageFilter);
+  const visible = visibleForSel;
   const stageCounts = new Map<CaseStage, number>();
   for (const c of activeCases) {
     const key = getStage(deriveStageKey(c)).key;
     stageCounts.set(key, (stageCounts.get(key) ?? 0) + 1);
   }
-
-  const sel = useBatchSelection(visible.map(c => c.id));
 
   async function pinSelected(ids: string[], pinned: boolean) {
     const r = await batchPinCases({ data: { ids, pinned } });
