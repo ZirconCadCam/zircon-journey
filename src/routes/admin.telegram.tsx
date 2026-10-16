@@ -1,9 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, Send, RefreshCw, Trash2, AlertTriangle, Clock, Loader2, FileText, Search, Pause, History, X } from "lucide-react";
+import { ArrowRight, Send, RefreshCw, Trash2, AlertTriangle, Clock, Loader2, FileText, Search, Pause, History, X, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { hasValidStaffSession } from "@/lib/staff-session";
-import { listTelegramOutbox, retryTelegramOutbox, deleteTelegramOutbox, pauseTelegramOutbox, removeTelegramOutboxDoc } from "@/lib/secure-ops.functions";
+import { listTelegramOutbox, retryTelegramOutbox, deleteTelegramOutbox, pauseTelegramOutbox, removeTelegramOutboxDoc, getTelegramPerms, TG_PERMS } from "@/lib/secure-ops.functions";
+import { setAppFlag } from "@/lib/app-flags";
 import { kickTelegramDrain } from "@/lib/telegram-outbox";
 import { useBatchSelection, BatchToolbar, RowCheck } from "@/components/batch-toolbar";
 
@@ -55,6 +56,17 @@ function TelegramOutboxPage() {
   const [q, setQ] = useState("");
   const [logs, setLogs] = useState<Log[]>([]);
   const [openLog, setOpenLog] = useState<string | null>(null);
+  const [perms, setPerms] = useState({ retry: true, pause: true, remove: true });
+  const [showPerms, setShowPerms] = useState(false);
+
+  async function togglePerm(k: keyof typeof perms) {
+    const pw = prompt("أدخل كلمة مرور الإدارة لتغيير الصلاحية");
+    if (!pw) return;
+    const err = await setAppFlag(TG_PERMS[k], !perms[k], pw);
+    if (err) { toast.error("تعذر تغيير الصلاحية: " + err); return; }
+    setPerms((p) => ({ ...p, [k]: !p[k] }));
+    toast.success("حُفظت الصلاحية");
+  }
 
   async function load() {
     setLoading(true);
@@ -68,6 +80,7 @@ function TelegramOutboxPage() {
   useEffect(() => {
     if (!hasValidStaffSession("admin")) { nav({ to: "/staff/$role", params: { role: "admin" } }); return; }
     void load();
+    void getTelegramPerms().then(setPerms).catch(() => {});
   }, [nav]);
 
   // Live progress: refresh quietly while something is queued or sending,
@@ -166,6 +179,25 @@ function TelegramOutboxPage() {
 
         <h1 className="flex items-center gap-2 text-xl font-black"><Send className="size-5 text-gold" /> المتعذر إرسالها للتلجرام</h1>
 
+        <div className="rounded-xl border border-border bg-card p-3">
+          <button onClick={() => setShowPerms(!showPerms)} className="flex w-full items-center gap-2 text-sm font-bold">
+            <ShieldCheck className="size-4 text-gold" /> صلاحيات الإدارة على الطابور
+          </button>
+          {showPerms && (
+            <div className="mt-2 space-y-1.5">
+              {([["retry", "إعادة الإرسال"], ["pause", "إيقاف الإرسال"], ["remove", "حذف الملفات والرسائل من الطابور"]] as const).map(([k, l]) => (
+                <label key={k} className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm">
+                  <span>{l}</span>
+                  <button onClick={() => togglePerm(k)} className={`rounded-full px-3 py-1 text-xs font-bold ${perms[k] ? "gradient-gold text-gold-foreground" : "bg-muted text-muted-foreground"}`}>
+                    {perms[k] ? "مسموح" : "ممنوع"}
+                  </button>
+                </label>
+              ))}
+              <p className="text-[11px] text-muted-foreground">تغيير الصلاحية يتطلب كلمة مرور الإدارة، ويُطبَّق على الخادم أيضاً.</p>
+            </div>
+          )}
+        </div>
+
         <div className="grid grid-cols-3 gap-2">
           {([["failed", "متعذرة", AlertTriangle], ["pending", "في الانتظار", Clock], ["sending", "جارِ الإرسال", Loader2]] as const).map(([k, l, I]) => (
             <button key={k} onClick={() => setStatus(status === k ? "all" : k)}
@@ -199,9 +231,9 @@ function TelegramOutboxPage() {
 
         <div className="flex flex-wrap items-center gap-2">
           <BatchToolbar sel={sel} busy={busy} actions={[
-            { key: "retry", label: "إعادة الإرسال", icon: <Send className="size-3.5" />, onClick: retry },
-            { key: "pause", label: "إيقاف الإرسال", icon: <Pause className="size-3.5" />, onClick: pause },
-            { key: "del", label: "حذف من الطابور", icon: <Trash2 className="size-3.5" />, danger: true, onClick: remove },
+            ...(perms.retry ? [{ key: "retry", label: "إعادة الإرسال", icon: <Send className="size-3.5" />, onClick: retry }] : []),
+            ...(perms.pause ? [{ key: "pause", label: "إيقاف الإرسال", icon: <Pause className="size-3.5" />, onClick: pause }] : []),
+            ...(!perms.remove ? [] : [{ key: "del", label: "حذف من الطابور", icon: <Trash2 className="size-3.5" />, danger: true, onClick: remove },
           ]} />
           {counts.failed > 0 && !sel.active && (
             <button disabled={busy} onClick={() => retry(rows.filter((r) => r.status === "failed").map((r) => r.id))}
