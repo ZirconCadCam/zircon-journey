@@ -570,6 +570,23 @@ async function logOutbox(db: any, ids: string[], action: string, actor: string, 
   await db.from("telegram_outbox_log").insert(ids.map((outbox_id) => ({ outbox_id, action, actor, result, error: err })));
 }
 
+/** Separate admin permissions for queue actions (app_settings flags, default allowed). */
+export const TG_PERMS = { retry: "tg_perm_retry", pause: "tg_perm_pause", remove: "tg_perm_remove" } as const;
+async function tgAllowed(db: any, key: string): Promise<boolean> {
+  const { data } = await db.from("app_settings").select("bool_value").eq("key", key).maybeSingle();
+  return data ? data.bool_value !== false : true;
+}
+const DENIED = { ok: false, error: "ليست لديك صلاحية لهذا الإجراء" };
+
+export const getTelegramPerms = createServerFn({ method: "POST" }).handler(async () => {
+  const db = await admin();
+  return {
+    retry: await tgAllowed(db, TG_PERMS.retry),
+    pause: await tgAllowed(db, TG_PERMS.pause),
+    remove: await tgAllowed(db, TG_PERMS.remove),
+  };
+});
+
 const actorSchema = z.string().trim().max(80).default("الإدارة");
 
 /** Put rows back in the queue (fresh attempts) so the drain re-sends them. */
@@ -577,6 +594,7 @@ export const retryTelegramOutbox = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ ids: z.array(z.string().uuid()).min(1).max(300), actor: actorSchema }).parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
+    if (!(await tgAllowed(db, TG_PERMS.retry))) return DENIED;
     const { error } = await db
       .from("telegram_outbox")
       .update({ status: "pending", attempts: 0, last_error: null, created_at: new Date().toISOString() } as never)
@@ -591,6 +609,7 @@ export const pauseTelegramOutbox = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ ids: z.array(z.string().uuid()).min(1).max(300), actor: actorSchema }).parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
+    if (!(await tgAllowed(db, TG_PERMS.pause))) return DENIED;
     const { error } = await db.from("telegram_outbox").update({ status: "paused" } as never)
       .in("id", data.ids).in("status", ["pending", "failed", "sending"]);
     await logOutbox(db, data.ids, "pause", data.actor, error ? "failed" : "ok", error?.message ?? null);
@@ -602,6 +621,7 @@ export const removeTelegramOutboxDoc = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ id: z.string().uuid(), index: z.number().int().min(0), actor: actorSchema }).parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
+    if (!(await tgAllowed(db, TG_PERMS.remove))) return DENIED;
     const { data: row, error: e1 } = await db.from("telegram_outbox").select("documents,docs_total").eq("id", data.id).maybeSingle();
     if (e1 || !row) return { ok: false, error: e1?.message ?? "غير موجود" };
     const docs = Array.isArray((row as any).documents) ? [...(row as any).documents] : [];
@@ -617,6 +637,7 @@ export const deleteTelegramOutbox = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ ids: z.array(z.string().uuid()).min(1).max(300) }).parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
+    if (!(await tgAllowed(db, TG_PERMS.remove))) return DENIED;
     const { error } = await db.from("telegram_outbox").delete().in("id", data.ids);
     if (!error) await (db as any).from("telegram_outbox_log").delete().in("outbox_id", data.ids);
     return { ok: !error, error: error?.message ?? null };
