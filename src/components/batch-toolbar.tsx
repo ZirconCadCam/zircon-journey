@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
-import { CheckSquare, Square, X } from "lucide-react";
+import { CheckSquare, Square, X, Lock, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 /**
  * Reusable multi-select state for list pages.
