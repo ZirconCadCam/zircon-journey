@@ -1512,6 +1512,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                           </div>
                         </div>
                       )}
+                      </div>
                     </div>
 
 
