@@ -182,6 +182,11 @@ function ExpensesPage() {
         </div>
       </div>
 
+      <BatchToolbar
+        sel={sel}
+        actions={[{ key: "trash", label: "حذف (سلة المهملات)", icon: <Trash2 className="size-3.5" />, danger: true, onClick: trashSelected }]}
+      />
+
       <div className="overflow-x-auto border border-border rounded-xl">
         <table className="w-full text-sm">
           <thead className="bg-muted/40">
