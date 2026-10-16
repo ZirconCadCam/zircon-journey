@@ -233,9 +233,9 @@ function TelegramOutboxPage() {
           <BatchToolbar sel={sel} busy={busy} actions={[
             ...(perms.retry ? [{ key: "retry", label: "إعادة الإرسال", icon: <Send className="size-3.5" />, onClick: retry }] : []),
             ...(perms.pause ? [{ key: "pause", label: "إيقاف الإرسال", icon: <Pause className="size-3.5" />, onClick: pause }] : []),
-            ...(!perms.remove ? [] : [{ key: "del", label: "حذف من الطابور", icon: <Trash2 className="size-3.5" />, danger: true, onClick: remove },
+            ...(!perms.remove ? [] : [{ key: "del", label: "حذف من الطابور", icon: <Trash2 className="size-3.5" />, danger: true, onClick: remove }]),
           ]} />
-          {counts.failed > 0 && !sel.active && (
+          {perms.retry && counts.failed > 0 && !sel.active && (
             <button disabled={busy} onClick={() => retry(rows.filter((r) => r.status === "failed").map((r) => r.id))}
               className="inline-flex items-center gap-1.5 rounded-lg gradient-gold text-gold-foreground px-3 py-1.5 text-xs font-bold disabled:opacity-50">
               <Send className="size-3.5" /> إعادة إرسال كل المتعذرة ({counts.failed})
@@ -272,7 +272,7 @@ function TelegramOutboxPage() {
                         <div className="flex flex-wrap gap-1">
                           {docs.map((d, i) => (
                             <span key={i} className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-xs"><FileText className="size-3" />{d.filename}
-                              <button disabled={busy} title="حذف الملف" onClick={() => removeDoc(r.id, i, d.filename)} className="text-destructive hover:opacity-70"><X className="size-3" /></button></span>
+                              {perms.remove && <button disabled={busy} title="حذف الملف" onClick={() => removeDoc(r.id, i, d.filename)} className="text-destructive hover:opacity-70"><X className="size-3" /></button>}</span>
                           ))}
                         </div>
                       )}
@@ -286,11 +286,11 @@ function TelegramOutboxPage() {
                     </div>
                     {!sel.active && (
                       <div className="shrink-0 flex flex-col gap-1">
-                        <button disabled={busy} onClick={() => retry([r.id])} title="إعادة الإرسال"
+                        {perms.retry && <button disabled={busy} onClick={() => retry([r.id])} title="إعادة الإرسال"
                           className="inline-flex items-center gap-1 rounded-lg border border-gold/60 bg-gold/10 px-2.5 py-1.5 text-xs font-bold hover:gradient-gold disabled:opacity-50">
                           <Send className="size-3.5" /> إرسال
-                        </button>
-                        {r.status !== "paused" && (
+                        </button>}
+                        {perms.pause && r.status !== "paused" && (
                           <button disabled={busy} onClick={() => pause([r.id])} className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-bold hover:bg-muted/40 disabled:opacity-50">
                             <Pause className="size-3.5" /> إيقاف
                           </button>
