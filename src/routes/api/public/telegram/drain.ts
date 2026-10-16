@@ -144,6 +144,14 @@ async function handle(): Promise<Response> {
           const res = await fetch(`${API}/sendDocument`, { method: "POST", body: form });
           const j: any = await res.json().catch(() => ({}));
           if (!res.ok || !j?.ok) throw new Error(String(j?.description ?? `HTTP ${res.status}`));
+          const mid = Number(j?.result?.message_id);
+          if (path && mid) {
+            const { telegramMessageLink } = await import("@/lib/telegram-file-links");
+            await (supabaseAdmin as any).from("telegram_file_links").insert({
+              object_path: path, bucket, file_name: doc.filename, chat_id: chat,
+              message_id: mid, link: telegramMessageLink(chat, mid),
+            });
+          }
         } catch (e: any) {
           failed.push(`${doc.filename}: ${e?.message ?? "خطأ"}`);
           pendingDocs.push(doc);
@@ -182,5 +190,13 @@ async function handle(): Promise<Response> {
     }
   }
 
-  return Response.json({ ok: true, processed: results.length, results });
+  let purged = 0;
+  try {
+    const { purgeArchivedCaseFiles } = await import("@/lib/case-file-purge.server");
+    purged = await purgeArchivedCaseFiles();
+  } catch (e) {
+    console.warn("[purge] failed", e);
+  }
+
+  return Response.json({ ok: true, processed: results.length, results, purged });
 }
