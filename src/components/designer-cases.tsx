@@ -211,6 +211,49 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     return m;
   }, [doctors]);
 
+  const sel = useBatchSelection(displayed.map(c => c.id));
+
+  async function batchTrashCases(ids: string[]) {
+    if (!confirm(`نقل ${ids.length} حالة إلى سلة المهملات؟ تُحذف نهائياً بعد 7 أيام.`)) return;
+    const r = await batchTrash({ data: { table: "slot_cases", ids } });
+    if (r.ok) { toast.success("تم النقل إلى سلة المهملات"); sel.clear(); refreshCases(); }
+    else toast.error(r.error ?? "تعذر الحذف");
+  }
+  async function batchPin(ids: string[], pinned: boolean) {
+    const r = await batchPinCases({ data: { ids, pinned } });
+    if (r.ok) { toast.success(pinned ? "تم التثبيت" : "تم إلغاء التثبيت"); sel.clear(); refreshCases(); }
+    else toast.error(r.error ?? "تعذر التثبيت");
+  }
+  async function batchTelegram(ids: string[]) {
+    const r = await batchCasesToTelegram({ data: { ids } });
+    if (r.ok) { toast.success("أُرسلت الدفعة إلى تلجرام"); sel.clear(); }
+    else toast.error(r.error ?? "تعذر الإرسال");
+  }
+  async function batchMove(ids: string[]) {
+    const input = prompt("رقم خانة الطبيب الجديد (slot):");
+    const slot = Number(input);
+    if (!input || !Number.isInteger(slot) || slot < 1) return;
+    const r = await batchMoveCases({ data: { ids, doctorSlot: slot } });
+    if (r.ok) { toast.success("تم نقل الحالات"); sel.clear(); refreshCases(); }
+    else toast.error(r.error ?? "تعذر النقل");
+  }
+  async function batchShade(ids: string[]) {
+    const shade = prompt("اللون الجديد (مثال A2):");
+    if (!shade) return;
+    const r = await batchUpdateCases({ data: { ids, patch: { shade } } });
+    if (r.ok) { toast.success("تم تحديث اللون"); sel.clear(); refreshCases(); }
+    else toast.error(r.error ?? "تعذر التعديل");
+  }
+
+  const batchActions = [
+    { key: "pin", label: "تثبيت", onClick: (ids: string[]) => batchPin(ids, true) },
+    { key: "unpin", label: "إلغاء التثبيت", onClick: (ids: string[]) => batchPin(ids, false) },
+    { key: "shade", label: "تعديل اللون", onClick: batchShade },
+    { key: "move", label: "نقل لطبيب", onClick: batchMove },
+    { key: "telegram", label: "إرسال للتلجرام", onClick: batchTelegram },
+    { key: "trash", label: "حذف (سلة المهملات)", danger: true, onClick: batchTrashCases },
+  ];
+
   /** Build the device-folder location (role/doctor/case) for a case file. */
   function locFor(c: Case, category?: import("@/lib/case-folders").FileCategory): import("@/lib/case-folders").CaseFileLocation {
     const role: import("@/lib/case-folders").CaseRole =
@@ -773,15 +816,15 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     toast.success(next ? "تم تثبيت الحالة" : "تم إلغاء التثبيت");
   }
 
-  /** Admin: permanently delete an archived case. */
+  /** Move a case to the recycle bin (auto-purged after 7 days). */
   async function deleteCase(c: Case) {
-    if (!confirm(`حذف الحالة ${c.case_code} نهائياً؟ لا يمكن التراجع.`)) return;
+    if (!confirm(`نقل الحالة ${c.case_code} إلى سلة المهملات؟ تُحذف نهائياً بعد 7 أيام.`)) return;
     setBusyId(c.id);
-    const { error } = await supabase.from("slot_cases").delete().eq("id", c.id);
+    const r = await batchTrash({ data: { table: "slot_cases", ids: [c.id] } });
     setBusyId(null);
-    if (error) { toast.error("تعذر الحذف"); return; }
+    if (!r.ok) { toast.error(r.error ?? "تعذر الحذف"); return; }
     setCases(prev => prev.filter(x => x.id !== c.id));
-    toast.success("تم حذف الحالة نهائياً");
+    toast.success("تم النقل إلى سلة المهملات");
   }
 
 
@@ -1202,6 +1245,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
 
       {/* Cases list */}
       <section className="space-y-4">
+        <BatchToolbar sel={sel} actions={batchActions} />
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="text-sm text-muted-foreground">
             عرض <span className="font-bold text-foreground">{displayed.length}</span> حالة
@@ -1305,7 +1349,9 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                     </button>
                   )}
                   <div className="flex items-start justify-between flex-wrap gap-3">
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 flex items-start gap-2">
+                      <RowCheck sel={sel} id={c.id} />
+                      <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-mono text-xs rounded-md bg-muted px-2 py-0.5 font-bold">{c.case_code}</span>
                         <span className="text-[11px] rounded-full gradient-gold text-gold-foreground px-2 py-0.5 font-bold">{getStage(deriveStageKey(c)).label}</span>
