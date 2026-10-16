@@ -60,6 +60,23 @@ export function BatchToolbar({
   actions: BatchAction[];
   busy?: boolean;
 }) {
+  const [pending, setPending] = useState<BatchAction | null>(null);
+  const [pw, setPw] = useState("");
+  const [checking, setChecking] = useState(false);
+
+  async function confirmWithPassword() {
+    if (!pending || checking) return;
+    setChecking(true);
+    const { data, error } = await supabase.rpc("get_staff_password", { p_role: "admin" });
+    setChecking(false);
+    if (error || !data) { toast.error("تعذر التحقق من كلمة المرور"); return; }
+    if (pw !== data) { toast.error("كلمة المرور غير صحيحة"); return; }
+    const action = pending;
+    setPending(null);
+    setPw("");
+    await action.onClick(sel.selectedVisible);
+  }
+
   if (!sel.active) {
     return (
       <button
@@ -84,7 +101,7 @@ export function BatchToolbar({
         <button
           key={a.key}
           disabled={busy || sel.count === 0}
-          onClick={() => a.onClick(sel.selectedVisible)}
+          onClick={() => { setPending(a); setPw(""); }}
           className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-bold transition disabled:opacity-50 ${
             a.danger
               ? "border border-destructive/50 text-destructive hover:bg-destructive/10"
@@ -101,6 +118,47 @@ export function BatchToolbar({
       >
         <X className="size-3.5" /> إغلاق
       </button>
+
+      {pending && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" onClick={() => setPending(null)}>
+          <div
+            className="w-full max-w-sm rounded-2xl bg-card border border-border p-5 shadow-luxury space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2 font-bold text-sm">
+              <Lock className="size-4 text-gold" /> صلاحية الإدارة مطلوبة
+            </div>
+            <p className="text-xs text-muted-foreground">
+              الإجراء «{pending.label}» على {sel.count} عنصر يتطلب كلمة مرور الإدارة.
+            </p>
+            <input
+              type="password"
+              value={pw}
+              onChange={(e) => setPw(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") confirmWithPassword(); }}
+              placeholder="كلمة مرور الإدارة"
+              autoFocus
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-gold"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={confirmWithPassword}
+                disabled={checking || !pw}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg gradient-gold text-gold-foreground px-3 py-2 text-xs font-bold transition disabled:opacity-50"
+              >
+                {checking ? <Loader2 className="size-3.5 animate-spin" /> : <Lock className="size-3.5" />}
+                تأكيد وتنفيذ
+              </button>
+              <button
+                onClick={() => setPending(null)}
+                className="rounded-lg border border-border px-3 py-2 text-xs font-bold hover:bg-muted/40 transition"
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
