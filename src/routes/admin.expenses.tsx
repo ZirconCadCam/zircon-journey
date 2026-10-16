@@ -190,13 +190,14 @@ function ExpensesPage() {
       <div className="overflow-x-auto border border-border rounded-xl">
         <table className="w-full text-sm">
           <thead className="bg-muted/40">
-            <tr>{["التاريخ", "المورد", "التصنيف", "المبلغ", "العملة", "الوصف", ""].map((h) => <th key={h} className="p-2 text-start font-bold">{h}</th>)}</tr>
+            <tr>{["", "التاريخ", "المورد", "التصنيف", "المبلغ", "العملة", "الوصف", ""].map((h, i) => <th key={i} className="p-2 text-start font-bold">{h}</th>)}</tr>
           </thead>
           <tbody>
             {loading && <tr><td colSpan={7} className="p-6 text-center text-muted-foreground"><Loader2 className="size-5 animate-spin inline" /></td></tr>}
             {!loading && !filtered.length && <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">لا توجد مصروفات بعد</td></tr>}
             {filtered.map((r) => (
-              <tr key={`${r.id}-${r.status}-${r.amount ?? ""}-${r.vendor ?? ""}`} className="border-t border-border align-top">
+              <tr key={`${r.id}-${r.status}-${r.amount ?? ""}-${r.vendor ?? ""}`} className={`border-t border-border align-top ${sel.isSelected(r.id) ? "bg-gold/5" : ""}`}>
+                <td className="p-2 w-8"><RowCheck sel={sel} id={r.id} /></td>
                 <td className="p-2 w-36"><input type="date" defaultValue={r.expense_date ?? ""} className={inp}
                   onBlur={(e) => e.target.value !== (r.expense_date ?? "") && patch(r.id, { expense_date: e.target.value || null })} /></td>
                 <td className="p-2"><input defaultValue={r.vendor ?? ""} className={inp}
