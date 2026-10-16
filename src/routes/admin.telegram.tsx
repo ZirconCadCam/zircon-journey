@@ -70,6 +70,19 @@ function TelegramOutboxPage() {
     void load();
   }, [nav]);
 
+  // Live progress: refresh quietly while something is queued or sending,
+  // only while this page is open and visible; stops by itself when idle.
+  const active = rows.some((r) => r.status === "pending" || r.status === "sending");
+  useEffect(() => {
+    if (!active) return;
+    const t = setInterval(async () => {
+      if (document.visibilityState !== "visible") return;
+      const res = await listTelegramOutbox({ data: { status: "all" } });
+      if (!res.error) { setRows(res.rows as Row[]); setLogs((res as any).logs ?? []); }
+    }, 4000);
+    return () => clearInterval(t);
+  }, [active]);
+
   const docsOf = (r: Row) => (Array.isArray(r.documents) ? r.documents : []) as { filename: string }[];
 
   const filtered = useMemo(() => {
@@ -147,7 +160,7 @@ function TelegramOutboxPage() {
             <ArrowRight className="size-4" /> رجوع للإدارة
           </Link>
           <button onClick={load} disabled={loading} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-bold hover:bg-muted/40">
-            <RefreshCw className={`size-3.5 ${loading ? "animate-spin" : ""}`} /> تحديث
+            <RefreshCw className={`size-3.5 ${loading || active ? "animate-spin" : ""}`} /> {active ? "تحديث مباشر" : "تحديث"}
           </button>
         </div>
 
