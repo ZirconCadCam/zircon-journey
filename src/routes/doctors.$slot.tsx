@@ -702,6 +702,8 @@ function CasesPanel({ doctor, me, myName }: { doctor: Doctor; me: RoleKey; myNam
     if (r.ok) toast.success("تم النقل إلى سلة المهملات"); else toast.error(r.error ?? "تعذر الحذف");
   }
 
+  const sel = useBatchSelection(visible.map(c => c.id));
+
   if (loading) return <div className="p-12 text-center text-muted-foreground text-sm">جارِ تحميل الحالات...</div>;
 
   // Doctor page shows only active cases. Archiving lives in the technician + admin pages.
