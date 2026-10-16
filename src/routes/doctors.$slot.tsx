@@ -2,6 +2,8 @@ import { ToolGate } from "@/components/tool-gate";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { batchTrash, batchPinCases, batchCasesToTelegram } from "@/lib/secure-ops.functions";
+import { BatchToolbar, RowCheck, useBatchSelection } from "@/components/batch-toolbar";
 import { useAuth, ROLE_LABELS, type AppRole } from "@/hooks/use-auth";
 import { ChatModule } from "@/components/chat-module";
 import { ROLE_LABEL as CHAT_LABEL, ROLE_COLOR as CHAT_COLOR, type RoleKey } from "@/lib/chat";
@@ -377,7 +379,7 @@ function FilesPanel({ doctor, actor }: { doctor: Doctor; actor: string }) {
 
   const load = useCallback(async () => {
     const { data } = await supabase.from("doctor_files").select("*")
-      .eq("doctor_slot", doctor.slot).order("created_at", { ascending: false });
+      .eq("doctor_slot", doctor.slot).is("trashed_at", null).order("created_at", { ascending: false });
     setFiles((data as DocFile[]) ?? []);
   }, [doctor.slot]);
 
@@ -420,10 +422,9 @@ function FilesPanel({ doctor, actor }: { doctor: Doctor; actor: string }) {
     if (error) toast.error(error.message); else toast.success(val ? "تمت الأرشفة" : "تم الإسترجاع");
   }
   async function remove(f: DocFile) {
-    if (!confirm(`حذف الملف "${f.file_name}"؟`)) return;
-    await supabase.storage.from("doctor-files").remove([f.file_path]);
-    const { error } = await supabase.from("doctor_files").delete().eq("id", f.id);
-    if (error) toast.error(error.message); else toast.success("تم الحذف");
+    if (!confirm(`نقل الملف "${f.file_name}" إلى سلة المهملات؟ يُحذف نهائياً بعد 7 أيام.`)) return;
+    const r = await batchTrash({ data: { table: "doctor_files", ids: [f.id] } });
+    if (r.ok) toast.success("تم النقل إلى سلة المهملات"); else toast.error(r.error ?? "تعذر الحذف");
   }
   async function copyLink(f: DocFile) {
     if (!f.public_url) return;
@@ -651,6 +652,7 @@ function CasesPanel({ doctor, me, myName }: { doctor: Doctor; me: RoleKey; myNam
   const load = useCallback(async () => {
     const { data } = await supabase.from("slot_cases").select("*")
       .eq("doctor_slot", doctor.slot)
+      .is("trashed_at", null)
       .order("pinned", { ascending: false })
       .order("created_at", { ascending: false });
     setCases((data as SlotCase[]) ?? []);
@@ -683,9 +685,9 @@ function CasesPanel({ doctor, me, myName }: { doctor: Doctor; me: RoleKey; myNam
     else toast.success(!c.pinned ? "تم تثبيت الحالة" : "تم إلغاء التثبيت");
   }
   async function remove(c: SlotCase) {
-    if (!confirm(`حذف الحالة "${c.case_code} — ${c.patient_name}" نهائياً؟`)) return;
-    const { error } = await supabase.from("slot_cases").delete().eq("id", c.id);
-    if (error) toast.error(error.message); else toast.success("تم حذف الحالة");
+    if (!confirm(`نقل الحالة "${c.case_code} — ${c.patient_name}" إلى سلة المهملات؟ تُحذف نهائياً بعد 7 أيام.`)) return;
+    const r = await batchTrash({ data: { table: "slot_cases", ids: [c.id] } });
+    if (r.ok) toast.success("تم النقل إلى سلة المهملات"); else toast.error(r.error ?? "تعذر الحذف");
   }
 
   if (loading) return <div className="p-12 text-center text-muted-foreground text-sm">جارِ تحميل الحالات...</div>;
