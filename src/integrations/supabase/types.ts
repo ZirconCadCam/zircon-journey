@@ -479,6 +479,7 @@ export type Database = {
           id: string
           public_url: string | null
           size_bytes: number | null
+          trashed_at: string | null
           uploaded_by: string
         }
         Insert: {
@@ -490,6 +491,7 @@ export type Database = {
           id?: string
           public_url?: string | null
           size_bytes?: number | null
+          trashed_at?: string | null
           uploaded_by?: string
         }
         Update: {
@@ -501,6 +503,7 @@ export type Database = {
           id?: string
           public_url?: string | null
           size_bytes?: number | null
+          trashed_at?: string | null
           uploaded_by?: string
         }
         Relationships: [
@@ -671,6 +674,7 @@ export type Database = {
           id: string
           invoice_number: string | null
           status: string
+          trashed_at: string | null
           vendor: string | null
         }
         Insert: {
@@ -687,6 +691,7 @@ export type Database = {
           id?: string
           invoice_number?: string | null
           status?: string
+          trashed_at?: string | null
           vendor?: string | null
         }
         Update: {
@@ -703,6 +708,7 @@ export type Database = {
           id?: string
           invoice_number?: string | null
           status?: string
+          trashed_at?: string | null
           vendor?: string | null
         }
         Relationships: []
@@ -964,6 +970,7 @@ export type Database = {
           teeth_count: string | null
           temporary_delivered: boolean
           tooth_number: string | null
+          trashed_at: string | null
           updated_at: string
         }
         Insert: {
@@ -1058,6 +1065,7 @@ export type Database = {
           teeth_count?: string | null
           temporary_delivered?: boolean
           tooth_number?: string | null
+          trashed_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -1152,6 +1160,7 @@ export type Database = {
           teeth_count?: string | null
           temporary_delivered?: boolean
           tooth_number?: string | null
+          trashed_at?: string | null
           updated_at?: string
         }
         Relationships: []

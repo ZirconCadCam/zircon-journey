@@ -6,6 +6,8 @@ import { hasValidStaffSession } from "@/lib/staff-session";
 import {
   EXPENSE_CATEGORIES, uploadExpense, listExpenses, updateExpense, deleteExpense, expenseFileUrl, retryExpense,
 } from "@/lib/expenses.functions";
+import { batchTrash } from "@/lib/secure-ops.functions";
+import { BatchToolbar, RowCheck, useBatchSelection } from "@/components/batch-toolbar";
 
 export const Route = createFileRoute("/admin/expenses")({
   head: () => ({
@@ -77,6 +79,15 @@ function ExpensesPage() {
     (!from || (r.expense_date ?? r.created_at.slice(0, 10)) >= from) &&
     (!to || (r.expense_date ?? r.created_at.slice(0, 10)) <= to)), [rows, cat, from, to]);
 
+  const sel = useBatchSelection(filtered.map((r) => r.id));
+
+  async function trashSelected(ids: string[]) {
+    if (!confirm(`نقل ${ids.length} مصروف إلى سلة المهملات؟ يُحذف نهائياً بعد 7 أيام.`)) return;
+    const r = await batchTrash({ data: { table: "expenses", ids } });
+    if (r.ok) { toast.success("تم النقل إلى سلة المهملات"); sel.clear(); await load(); }
+    else toast.error(r.error ?? "تعذر الحذف");
+  }
+
   const totals = useMemo(() => {
     const m = new Map<string, number>();
     for (const r of filtered) if (r.amount != null) m.set(r.currency ?? "—", (m.get(r.currency ?? "—") ?? 0) + Number(r.amount));
@@ -116,7 +127,7 @@ function ExpensesPage() {
   }
 
   async function remove(id: string) {
-    if (!confirm("حذف هذا المصروف وملفه؟")) return;
+    if (!confirm("نقل هذا المصروف إلى سلة المهملات؟ يُحذف نهائياً بعد 7 أيام.")) return;
     const r = await deleteExpense({ data: { id } });
     if (r.ok) setRows((rs) => rs.filter((x) => x.id !== id)); else toast.error(r.error ?? "تعذر الحذف");
   }
@@ -171,16 +182,22 @@ function ExpensesPage() {
         </div>
       </div>
 
+      <BatchToolbar
+        sel={sel}
+        actions={[{ key: "trash", label: "حذف (سلة المهملات)", icon: <Trash2 className="size-3.5" />, danger: true, onClick: trashSelected }]}
+      />
+
       <div className="overflow-x-auto border border-border rounded-xl">
         <table className="w-full text-sm">
           <thead className="bg-muted/40">
-            <tr>{["التاريخ", "المورد", "التصنيف", "المبلغ", "العملة", "الوصف", ""].map((h) => <th key={h} className="p-2 text-start font-bold">{h}</th>)}</tr>
+            <tr>{["", "التاريخ", "المورد", "التصنيف", "المبلغ", "العملة", "الوصف", ""].map((h, i) => <th key={i} className="p-2 text-start font-bold">{h}</th>)}</tr>
           </thead>
           <tbody>
-            {loading && <tr><td colSpan={7} className="p-6 text-center text-muted-foreground"><Loader2 className="size-5 animate-spin inline" /></td></tr>}
-            {!loading && !filtered.length && <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">لا توجد مصروفات بعد</td></tr>}
+            {loading && <tr><td colSpan={8} className="p-6 text-center text-muted-foreground"><Loader2 className="size-5 animate-spin inline" /></td></tr>}
+            {!loading && !filtered.length && <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">لا توجد مصروفات بعد</td></tr>}
             {filtered.map((r) => (
-              <tr key={`${r.id}-${r.status}-${r.amount ?? ""}-${r.vendor ?? ""}`} className="border-t border-border align-top">
+              <tr key={`${r.id}-${r.status}-${r.amount ?? ""}-${r.vendor ?? ""}`} className={`border-t border-border align-top ${sel.isSelected(r.id) ? "bg-gold/5" : ""}`}>
+                <td className="p-2 w-8"><RowCheck sel={sel} id={r.id} /></td>
                 <td className="p-2 w-36"><input type="date" defaultValue={r.expense_date ?? ""} className={inp}
                   onBlur={(e) => e.target.value !== (r.expense_date ?? "") && patch(r.id, { expense_date: e.target.value || null })} /></td>
                 <td className="p-2"><input defaultValue={r.vendor ?? ""} className={inp}

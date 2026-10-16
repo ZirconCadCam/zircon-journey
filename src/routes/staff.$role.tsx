@@ -12,9 +12,10 @@ import { AdminOverdueCompletion } from "@/components/admin-overdue-completion";
 import { AdminAccountingPanel } from "@/components/admin-accounting-panel";
 import { AdminAccountingReport } from "@/components/admin-accounting-report";
 import { AdminSystemStatus } from "@/components/admin-system-status";
+import { AdminTrashPanel } from "@/components/admin-trash-panel";
 import { AdminVoiceListener } from "@/components/admin-voice-listener";
 import { ToolGate } from "@/components/tool-gate";
-import { Gauge, Receipt } from "lucide-react";
+import { Gauge, Receipt, Trash2 } from "lucide-react";
 import { RoleNotifications } from "@/components/role-notifications";
 import { NotificationSettings } from "@/components/notification-settings";
 import { DoctorAvatar } from "@/components/doctor-avatar";
@@ -248,7 +249,7 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
   const [unread, setUnread] = useState<Record<number, number>>({});
   // Default tab: roles with a case list land on "cases"; admin stays on "chat".
   const initialTab: "chat" | "cases" | "settings" = "cases";
-  const [tab, setTab] = useState<"chat" | "cases" | "settings" | "archive" | "designfiles" | "reports" | "search" | "notify" | "photos" | "followup" | "archiveapprovals" | "overdue" | "devices" | "accounts" | "accreport" | "readyzircon" | "status">(initialTab);
+  const [tab, setTab] = useState<"chat" | "cases" | "settings" | "archive" | "designfiles" | "reports" | "search" | "notify" | "photos" | "followup" | "archiveapprovals" | "overdue" | "devices" | "accounts" | "accreport" | "readyzircon" | "status" | "trash">(initialTab);
   const { count: newRounds, clear: clearRounds } = useNewRevisionRounds(role === "technician" ? "technician" : "designer");
 
   useEffect(() => {
@@ -456,6 +457,12 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
               </Link>
             )}
             {role === "admin" && (
+              <button onClick={() => setTab("trash")}
+                className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "trash" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
+                <Trash2 className="size-4" /> سلة المهملات
+              </button>
+            )}
+            {role === "admin" && (
               <button onClick={() => setTab("settings")}
                 className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "settings" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
                 <Settings className="size-4" /> الإعدادات
@@ -477,6 +484,8 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
             <AdminArchiveApprovals />
           ) : tab === "status" && role === "admin" ? (
             <AdminSystemStatus />
+          ) : tab === "trash" && role === "admin" ? (
+            <AdminTrashPanel />
           ) : tab === "overdue" && role === "admin" ? (
             <AdminOverdueCompletion />
           ) : tab === "accounts" && role === "admin" ? (

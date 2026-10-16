@@ -2,6 +2,8 @@ import { ToolGate } from "@/components/tool-gate";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { batchTrash, batchPinCases, batchCasesToTelegram } from "@/lib/secure-ops.functions";
+import { BatchToolbar, RowCheck, useBatchSelection } from "@/components/batch-toolbar";
 import { useAuth, ROLE_LABELS, type AppRole } from "@/hooks/use-auth";
 import { ChatModule } from "@/components/chat-module";
 import { ROLE_LABEL as CHAT_LABEL, ROLE_COLOR as CHAT_COLOR, type RoleKey } from "@/lib/chat";
@@ -377,7 +379,7 @@ function FilesPanel({ doctor, actor }: { doctor: Doctor; actor: string }) {
 
   const load = useCallback(async () => {
     const { data } = await supabase.from("doctor_files").select("*")
-      .eq("doctor_slot", doctor.slot).order("created_at", { ascending: false });
+      .eq("doctor_slot", doctor.slot).is("trashed_at", null).order("created_at", { ascending: false });
     setFiles((data as DocFile[]) ?? []);
   }, [doctor.slot]);
 
@@ -420,10 +422,9 @@ function FilesPanel({ doctor, actor }: { doctor: Doctor; actor: string }) {
     if (error) toast.error(error.message); else toast.success(val ? "تمت الأرشفة" : "تم الإسترجاع");
   }
   async function remove(f: DocFile) {
-    if (!confirm(`حذف الملف "${f.file_name}"؟`)) return;
-    await supabase.storage.from("doctor-files").remove([f.file_path]);
-    const { error } = await supabase.from("doctor_files").delete().eq("id", f.id);
-    if (error) toast.error(error.message); else toast.success("تم الحذف");
+    if (!confirm(`نقل الملف "${f.file_name}" إلى سلة المهملات؟ يُحذف نهائياً بعد 7 أيام.`)) return;
+    const r = await batchTrash({ data: { table: "doctor_files", ids: [f.id] } });
+    if (r.ok) toast.success("تم النقل إلى سلة المهملات"); else toast.error(r.error ?? "تعذر الحذف");
   }
   async function copyLink(f: DocFile) {
     if (!f.public_url) return;
@@ -465,9 +466,20 @@ function FilesPanel({ doctor, actor }: { doctor: Doctor; actor: string }) {
   }
 
   const visible = files.filter(f => (view === "active" ? !f.archived : f.archived) && (!q || f.file_name.toLowerCase().includes(q.toLowerCase())));
+  const sel = useBatchSelection(visible.map(f => f.id));
+
+  async function trashSelected(ids: string[]) {
+    if (!confirm(`نقل ${ids.length} ملف إلى سلة المهملات؟ يُحذف نهائياً بعد 7 أيام.`)) return;
+    const r = await batchTrash({ data: { table: "doctor_files", ids } });
+    if (r.ok) { toast.success("تم النقل إلى سلة المهملات"); sel.clear(); load(); }
+    else toast.error(r.error ?? "تعذر الحذف");
+  }
 
   return (
     <div className="space-y-4">
+      <BatchToolbar sel={sel} actions={[
+        { key: "trash", label: "حذف (سلة المهملات)", icon: <Trash2 className="size-3.5" />, danger: true, onClick: trashSelected },
+      ]} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <button onClick={()=>setView("active")} className={`rounded-full px-4 py-1.5 text-xs font-bold border ${view==="active"?"gradient-gold border-gold":"bg-card border-border"}`}>النشطة</button>
@@ -500,7 +512,7 @@ function FilesPanel({ doctor, actor }: { doctor: Doctor; actor: string }) {
           </div>
         ) : (
           <ul className="divide-y divide-border">
-            {visible.map(f => <FileRow key={f.id} f={f} doctorBranch={doctor.branch} doctorName={doctor.name}
+            {visible.map(f => <FileRow key={f.id} f={f} doctorBranch={doctor.branch} doctorName={doctor.name} sel={sel}
               onArchive={archive} onRemove={remove} onCopy={copyLink} onShare={shareExternal} onSendTo={sendToRole} />)}
           </ul>
         )}
@@ -509,7 +521,7 @@ function FilesPanel({ doctor, actor }: { doctor: Doctor; actor: string }) {
   );
 }
 
-function FileRow({ f, doctorBranch, doctorName, onArchive, onRemove, onCopy, onShare, onSendTo }: any) {
+function FileRow({ f, doctorBranch, doctorName, sel, onArchive, onRemove, onCopy, onShare, onSendTo }: any) {
   const [copied, setCopied] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
   const sendRef = useRef<HTMLDivElement>(null);
@@ -550,6 +562,7 @@ function FileRow({ f, doctorBranch, doctorName, onArchive, onRemove, onCopy, onS
     <li className="p-4 hover:bg-muted/40 transition">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3 min-w-0 flex-1">
+          <RowCheck sel={sel} id={f.id} />
           <div className="size-11 rounded-xl gradient-gold grid place-items-center shadow-gold shrink-0">
             <FileText className="size-5 text-gold-foreground" />
           </div>
@@ -651,6 +664,7 @@ function CasesPanel({ doctor, me, myName }: { doctor: Doctor; me: RoleKey; myNam
   const load = useCallback(async () => {
     const { data } = await supabase.from("slot_cases").select("*")
       .eq("doctor_slot", doctor.slot)
+      .is("trashed_at", null)
       .order("pinned", { ascending: false })
       .order("created_at", { ascending: false });
     setCases((data as SlotCase[]) ?? []);
@@ -683,9 +697,9 @@ function CasesPanel({ doctor, me, myName }: { doctor: Doctor; me: RoleKey; myNam
     else toast.success(!c.pinned ? "تم تثبيت الحالة" : "تم إلغاء التثبيت");
   }
   async function remove(c: SlotCase) {
-    if (!confirm(`حذف الحالة "${c.case_code} — ${c.patient_name}" نهائياً؟`)) return;
-    const { error } = await supabase.from("slot_cases").delete().eq("id", c.id);
-    if (error) toast.error(error.message); else toast.success("تم حذف الحالة");
+    if (!confirm(`نقل الحالة "${c.case_code} — ${c.patient_name}" إلى سلة المهملات؟ تُحذف نهائياً بعد 7 أيام.`)) return;
+    const r = await batchTrash({ data: { table: "slot_cases", ids: [c.id] } });
+    if (r.ok) toast.success("تم النقل إلى سلة المهملات"); else toast.error(r.error ?? "تعذر الحذف");
   }
 
   if (loading) return <div className="p-12 text-center text-muted-foreground text-sm">جارِ تحميل الحالات...</div>;
@@ -704,8 +718,33 @@ function CasesPanel({ doctor, me, myName }: { doctor: Doctor; me: RoleKey; myNam
     stageCounts.set(key, (stageCounts.get(key) ?? 0) + 1);
   }
 
+  const sel = useBatchSelection(visible.map(c => c.id));
+
+  async function pinSelected(ids: string[], pinned: boolean) {
+    const r = await batchPinCases({ data: { ids, pinned } });
+    if (r.ok) { toast.success(pinned ? "تم التثبيت" : "تم إلغاء التثبيت"); sel.clear(); load(); }
+    else toast.error(r.error ?? "تعذر التثبيت");
+  }
+  async function trashSelected(ids: string[]) {
+    if (!confirm(`نقل ${ids.length} حالة إلى سلة المهملات؟ تُحذف نهائياً بعد 7 أيام.`)) return;
+    const r = await batchTrash({ data: { table: "slot_cases", ids } });
+    if (r.ok) { toast.success("تم النقل إلى سلة المهملات"); sel.clear(); load(); }
+    else toast.error(r.error ?? "تعذر الحذف");
+  }
+  async function telegramSelected(ids: string[]) {
+    const r = await batchCasesToTelegram({ data: { ids } });
+    if (r.ok) { toast.success("أُرسلت الدفعة إلى تلجرام"); sel.clear(); }
+    else toast.error(r.error ?? "تعذر الإرسال");
+  }
+
   return (
     <div className="space-y-4">
+      <BatchToolbar sel={sel} actions={[
+        { key: "pin", label: "تثبيت", icon: <Pin className="size-3.5" />, onClick: (ids) => pinSelected(ids, true) },
+        { key: "unpin", label: "إلغاء التثبيت", onClick: (ids) => pinSelected(ids, false) },
+        { key: "telegram", label: "إرسال للتلجرام", icon: <Send className="size-3.5" />, onClick: telegramSelected },
+        { key: "trash", label: "حذف (سلة المهملات)", icon: <Trash2 className="size-3.5" />, danger: true, onClick: trashSelected },
+      ]} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="text-xs text-muted-foreground">
           عدد الحالات النشطة: <span className="font-bold text-foreground">{visible.length}</span>
@@ -752,7 +791,7 @@ function CasesPanel({ doctor, me, myName }: { doctor: Doctor; me: RoleKey; myNam
         <div className="grid md:grid-cols-2 gap-4">
           {visible.map(c => (
             <CaseCard key={c.id} c={c} doctorName={doctor.name}
-              doctorSlot={doctor.slot} me={me} myName={myName}
+              doctorSlot={doctor.slot} me={me} myName={myName} sel={sel}
               onEdit={() => setEditing(c)}
               onPin={() => togglePin(c)}
               onDelete={() => remove(c)} />
@@ -765,8 +804,8 @@ function CasesPanel({ doctor, me, myName }: { doctor: Doctor; me: RoleKey; myNam
   );
 }
 
-function CaseCard({ c, doctorName, doctorSlot, me, myName, onEdit, onPin, onDelete }: {
-  c: SlotCase; doctorName: string; doctorSlot: number; me: RoleKey; myName: string;
+function CaseCard({ c, doctorName, doctorSlot, me, myName, sel, onEdit, onPin, onDelete }: {
+  c: SlotCase; doctorName: string; doctorSlot: number; me: RoleKey; myName: string; sel?: any;
   onEdit: () => void; onPin: () => void; onDelete: () => void;
 }) {
   const stage = getStage(deriveStageKey(c));
@@ -791,13 +830,16 @@ function CaseCard({ c, doctorName, doctorSlot, me, myName, onEdit, onPin, onDele
         </span>
       )}
       <header className="flex items-start justify-between gap-3 mb-3">
-        <div className="min-w-0">
+        <div className="min-w-0 flex items-start gap-2">
+          {sel && <RowCheck sel={sel} id={c.id} />}
+          <div className="min-w-0">
           <div className="font-mono text-[11px] text-muted-foreground">{c.case_code}</div>
           <div className="font-bold text-base truncate">{c.patient_name}</div>
           <div className="text-[11px] text-muted-foreground mt-0.5">
             {c.case_type || "—"}{c.tooth_number ? ` • سن ${c.tooth_number}` : ""}{c.teeth_count ? ` • عدد ${c.teeth_count}` : ""}
           </div>
           {c.shade && <div className="mt-2"><ShadeBadge shade={c.shade} size="sm" /></div>}
+          </div>
         </div>
         <span className="shrink-0 rounded-full gradient-gold text-gold-foreground text-[11px] font-bold px-2.5 py-1 shadow-gold">
           {stage.label}

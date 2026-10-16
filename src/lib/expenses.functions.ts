@@ -134,7 +134,7 @@ export const uploadExpense = createServerFn({ method: "POST" })
 
 export const listExpenses = createServerFn({ method: "GET" }).handler(async () => {
   const db = await admin();
-  const { data } = await db.from("expenses").select(COLS).order("created_at", { ascending: false }).limit(1000);
+  const { data } = await db.from("expenses").select(COLS).is("trashed_at", null).order("created_at", { ascending: false }).limit(1000);
   return (data ?? []) as Array<{
     id: string; vendor: string | null; expense_date: string | null; amount: number | null;
     currency: string | null; category: string; description: string | null; invoice_number: string | null;
@@ -166,9 +166,7 @@ export const deleteExpense = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
-    const { data: row } = await db.from("expenses").select("file_path").eq("id", data.id).maybeSingle();
-    if (row?.file_path) await db.storage.from(BUCKET).remove([row.file_path]);
-    const { error } = await db.from("expenses").delete().eq("id", data.id);
+    const { error } = await db.from("expenses").update({ trashed_at: new Date().toISOString() } as never).eq("id", data.id);
     return { ok: !error, error: error?.message ?? null };
   });
 
