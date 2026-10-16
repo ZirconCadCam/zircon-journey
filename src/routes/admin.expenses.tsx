@@ -127,7 +127,7 @@ function ExpensesPage() {
   }
 
   async function remove(id: string) {
-    if (!confirm("حذف هذا المصروف وملفه؟")) return;
+    if (!confirm("نقل هذا المصروف إلى سلة المهملات؟ يُحذف نهائياً بعد 7 أيام.")) return;
     const r = await deleteExpense({ data: { id } });
     if (r.ok) setRows((rs) => rs.filter((x) => x.id !== id)); else toast.error(r.error ?? "تعذر الحذف");
   }
@@ -193,8 +193,8 @@ function ExpensesPage() {
             <tr>{["", "التاريخ", "المورد", "التصنيف", "المبلغ", "العملة", "الوصف", ""].map((h, i) => <th key={i} className="p-2 text-start font-bold">{h}</th>)}</tr>
           </thead>
           <tbody>
-            {loading && <tr><td colSpan={7} className="p-6 text-center text-muted-foreground"><Loader2 className="size-5 animate-spin inline" /></td></tr>}
-            {!loading && !filtered.length && <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">لا توجد مصروفات بعد</td></tr>}
+            {loading && <tr><td colSpan={8} className="p-6 text-center text-muted-foreground"><Loader2 className="size-5 animate-spin inline" /></td></tr>}
+            {!loading && !filtered.length && <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">لا توجد مصروفات بعد</td></tr>}
             {filtered.map((r) => (
               <tr key={`${r.id}-${r.status}-${r.amount ?? ""}-${r.vendor ?? ""}`} className={`border-t border-border align-top ${sel.isSelected(r.id) ? "bg-gold/5" : ""}`}>
                 <td className="p-2 w-8"><RowCheck sel={sel} id={r.id} /></td>
