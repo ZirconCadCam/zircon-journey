@@ -15,7 +15,7 @@ import { AdminSystemStatus } from "@/components/admin-system-status";
 import { AdminTrashPanel } from "@/components/admin-trash-panel";
 import { AdminVoiceListener } from "@/components/admin-voice-listener";
 import { ToolGate } from "@/components/tool-gate";
-import { Gauge, Receipt } from "lucide-react";
+import { Gauge, Receipt, Trash2 } from "lucide-react";
 import { RoleNotifications } from "@/components/role-notifications";
 import { NotificationSettings } from "@/components/notification-settings";
 import { DoctorAvatar } from "@/components/doctor-avatar";
