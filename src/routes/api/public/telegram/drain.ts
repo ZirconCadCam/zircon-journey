@@ -80,7 +80,11 @@ async function handle(): Promise<Response> {
     // Claim the row so a concurrent drain does not resend it.
     const { data: claimed } = await supabaseAdmin
       .from("telegram_outbox")
-      .update({ status: "sending", attempts: (row.attempts ?? 0) + 1 })
+      .update({
+        status: "sending",
+        attempts: (row.attempts ?? 0) + 1,
+        ...(row.docs_total == null ? { docs_total: Array.isArray(row.documents) ? row.documents.length : 0 } : {}),
+      } as any)
       .eq("id", row.id)
       .eq("status", "pending")
       .select("id");
@@ -158,6 +162,7 @@ async function handle(): Promise<Response> {
           documents: [] as any,
         })
         .eq("id", row.id);
+      await (supabaseAdmin as any).from("telegram_outbox_log").insert({ outbox_id: row.id, action: "send", actor: "البوت", result: "sent" });
       results.push({ id: row.id, ok: true });
     } catch (e: any) {
       const error = String(e?.message ?? "خطأ");
@@ -172,6 +177,7 @@ async function handle(): Promise<Response> {
           ...(captionSent ? { documents: pendingDocs as any } : {}),
         })
         .eq("id", row.id);
+      await (supabaseAdmin as any).from("telegram_outbox_log").insert({ outbox_id: row.id, action: "send", actor: "البوت", result: "failed", error });
       results.push({ id: row.id, ok: false, error });
     }
   }

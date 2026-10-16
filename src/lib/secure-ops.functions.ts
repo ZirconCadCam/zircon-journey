@@ -540,23 +540,41 @@ export const deleteDoctor = createServerFn({ method: "POST" })
 
 /** Failed + queued Telegram deliveries for the admin monitor page. */
 export const listTelegramOutbox = createServerFn({ method: "POST" })
-  .inputValidator((d) => z.object({ status: z.enum(["failed", "pending", "sending", "all"]).default("all") }).parse(d))
+  .inputValidator((d) => z.object({ status: z.enum(["failed", "pending", "sending", "paused", "all"]).default("all") }).parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
     let q = db
       .from("telegram_outbox")
-      .select("id,caption,documents,status,attempts,last_error,created_at,caption_sent")
+      .select("id,caption,documents,status,attempts,last_error,created_at,caption_sent,docs_total")
       .neq("status", "sent")
       .order("created_at", { ascending: false })
       .limit(300);
     if (data.status !== "all") q = q.eq("status", data.status);
     const { data: rows, error } = await q;
-    return { rows: (rows ?? []) as any[], error: error?.message ?? null };
+    const ids = (rows ?? []).map((r: any) => r.id);
+    let logs: any[] = [];
+    if (ids.length) {
+      const { data: l } = await (db as any)
+        .from("telegram_outbox_log")
+        .select("id,outbox_id,action,actor,result,error,created_at")
+        .in("outbox_id", ids)
+        .order("created_at", { ascending: false })
+        .limit(2000);
+      logs = l ?? [];
+    }
+    return { rows: (rows ?? []) as any[], logs, error: error?.message ?? null };
   });
+
+async function logOutbox(db: any, ids: string[], action: string, actor: string, result = "ok", err: string | null = null) {
+  if (!ids.length) return;
+  await db.from("telegram_outbox_log").insert(ids.map((outbox_id) => ({ outbox_id, action, actor, result, error: err })));
+}
+
+const actorSchema = z.string().trim().max(80).default("الإدارة");
 
 /** Put rows back in the queue (fresh attempts) so the drain re-sends them. */
 export const retryTelegramOutbox = createServerFn({ method: "POST" })
-  .inputValidator((d) => z.object({ ids: z.array(z.string().uuid()).min(1).max(300) }).parse(d))
+  .inputValidator((d) => z.object({ ids: z.array(z.string().uuid()).min(1).max(300), actor: actorSchema }).parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
     const { error } = await db
@@ -564,6 +582,33 @@ export const retryTelegramOutbox = createServerFn({ method: "POST" })
       .update({ status: "pending", attempts: 0, last_error: null, created_at: new Date().toISOString() } as never)
       .in("id", data.ids)
       .neq("status", "sent");
+    await logOutbox(db, data.ids, "retry", data.actor, error ? "failed" : "queued", error?.message ?? null);
+    return { ok: !error, error: error?.message ?? null };
+  });
+
+/** Pause sending: the drain only picks "pending" rows, so paused rows stay put. */
+export const pauseTelegramOutbox = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ ids: z.array(z.string().uuid()).min(1).max(300), actor: actorSchema }).parse(d))
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const { error } = await db.from("telegram_outbox").update({ status: "paused" } as never)
+      .in("id", data.ids).in("status", ["pending", "failed", "sending"]);
+    await logOutbox(db, data.ids, "pause", data.actor, error ? "failed" : "ok", error?.message ?? null);
+    return { ok: !error, error: error?.message ?? null };
+  });
+
+/** Drop one attached file from a queued row. */
+export const removeTelegramOutboxDoc = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ id: z.string().uuid(), index: z.number().int().min(0), actor: actorSchema }).parse(d))
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const { data: row, error: e1 } = await db.from("telegram_outbox").select("documents,docs_total").eq("id", data.id).maybeSingle();
+    if (e1 || !row) return { ok: false, error: e1?.message ?? "غير موجود" };
+    const docs = Array.isArray((row as any).documents) ? [...(row as any).documents] : [];
+    const [gone] = docs.splice(data.index, 1);
+    const total = Math.max(0, ((row as any).docs_total ?? docs.length + 1) - 1);
+    const { error } = await db.from("telegram_outbox").update({ documents: docs, docs_total: total } as never).eq("id", data.id);
+    await logOutbox(db, [data.id], "remove_file", data.actor, error ? "failed" : "ok", error?.message ?? (gone?.filename ? `حُذف: ${gone.filename}` : null));
     return { ok: !error, error: error?.message ?? null };
   });
 
@@ -573,5 +618,6 @@ export const deleteTelegramOutbox = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const db = await admin();
     const { error } = await db.from("telegram_outbox").delete().in("id", data.ids);
+    if (!error) await (db as any).from("telegram_outbox_log").delete().in("outbox_id", data.ids);
     return { ok: !error, error: error?.message ?? null };
   });

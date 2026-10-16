@@ -1,9 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, Send, RefreshCw, Trash2, AlertTriangle, Clock, Loader2, FileText, Search } from "lucide-react";
+import { ArrowRight, Send, RefreshCw, Trash2, AlertTriangle, Clock, Loader2, FileText, Search, Pause, History, X } from "lucide-react";
 import { toast } from "sonner";
 import { hasValidStaffSession } from "@/lib/staff-session";
-import { listTelegramOutbox, retryTelegramOutbox, deleteTelegramOutbox } from "@/lib/secure-ops.functions";
+import { listTelegramOutbox, retryTelegramOutbox, deleteTelegramOutbox, pauseTelegramOutbox, removeTelegramOutboxDoc } from "@/lib/secure-ops.functions";
 import { kickTelegramDrain } from "@/lib/telegram-outbox";
 import { useBatchSelection, BatchToolbar, RowCheck } from "@/components/batch-toolbar";
 
@@ -23,13 +23,18 @@ export const Route = createFileRoute("/admin/telegram")({
 
 type Row = {
   id: string; caption: string; documents: any; status: string; attempts: number;
-  last_error: string | null; created_at: string; caption_sent: boolean;
+  last_error: string | null; created_at: string; caption_sent: boolean; docs_total: number | null;
 };
+type Log = { id: string; outbox_id: string; action: string; actor: string | null; result: string | null; error: string | null; created_at: string };
+const ACTION: Record<string, string> = { retry: "إعادة إرسال", pause: "إيقاف الإرسال", remove_file: "حذف ملف", send: "محاولة إرسال" };
+const RESULT: Record<string, string> = { ok: "تم", queued: "أُضيفت للطابور", sent: "نجحت ✓", failed: "فشلت ✗" };
+const ACTOR = "الإدارة";
 
 const STATUS: Record<string, { label: string; cls: string }> = {
   failed: { label: "متعذر", cls: "bg-destructive/15 text-destructive border-destructive/40" },
   pending: { label: "في الانتظار", cls: "bg-gold/20 text-foreground border-gold/50" },
   sending: { label: "جارِ الإرسال", cls: "bg-primary/10 text-primary border-primary/30" },
+  paused: { label: "موقوف", cls: "bg-muted text-muted-foreground border-border" },
 };
 
 const PERIODS = [
@@ -44,16 +49,19 @@ function TelegramOutboxPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [status, setStatus] = useState<"all" | "failed" | "pending" | "sending">("all");
+  const [status, setStatus] = useState<"all" | "failed" | "pending" | "sending" | "paused">("all");
   const [period, setPeriod] = useState<(typeof PERIODS)[number]["id"]>("all");
   const [kind, setKind] = useState<"all" | "files" | "text">("all");
   const [q, setQ] = useState("");
+  const [logs, setLogs] = useState<Log[]>([]);
+  const [openLog, setOpenLog] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
     const res = await listTelegramOutbox({ data: { status: "all" } });
     if (res.error) toast.error("تعذر تحميل الطابور: " + res.error);
     setRows(res.rows as Row[]);
+    setLogs((res as any).logs ?? []);
     setLoading(false);
   }
 
@@ -92,13 +100,30 @@ function TelegramOutboxPage() {
   async function retry(ids: string[]) {
     if (!ids.length) return;
     setBusy(true);
-    const res = await retryTelegramOutbox({ data: { ids } });
+    const res = await retryTelegramOutbox({ data: { ids, actor: ACTOR } });
     setBusy(false);
     if (!res.ok) { toast.error("تعذرت إعادة الإرسال: " + res.error); return; }
     kickTelegramDrain();
     toast.success(`أُعيدت ${ids.length} رسالة للإرسال — ستصل للجروب خلال لحظات`);
     sel.clear();
     setTimeout(load, 4000);
+  }
+
+  async function pause(ids: string[]) {
+    setBusy(true);
+    const res = await pauseTelegramOutbox({ data: { ids, actor: ACTOR } });
+    setBusy(false);
+    if (!res.ok) { toast.error("تعذر الإيقاف: " + res.error); return; }
+    toast.success("أُوقف الإرسال"); sel.clear(); void load();
+  }
+
+  async function removeDoc(id: string, index: number, name: string) {
+    if (!confirm(`حذف الملف «${name}» من الطابور؟`)) return;
+    setBusy(true);
+    const res = await removeTelegramOutboxDoc({ data: { id, index, actor: ACTOR } });
+    setBusy(false);
+    if (!res.ok) { toast.error("تعذر حذف الملف: " + res.error); return; }
+    toast.success("حُذف الملف"); void load();
   }
 
   async function remove(ids: string[]) {
@@ -140,7 +165,7 @@ function TelegramOutboxPage() {
 
         <div className="rounded-xl border border-border bg-card p-3 space-y-2">
           <div className="flex flex-wrap gap-1.5">
-            {(["all", "failed", "pending", "sending"] as const).map((s) => (
+            {(["all", "failed", "pending", "sending", "paused"] as const).map((s) => (
               <button key={s} className={chip(status === s)} onClick={() => setStatus(s)}>{s === "all" ? "كل الحالات" : STATUS[s].label}</button>
             ))}
           </div>
@@ -162,6 +187,7 @@ function TelegramOutboxPage() {
         <div className="flex flex-wrap items-center gap-2">
           <BatchToolbar sel={sel} busy={busy} actions={[
             { key: "retry", label: "إعادة الإرسال", icon: <Send className="size-3.5" />, onClick: retry },
+            { key: "pause", label: "إيقاف الإرسال", icon: <Pause className="size-3.5" />, onClick: pause },
             { key: "del", label: "حذف من الطابور", icon: <Trash2 className="size-3.5" />, danger: true, onClick: remove },
           ]} />
           {counts.failed > 0 && !sel.active && (
@@ -181,6 +207,10 @@ function TelegramOutboxPage() {
             {filtered.map((r) => {
               const docs = docsOf(r);
               const st = STATUS[r.status] ?? { label: r.status, cls: "border-border" };
+              const total = (r.docs_total ?? docs.length) + 1;
+              const done = (r.caption_sent ? 1 : 0) + Math.max(0, (r.docs_total ?? docs.length) - docs.length);
+              const pct = Math.round((done / total) * 100);
+              const rowLogs = logs.filter((l) => l.outbox_id === r.id);
               return (
                 <div key={r.id} className="rounded-xl border border-border bg-card p-3 space-y-2">
                   <div className="flex items-start gap-2">
@@ -196,19 +226,55 @@ function TelegramOutboxPage() {
                       {docs.length > 0 && (
                         <div className="flex flex-wrap gap-1">
                           {docs.map((d, i) => (
-                            <span key={i} className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-xs"><FileText className="size-3" />{d.filename}</span>
+                            <span key={i} className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-xs"><FileText className="size-3" />{d.filename}
+                              <button disabled={busy} title="حذف الملف" onClick={() => removeDoc(r.id, i, d.filename)} className="text-destructive hover:opacity-70"><X className="size-3" /></button></span>
                           ))}
                         </div>
                       )}
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[11px] text-muted-foreground"><span>التقدم: {done} من {total}</span><span>{pct}%</span></div>
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                          <div className={`h-full rounded-full transition-all ${r.status === "failed" ? "bg-destructive" : r.status === "sending" ? "bg-primary animate-pulse" : "gradient-gold"}`} style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
                       {r.last_error && <p className="rounded-md bg-destructive/10 px-2 py-1 text-xs text-destructive break-words">السبب: {r.last_error}</p>}
                     </div>
                     {!sel.active && (
-                      <button disabled={busy} onClick={() => retry([r.id])} title="إعادة الإرسال"
-                        className="shrink-0 inline-flex items-center gap-1 rounded-lg border border-gold/60 bg-gold/10 px-2.5 py-1.5 text-xs font-bold hover:gradient-gold disabled:opacity-50">
-                        <Send className="size-3.5" /> إرسال
-                      </button>
+                      <div className="shrink-0 flex flex-col gap-1">
+                        <button disabled={busy} onClick={() => retry([r.id])} title="إعادة الإرسال"
+                          className="inline-flex items-center gap-1 rounded-lg border border-gold/60 bg-gold/10 px-2.5 py-1.5 text-xs font-bold hover:gradient-gold disabled:opacity-50">
+                          <Send className="size-3.5" /> إرسال
+                        </button>
+                        {r.status !== "paused" && (
+                          <button disabled={busy} onClick={() => pause([r.id])} className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-bold hover:bg-muted/40 disabled:opacity-50">
+                            <Pause className="size-3.5" /> إيقاف
+                          </button>
+                        )}
+                        <button onClick={() => setOpenLog(openLog === r.id ? null : r.id)} className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs font-bold hover:bg-muted/40">
+                          <History className="size-3.5" /> السجل ({rowLogs.length})
+                        </button>
+                      </div>
                     )}
                   </div>
+                  {openLog === r.id && (
+                    <div className="rounded-lg border border-border bg-muted/20 p-2">
+                      {rowLogs.length === 0 ? <p className="text-xs text-muted-foreground">لا توجد محاولات مسجلة بعد</p> : (
+                        <ul className="space-y-1">
+                          {rowLogs.map((l) => (
+                            <li key={l.id} className="text-xs border-b border-border/50 pb-1 last:border-0">
+                              <div className="flex flex-wrap gap-2">
+                                <span className="font-bold">{ACTION[l.action] ?? l.action}</span>
+                                <span>بواسطة: {l.actor ?? "—"}</span>
+                                <span className="text-muted-foreground">{new Date(l.created_at).toLocaleString("ar-EG")}</span>
+                                <span className={l.result === "failed" ? "text-destructive font-bold" : "font-bold"}>{RESULT[l.result ?? ""] ?? l.result}</span>
+                              </div>
+                              {l.error && <p className={`break-words ${l.result === "failed" ? "text-destructive" : "text-muted-foreground"}`}>{l.error}</p>}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
