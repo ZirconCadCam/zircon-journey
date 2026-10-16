@@ -15,7 +15,7 @@ import { AdminSystemStatus } from "@/components/admin-system-status";
 import { AdminTrashPanel } from "@/components/admin-trash-panel";
 import { AdminVoiceListener } from "@/components/admin-voice-listener";
 import { ToolGate } from "@/components/tool-gate";
-import { Gauge, Receipt, Trash2 } from "lucide-react";
+import { Gauge, Receipt, Trash2, Send } from "lucide-react";
 import { RoleNotifications } from "@/components/role-notifications";
 import { NotificationSettings } from "@/components/notification-settings";
 import { DoctorAvatar } from "@/components/doctor-avatar";
@@ -448,6 +448,12 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
               <Link to="/admin/usage"
                 className="px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition hover:bg-muted/40">
                 <Gauge className="size-4" /> تفاصيل الاستهلاك
+              </Link>
+            )}
+            {role === "admin" && (
+              <Link to="/admin/telegram"
+                className="px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition hover:bg-muted/40">
+                <Send className="size-4" /> المتعذر إرسالها للتلجرام
               </Link>
             )}
             {role === "admin" && (

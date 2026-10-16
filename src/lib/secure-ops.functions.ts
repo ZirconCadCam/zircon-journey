@@ -535,3 +535,43 @@ export const deleteDoctor = createServerFn({ method: "POST" })
     const { error } = await db.from("doctor_profiles").delete().eq("slot", data.slot);
     return { ok: !error, error: error?.message ?? null };
   });
+
+/* ------------------------------------------------- telegram outbox admin */
+
+/** Failed + queued Telegram deliveries for the admin monitor page. */
+export const listTelegramOutbox = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ status: z.enum(["failed", "pending", "sending", "all"]).default("all") }).parse(d))
+  .handler(async ({ data }) => {
+    const db = await admin();
+    let q = db
+      .from("telegram_outbox")
+      .select("id,caption,documents,status,attempts,last_error,created_at,caption_sent")
+      .neq("status", "sent")
+      .order("created_at", { ascending: false })
+      .limit(300);
+    if (data.status !== "all") q = q.eq("status", data.status);
+    const { data: rows, error } = await q;
+    return { rows: (rows ?? []) as any[], error: error?.message ?? null };
+  });
+
+/** Put rows back in the queue (fresh attempts) so the drain re-sends them. */
+export const retryTelegramOutbox = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ ids: z.array(z.string().uuid()).min(1).max(300) }).parse(d))
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const { error } = await db
+      .from("telegram_outbox")
+      .update({ status: "pending", attempts: 0, last_error: null, created_at: new Date().toISOString() } as never)
+      .in("id", data.ids)
+      .neq("status", "sent");
+    return { ok: !error, error: error?.message ?? null };
+  });
+
+/** Remove rows from the queue entirely. */
+export const deleteTelegramOutbox = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ ids: z.array(z.string().uuid()).min(1).max(300) }).parse(d))
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const { error } = await db.from("telegram_outbox").delete().in("id", data.ids);
+    return { ok: !error, error: error?.message ?? null };
+  });
