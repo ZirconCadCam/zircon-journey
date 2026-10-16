@@ -15,6 +15,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AdminExpensesRouteImport } from './routes/admin.expenses'
+import { Route as AdminTelegramRouteImport } from './routes/admin.telegram'
 import { Route as AdminUsageRouteImport } from './routes/admin.usage'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as ApiTtsRouteImport } from './routes/api/tts'
@@ -61,6 +62,11 @@ const Char91DotwellKnownChar93OauthProtectedResourceRoute =
 const AdminExpensesRoute = AdminExpensesRouteImport.update({
   id: '/admin/expenses',
   path: '/admin/expenses',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminTelegramRoute = AdminTelegramRouteImport.update({
+  id: '/admin/telegram',
+  path: '/admin/telegram',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminUsageRoute = AdminUsageRouteImport.update({
@@ -153,6 +159,7 @@ export interface FileRoutesByFullPath {
   '/mcp': typeof McpRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin/expenses': typeof AdminExpensesRoute
+  '/admin/telegram': typeof AdminTelegramRoute
   '/admin/usage': typeof AdminUsageRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/tts': typeof ApiTtsRoute
@@ -177,6 +184,7 @@ export interface FileRoutesByTo {
   '/mcp': typeof McpRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin/expenses': typeof AdminExpensesRoute
+  '/admin/telegram': typeof AdminTelegramRoute
   '/admin/usage': typeof AdminUsageRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/tts': typeof ApiTtsRoute
@@ -202,6 +210,7 @@ export interface FileRoutesById {
   '/mcp': typeof McpRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin/expenses': typeof AdminExpensesRoute
+  '/admin/telegram': typeof AdminTelegramRoute
   '/admin/usage': typeof AdminUsageRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/tts': typeof ApiTtsRoute
@@ -228,6 +237,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/.well-known/oauth-protected-resource'
     | '/admin/expenses'
+    | '/admin/telegram'
     | '/admin/usage'
     | '/admin/users'
     | '/api/tts'
@@ -252,6 +262,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/.well-known/oauth-protected-resource'
     | '/admin/expenses'
+    | '/admin/telegram'
     | '/admin/usage'
     | '/admin/users'
     | '/api/tts'
@@ -276,6 +287,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/.well-known/oauth-protected-resource'
     | '/admin/expenses'
+    | '/admin/telegram'
     | '/admin/usage'
     | '/admin/users'
     | '/api/tts'
@@ -301,6 +313,7 @@ export interface RootRouteChildren {
   McpRoute: typeof McpRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   AdminExpensesRoute: typeof AdminExpensesRoute
+  AdminTelegramRoute: typeof AdminTelegramRoute
   AdminUsageRoute: typeof AdminUsageRoute
   AdminUsersRoute: typeof AdminUsersRoute
   ApiTtsRoute: typeof ApiTtsRoute
@@ -361,6 +374,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/expenses'
       fullPath: '/admin/expenses'
       preLoaderRoute: typeof AdminExpensesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/telegram': {
+      id: '/admin/telegram'
+      path: '/admin/telegram'
+      fullPath: '/admin/telegram'
+      preLoaderRoute: typeof AdminTelegramRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/usage': {
@@ -486,6 +506,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   AdminExpensesRoute: AdminExpensesRoute,
+  AdminTelegramRoute: AdminTelegramRoute,
   AdminUsageRoute: AdminUsageRoute,
   AdminUsersRoute: AdminUsersRoute,
   ApiTtsRoute: ApiTtsRoute,
