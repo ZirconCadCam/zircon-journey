@@ -154,7 +154,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
 
   /** Re-fetch the case list. Shared by realtime, polling, focus and the button. */
   const refreshCases = useCallback(async () => {
-    const { data: cs } = await supabase.from("slot_cases").select("*").order("created_at", { ascending: false });
+    const { data: cs } = await supabase.from("slot_cases").select("*").is("trashed_at", null).order("created_at", { ascending: false });
     setCases((cs ?? []) as Case[]);
   }, []);
 
@@ -172,7 +172,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     (async () => {
       const [{ data: docs }, { data: cs }] = await Promise.all([
         supabase.from("doctor_profiles").select("slot,name,branch,active").order("slot"),
-        supabase.from("slot_cases").select("*").order("created_at", { ascending: false }),
+        supabase.from("slot_cases").select("*").is("trashed_at", null).order("created_at", { ascending: false }),
       ]);
       setDoctors(((docs ?? []) as Doctor[]).filter(d => d.active));
       setCases((cs ?? []) as Case[]);
