@@ -1,8 +1,8 @@
 # نقل التطبيق إلى Vercel
 
 1. صدّر المشروع إلى GitHub من Lovable.
-2. ثبّت إضافة Nitro محلياً: `bun add -D nitro`.
-3. أنشئ `vite.config.vercel.ts`:
+2. إضافة Nitro مثبتة مسبقاً في المشروع.
+3. ملف `vite.config.vercel.ts` موجود جاهزاً في المشروع (لا حاجة لإنشائه):
 ```ts
 import { defineConfig } from "vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
