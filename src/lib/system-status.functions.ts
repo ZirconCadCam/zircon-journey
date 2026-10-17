@@ -36,3 +36,36 @@ export const getSystemStatus = createServerFn({ method: "GET" }).handler(async (
   ]);
   return { checkedAt: new Date().toISOString(), probes };
 });
+
+/**
+ * Runtime configuration check. Returns only presence/format booleans —
+ * never the values themselves.
+ */
+export interface ConfigItem { name: string; scope: "browser" | "server"; required: boolean; present: boolean; valid: boolean; affects: string }
+
+const CONFIG_SPEC: { name: string; scope: "browser" | "server"; required: boolean; affects: string; check?: (v: string) => boolean }[] = [
+  { name: "VITE_SUPABASE_URL", scope: "browser", required: true, affects: "فتح التطبيق وعرض كل البيانات", check: (v) => /^https:\/\//.test(v) },
+  { name: "VITE_SUPABASE_PUBLISHABLE_KEY", scope: "browser", required: true, affects: "فتح التطبيق وعرض كل البيانات" },
+  { name: "VITE_SUPABASE_PROJECT_ID", scope: "browser", required: false, affects: "معلومة مساعدة فقط" },
+  { name: "SUPABASE_URL", scope: "server", required: true, affects: "عمليات الخادم: الأطباء، الحسابات، تلجرام", check: (v) => /^https:\/\//.test(v) },
+  { name: "SUPABASE_PUBLISHABLE_KEY", scope: "server", required: true, affects: "قراءة البيانات من الخادم والتقارير" },
+  { name: "SUPABASE_SERVICE_ROLE_KEY", scope: "server", required: true, affects: "الرفع، سلة المهملات، طابور تلجرام، إدارة الأطباء" },
+  { name: "TELEGRAM_BOT_TOKEN", scope: "server", required: true, affects: "الإرسال إلى جروب تلجرام", check: (v) => /^\d+:[\w-]{20,}$/.test(v) },
+  { name: "TELEGRAM_CHAT_ID", scope: "server", required: false, affects: "جروب تلجرام (يُستخدم الافتراضي إن غاب)", check: (v) => /^-\d{6,}$/.test(v) || /^@\w{4,}$/.test(v) },
+  { name: "LOVABLE_API_KEY", scope: "server", required: false, affects: "قراءة الفواتير بالذكاء الاصطناعي" },
+  { name: "VAPID_PUBLIC_KEY", scope: "server", required: false, affects: "إشعارات الجوال" },
+  { name: "VAPID_PRIVATE_KEY", scope: "server", required: false, affects: "إشعارات الجوال" },
+  { name: "REPORTS_CRON_KEY", scope: "server", required: false, affects: "التقارير الشهرية التلقائية" },
+  { name: "ELEVENLABS_API_KEY", scope: "server", required: false, affects: "التنبيه الصوتي" },
+];
+
+export const getConfigCheck = createServerFn({ method: "GET" }).handler(async () => {
+  const browserEnv = import.meta.env as Record<string, string | undefined>;
+  const items: ConfigItem[] = CONFIG_SPEC.map((s) => {
+    const raw = (s.scope === "browser" ? browserEnv[s.name] ?? process.env[s.name] : process.env[s.name]) ?? "";
+    const v = String(raw).trim();
+    const present = v.length > 0;
+    return { name: s.name, scope: s.scope, required: s.required, affects: s.affects, present, valid: present && (s.check ? s.check(v) : true) };
+  });
+  return { checkedAt: new Date().toISOString(), items };
+});
