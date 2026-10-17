@@ -7,6 +7,7 @@ import tsConfigPaths from "vite-tsconfig-paths";
 import { nitro } from "nitro/vite";
 
 export default defineConfig({
+  build: { rollupOptions: { external: ["cloudflare:workers"] } },
   resolve: { alias: { "@": new URL("./src", import.meta.url).pathname } },
   plugins: [
     tsConfigPaths(),
