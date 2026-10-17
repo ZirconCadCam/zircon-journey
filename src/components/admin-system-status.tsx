@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getSystemStatus, type Probe } from "@/lib/system-status.functions";
+import { getSystemStatus, getConfigCheck, type Probe, type ConfigItem } from "@/lib/system-status.functions";
 import { RefreshCw, CheckCircle2, XCircle, HelpCircle } from "lucide-react";
 
 const META: Record<string, { label: string; affects: string }> = {
@@ -24,7 +24,12 @@ export function AdminSystemStatus() {
       setCheckedAt(new Date().toISOString());
     } finally { setBusy(false); }
   }
-  useEffect(() => { check(); }, []); // manual «فحص الآن» only — no polling
+  const [config, setConfig] = useState<ConfigItem[] | null>(null);
+  const [configErr, setConfigErr] = useState(false);
+  async function checkConfig() {
+    try { setConfig((await getConfigCheck()).items); setConfigErr(false); } catch { setConfigErr(true); }
+  }
+  useEffect(() => { check(); checkConfig(); }, []); // manual «فحص الآن» only — no polling
 
   const down = (probes ?? []).filter((p) => p.state !== "ok");
   const cloudDown = down.some((p) => ["database", "auth", "storage"].includes(p.key));
@@ -35,10 +40,10 @@ export function AdminSystemStatus() {
         <div>
           <h2 className="text-lg font-extrabold">حالة النظام</h2>
           <p className="text-xs text-muted-foreground">
-            {checkedAt ? `آخر فحص: ${new Date(checkedAt).toLocaleString("ar")}` : "جارِ الفحص..."} — يتحدث تلقائياً كل دقيقة
+            {checkedAt ? `آخر فحص: ${new Date(checkedAt).toLocaleString("ar")}` : "جارِ الفحص..."}
           </p>
         </div>
-        <button onClick={check} disabled={busy}
+        <button onClick={() => { check(); checkConfig(); }} disabled={busy}
           className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-bold hover:bg-muted disabled:opacity-50">
           <RefreshCw className={`size-4 ${busy ? "animate-spin" : ""}`} /> فحص الآن
         </button>
@@ -88,6 +93,39 @@ export function AdminSystemStatus() {
           )}
         </div>
       )}
+      <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="font-extrabold">فحص إعدادات التشغيل</div>
+          {config && (() => {
+            const missingReq = config.filter((c) => c.required && !c.valid).length;
+            return <span className={`text-xs font-bold ${missingReq ? "text-destructive" : "text-primary"}`}>
+              {missingReq ? `${missingReq} إعداد أساسي ناقص أو غير صحيح` : "كل الإعدادات الأساسية مضبوطة ✅"}
+            </span>;
+          })()}
+        </div>
+        <p className="text-xs text-muted-foreground">يعرض فقط هل الإعداد موجود وصحيح الشكل — لا تُعرض أي قيمة سرية.</p>
+        {configErr && <p className="text-xs text-destructive">تعذر الوصول إلى خادم التطبيق لفحص الإعدادات.</p>}
+        {!config && !configErr && <p className="text-xs text-muted-foreground">جارِ الفحص...</p>}
+        {config && (
+          <div className="divide-y divide-border">
+            {config.map((c) => {
+              const st = c.valid ? "مضبوط" : c.present ? "شكل غير صحيح" : "غير موجود";
+              const tone = c.valid ? "text-primary" : c.required ? "text-destructive" : "text-muted-foreground";
+              const Icon = c.valid ? CheckCircle2 : c.required ? XCircle : HelpCircle;
+              return (
+                <div key={c.name} className="py-2 flex items-start gap-2 text-sm">
+                  <Icon className={`size-4 mt-0.5 shrink-0 ${tone}`} />
+                  <div className="min-w-0 flex-1">
+                    <div className="font-mono text-xs break-all" dir="ltr">{c.name}</div>
+                    <div className="text-[11px] text-muted-foreground">{c.required ? "أساسي" : "اختياري"} — يؤثر على: {c.affects}</div>
+                  </div>
+                  <span className={`text-xs font-bold shrink-0 ${tone}`}>{st}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
