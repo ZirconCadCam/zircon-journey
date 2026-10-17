@@ -12,6 +12,7 @@ import { InstallPrompt } from "@/components/install-prompt";
 import { TransferOverlay, BackgroundKeepAlive } from "@/lib/transfer-manager";
 import { NativeBootstrap } from "@/components/native-bootstrap";
 import { StoragePermissionPrompt } from "@/components/storage-permission-prompt";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import appCss from "../styles.css?url";
 
 function NotFoundComponent() {
@@ -81,6 +82,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
       <body>
         {children}
         <Scripts />
+        <SpeedInsights />
       </body>
     </html>
   );
