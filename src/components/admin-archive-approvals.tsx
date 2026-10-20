@@ -235,7 +235,7 @@ export function AdminArchiveApprovals() {
       ) : (
         <div className="grid md:grid-cols-2 gap-4">
           {filtered.map(r => (
-            <ApprovalCard key={r.id} r={r} doctor={doctors[r.doctor_slot]} onDone={load} />
+            <ApprovalCard key={r.id} r={r} doctor={doctors[r.doctor_slot]} onDone={load} sel={sel} />
           ))}
         </div>
       )}
