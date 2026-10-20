@@ -4,12 +4,14 @@ import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import {
   Archive, Check, X, Loader2, Clock, AlertTriangle, Calendar,
-  Stethoscope, Filter, Search, ExternalLink, Receipt, Send,
+  Stethoscope, Filter, Search, ExternalLink, Receipt, Send, Trash2,
 } from "lucide-react";
 
 import { DoctorAvatar } from "@/components/doctor-avatar";
 import { ImageLightbox } from "@/components/image-lightbox";
 import { signPrivateUrl } from "@/lib/secure-storage";
+import { batchDeleteArchiveNotifs } from "@/lib/secure-ops.functions";
+import { BatchToolbar, RowCheck, useBatchSelection } from "@/components/batch-toolbar";
 
 interface Row {
   id: string;
@@ -61,6 +63,7 @@ export function AdminArchiveApprovals() {
   const [doctorSlot, setDoctorSlot] = useState<number | "all">("all");
   const [search, setSearch] = useState("");
   const [testing, setTesting] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   /** Send a test message to the clinic's Telegram group to verify delivery. */
   async function sendTelegramTest() {
