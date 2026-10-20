@@ -414,9 +414,16 @@ function ApprovalCard({ r, doctor, onDone, selected, onSelect }: { r: Row; docto
             {r.shade ? `اللون: ${r.shade}` : ""}
           </div>
         </div>
-        <span className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-extrabold ${status === "approved" ? "bg-emerald-600 text-white" : status === "rejected" ? "bg-rose-600 text-white" : "bg-amber-500 text-white animate-pulse"}`}>
-          <StatusIcon className="size-3" /> {statusLabel}
-        </span>
+        <div className="shrink-0 flex items-center gap-1.5">
+          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-extrabold ${status === "approved" ? "bg-emerald-600 text-white" : status === "rejected" ? "bg-rose-600 text-white" : "bg-amber-500 text-white animate-pulse"}`}>
+            <StatusIcon className="size-3" /> {statusLabel}
+          </span>
+          <button type="button" onClick={removeNotification} disabled={busy}
+            className="inline-flex items-center gap-1 rounded-lg border border-destructive/50 bg-destructive/5 px-2 py-1.5 text-[10px] font-extrabold text-destructive hover:bg-destructive/15 disabled:cursor-not-allowed disabled:opacity-60"
+            aria-label={`حذف إشعار الحالة ${r.case_code}`} title="حذف إشعار الأرشفة">
+            {busy ? <Loader2 className="size-3 animate-spin" /> : <Trash2 className="size-3" />} حذف
+          </button>
+        </div>
       </div>
 
       {url ? (
