@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import {
   Archive, Check, X, Loader2, Clock, AlertTriangle, Calendar,
-  Stethoscope, Filter, Search, ExternalLink, Receipt, Send,
+  Stethoscope, Filter, Search, ExternalLink, Receipt, Send, Trash2,
 } from "lucide-react";
 
 import { DoctorAvatar } from "@/components/doctor-avatar";
@@ -286,6 +286,33 @@ function ApprovalCard({ r, doctor, onDone }: { r: Row; doctor?: DoctorMini; onDo
     onDone();
   }
 
+  async function removeNotification() {
+    if (busy) return;
+    if (!window.confirm("هل تريد حذف إشعار الأرشفة هذا؟ ستبقى الحالة محفوظة، ولن يظهر الإشعار في هذه الصفحة مرة أخرى.")) return;
+    setBusy(true);
+    if (r.archive_receipt_path) {
+      await supabase.storage.from("chat-attachments").remove([r.archive_receipt_path]);
+    }
+    const { error } = await supabase.from("slot_cases").update({
+      archive_receipt_path: null,
+      archive_receipt_name: null,
+      archive_receipt_sent_at: null,
+      archive_request_note: null,
+      archive_approval: null,
+      archive_reviewed_at: null,
+      archive_reviewed_by: null,
+      archive_reject_reason: null,
+    } as any).eq("id", r.id);
+    if (error) {
+      setBusy(false);
+      toast.error(error.message);
+      return;
+    }
+    toast.success("تم حذف إشعار الأرشفة");
+    setBusy(false);
+    onDone();
+  }
+
   async function reject() {
     if (busy) return;
     if (!reason.trim()) { toast.error("اكتب سبب عدم الموافقة"); return; }
@@ -373,6 +400,11 @@ function ApprovalCard({ r, doctor, onDone }: { r: Row; doctor?: DoctorMini; onDo
             <X className="size-3.5" /> عدم الموافقة
           </button>
         )}
+        <button onClick={removeNotification} disabled={busy}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-destructive/40 px-3 py-2 text-[11px] font-bold text-destructive hover:bg-destructive/10 disabled:opacity-60"
+          aria-label={`حذف إشعار الحالة ${r.case_code}`}>
+          {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />} حذف الإشعار
+        </button>
       </div>
 
       {rejecting && (
