@@ -190,8 +190,13 @@ export function AdminArchiveApprovals() {
 
       {/* Filters */}
       <div className="rounded-2xl bg-card border border-border p-4 shadow-luxury">
-        <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground mb-3">
-          <Filter className="size-4 text-gold" /> الفلاتر
+        <div className="flex items-center justify-between gap-2 text-xs font-bold text-muted-foreground mb-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Filter className="size-4 text-gold" /> الفلاتر
+          </div>
+          <BatchToolbar sel={sel} busy={busy} actions={[
+            { key: "delete", label: "حذف الإشعارات", icon: <Trash2 className="size-3.5" />, danger: true, onClick: deleteNotifs },
+          ]} />
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="inline-flex items-center gap-1.5 rounded-xl border border-input bg-background px-3 py-2">
