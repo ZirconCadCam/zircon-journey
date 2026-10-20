@@ -333,8 +333,9 @@ function ApprovalCard({ r, doctor, onDone, sel }: { r: Row; doctor?: DoctorMini;
   const statusLabel = status === "approved" ? "تمت الموافقة — مؤرشفة" : status === "rejected" ? "غير موافق" : "بانتظار قرار الإدارة";
 
   return (
-    <div className={`rounded-2xl bg-card border-2 ${tone} p-4 shadow-luxury space-y-3`}>
+    <div className={`rounded-2xl bg-card border-2 p-4 shadow-luxury space-y-3 ${sel.active && sel.isSelected(r.id) ? "border-gold/60 bg-gold/5" : tone}`}>
       <div className="flex items-start gap-3">
+        {sel.active && <RowCheck sel={sel} id={r.id} />}
         <DoctorAvatar name={doctor?.name} className="size-11" rounded="xl" />
         <div className="min-w-0 flex-1">
           <div className="font-bold text-sm truncate">{r.patient_name}</div>
