@@ -520,6 +520,31 @@ export const batchCasesToTelegram = createServerFn({ method: "POST" })
     return { ok: !error, error: error?.message ?? null };
   });
 
+/** Delete archiving notifications (clear receipt fields) and remove the receipt images from storage. */
+export const batchDeleteArchiveNotifs = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ ids: idList }).parse(d))
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const { data: rows } = await db.from("slot_cases").select("id,archive_receipt_path").in("id", data.ids);
+    const paths = (rows ?? []).map((r: any) => r.archive_receipt_path).filter(Boolean) as string[];
+    const { error } = await db
+      .from("slot_cases")
+      .update({
+        archive_receipt_path: null,
+        archive_receipt_name: null,
+        archive_receipt_sent_at: null,
+        archive_request_note: null,
+        archive_approval: null,
+        archive_reviewed_at: null,
+        archive_reviewed_by: null,
+        archive_reject_reason: null,
+      } as never)
+      .in("id", data.ids);
+    if (error) return { ok: false, error: error.message };
+    if (paths.length) await db.storage.from("chat-attachments").remove(paths);
+    return { ok: true, error: null as string | null };
+  });
+
 /** Permanently delete a doctor, only when they have no cases (otherwise archive). */
 export const deleteDoctor = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ slot: z.number().int().min(1) }).parse(d))

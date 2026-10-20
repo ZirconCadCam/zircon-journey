@@ -4,12 +4,14 @@ import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import {
   Archive, Check, X, Loader2, Clock, AlertTriangle, Calendar,
-  Stethoscope, Filter, Search, ExternalLink, Receipt, Send,
+  Stethoscope, Filter, Search, ExternalLink, Receipt, Send, Trash2,
 } from "lucide-react";
 
 import { DoctorAvatar } from "@/components/doctor-avatar";
 import { ImageLightbox } from "@/components/image-lightbox";
 import { signPrivateUrl } from "@/lib/secure-storage";
+import { batchDeleteArchiveNotifs } from "@/lib/secure-ops.functions";
+import { BatchToolbar, RowCheck, useBatchSelection } from "@/components/batch-toolbar";
 
 interface Row {
   id: string;
@@ -61,6 +63,7 @@ export function AdminArchiveApprovals() {
   const [doctorSlot, setDoctorSlot] = useState<number | "all">("all");
   const [search, setSearch] = useState("");
   const [testing, setTesting] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   /** Send a test message to the clinic's Telegram group to verify delivery. */
   async function sendTelegramTest() {
@@ -138,6 +141,18 @@ export function AdminArchiveApprovals() {
     return true;
   }), [rows, status, month, doctorSlot, search, doctors]);
 
+  const sel = useBatchSelection(filtered.map((r) => r.id));
+
+  /** Delete selected archiving notifications: clears the receipt fields and removes the receipt images. */
+  async function deleteNotifs(ids: string[]) {
+    if (!confirm(`حذف ${ids.length} إشعاراً نهائياً مع صورة السند؟ لا يمكن التراجع.`)) return;
+    setBusy(true);
+    const res = await batchDeleteArchiveNotifs({ data: { ids } });
+    setBusy(false);
+    if (res.ok) { toast.success("تم حذف الإشعارات المحددة"); sel.clear(); load(); }
+    else toast.error(res.error ?? "تعذر حذف الإشعارات");
+  }
+
   return (
     <div className="space-y-4">
       <div className="rounded-2xl gradient-brown text-primary-foreground p-5 shadow-luxury flex items-center gap-4">
@@ -175,8 +190,13 @@ export function AdminArchiveApprovals() {
 
       {/* Filters */}
       <div className="rounded-2xl bg-card border border-border p-4 shadow-luxury">
-        <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground mb-3">
-          <Filter className="size-4 text-gold" /> الفلاتر
+        <div className="flex items-center justify-between gap-2 text-xs font-bold text-muted-foreground mb-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Filter className="size-4 text-gold" /> الفلاتر
+          </div>
+          <BatchToolbar sel={sel} busy={busy} actions={[
+            { key: "delete", label: "حذف الإشعارات", icon: <Trash2 className="size-3.5" />, danger: true, onClick: deleteNotifs },
+          ]} />
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="inline-flex items-center gap-1.5 rounded-xl border border-input bg-background px-3 py-2">
@@ -215,7 +235,7 @@ export function AdminArchiveApprovals() {
       ) : (
         <div className="grid md:grid-cols-2 gap-4">
           {filtered.map(r => (
-            <ApprovalCard key={r.id} r={r} doctor={doctors[r.doctor_slot]} onDone={load} />
+            <ApprovalCard key={r.id} r={r} doctor={doctors[r.doctor_slot]} onDone={load} sel={sel} />
           ))}
         </div>
       )}
@@ -223,7 +243,7 @@ export function AdminArchiveApprovals() {
   );
 }
 
-function ApprovalCard({ r, doctor, onDone }: { r: Row; doctor?: DoctorMini; onDone: () => void }) {
+function ApprovalCard({ r, doctor, onDone, sel }: { r: Row; doctor?: DoctorMini; onDone: () => void; sel: ReturnType<typeof useBatchSelection> }) {
   const [url, setUrl] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -313,8 +333,9 @@ function ApprovalCard({ r, doctor, onDone }: { r: Row; doctor?: DoctorMini; onDo
   const statusLabel = status === "approved" ? "تمت الموافقة — مؤرشفة" : status === "rejected" ? "غير موافق" : "بانتظار قرار الإدارة";
 
   return (
-    <div className={`rounded-2xl bg-card border-2 ${tone} p-4 shadow-luxury space-y-3`}>
+    <div className={`rounded-2xl bg-card border-2 p-4 shadow-luxury space-y-3 ${sel.active && sel.isSelected(r.id) ? "border-gold/60 bg-gold/5" : tone}`}>
       <div className="flex items-start gap-3">
+        {sel.active && <RowCheck sel={sel} id={r.id} />}
         <DoctorAvatar name={doctor?.name} className="size-11" rounded="xl" />
         <div className="min-w-0 flex-1">
           <div className="font-bold text-sm truncate">{r.patient_name}</div>
