@@ -141,6 +141,18 @@ export function AdminArchiveApprovals() {
     return true;
   }), [rows, status, month, doctorSlot, search, doctors]);
 
+  const sel = useBatchSelection(filtered.map((r) => r.id));
+
+  /** Delete selected archiving notifications: clears the receipt fields and removes the receipt images. */
+  async function deleteNotifs(ids: string[]) {
+    if (!confirm(`حذف ${ids.length} إشعاراً نهائياً مع صورة السند؟ لا يمكن التراجع.`)) return;
+    setBusy(true);
+    const res = await batchDeleteArchiveNotifs({ data: { ids } });
+    setBusy(false);
+    if (res.ok) { toast.success("تم حذف الإشعارات المحددة"); sel.clear(); load(); }
+    else toast.error(res.error ?? "تعذر حذف الإشعارات");
+  }
+
   return (
     <div className="space-y-4">
       <div className="rounded-2xl gradient-brown text-primary-foreground p-5 shadow-luxury flex items-center gap-4">
