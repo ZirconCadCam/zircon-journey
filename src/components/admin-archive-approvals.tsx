@@ -396,7 +396,7 @@ function ApprovalCard({ r, doctor, onDone, selected, onSelect }: { r: Row; docto
 
   return (
     <div className={`rounded-2xl bg-card border-2 ${tone} ${selected ? "ring-2 ring-gold ring-offset-2" : ""} p-4 shadow-luxury space-y-3`}>
-      <div className="flex items-start gap-3">
+      <div className="flex flex-wrap items-start gap-3">
         <label className="mt-1 shrink-0 cursor-pointer" title="تحديد الإشعار">
           <input type="checkbox" checked={selected} onChange={onSelect}
             className="size-4 accent-gold" aria-label={`تحديد إشعار الحالة ${r.case_code}`} />
@@ -450,6 +450,11 @@ function ApprovalCard({ r, doctor, onDone, selected, onSelect }: { r: Row; docto
       )}
 
       <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-border/60">
+        <button type="button" onClick={removeNotification} disabled={busy}
+          className="order-first inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg bg-destructive px-3 py-2 text-[11px] font-bold text-destructive-foreground shadow-sm hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-60"
+          aria-label={`حذف إشعار الحالة ${r.case_code}`} data-testid={`delete-archive-notification-${r.id}`}>
+          {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />} حذف الإشعار
+        </button>
         <Link to="/cases/$id" params={{ id: r.id }}
           className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-[11px] font-bold hover:border-gold">
           <ExternalLink className="size-3.5" /> فتح الحالة
@@ -466,11 +471,6 @@ function ApprovalCard({ r, doctor, onDone, selected, onSelect }: { r: Row; docto
             <X className="size-3.5" /> عدم الموافقة
           </button>
         )}
-        <button onClick={removeNotification} disabled={busy}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-destructive/40 px-3 py-2 text-[11px] font-bold text-destructive hover:bg-destructive/10 disabled:opacity-60"
-          aria-label={`حذف إشعار الحالة ${r.case_code}`}>
-          {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />} حذف الإشعار
-        </button>
       </div>
 
       {rejecting && (
