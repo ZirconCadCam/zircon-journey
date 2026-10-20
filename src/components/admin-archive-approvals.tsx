@@ -243,7 +243,7 @@ export function AdminArchiveApprovals() {
   );
 }
 
-function ApprovalCard({ r, doctor, onDone }: { r: Row; doctor?: DoctorMini; onDone: () => void }) {
+function ApprovalCard({ r, doctor, onDone, sel }: { r: Row; doctor?: DoctorMini; onDone: () => void; sel: ReturnType<typeof useBatchSelection> }) {
   const [url, setUrl] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
