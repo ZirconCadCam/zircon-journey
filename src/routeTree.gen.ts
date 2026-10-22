@@ -13,6 +13,11 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AdminArchiveRouteImport } from './routes/admin.archive'
+import { Route as McpRouteImport } from './routes/mcp'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as AdminExpensesRouteImport } from './routes/admin.expenses'
+import { Route as AdminTelegramRouteImport } from './routes/admin.telegram'
+import { Route as AdminUsageRouteImport } from './routes/admin.usage'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as ApiTtsRouteImport } from './routes/api/tts'
 import { Route as CasesIdRouteImport } from './routes/cases.$id'
@@ -63,9 +68,9 @@ const CasesIdRoute = CasesIdRouteImport.update({
   path: '/cases/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CasesNewRoute = CasesNewRouteImport.update({
-  id: '/cases/new',
-  path: '/cases/new',
+const ApiTtsRoute = ApiTtsRouteImport.update({
+  id: '/api/tts',
+  path: '/api/tts',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DoctorsIndexRoute = DoctorsIndexRouteImport.update({
@@ -125,7 +130,11 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
-  '/admin/archive': typeof AdminArchiveRoute
+  '/mcp': typeof McpRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/admin/expenses': typeof AdminExpensesRoute
+  '/admin/telegram': typeof AdminTelegramRoute
+  '/admin/usage': typeof AdminUsageRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/tts': typeof ApiTtsRoute
   '/cases/$id': typeof CasesIdRoute
@@ -135,6 +144,7 @@ export interface FileRoutesByFullPath {
   '/staff/$role': typeof StaffRoleRoute
   '/doctors/': typeof DoctorsIndexRoute
   '/help/': typeof HelpIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/public/push-dispatch': typeof ApiPublicPushDispatchRoute
   '/doctors/$slot/new-case': typeof DoctorsSlotNewCaseRoute
   '/api/public/hooks/monthly-accounting': typeof ApiPublicHooksMonthlyAccountingRoute
@@ -145,7 +155,11 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
-  '/admin/archive': typeof AdminArchiveRoute
+  '/mcp': typeof McpRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/admin/expenses': typeof AdminExpensesRoute
+  '/admin/telegram': typeof AdminTelegramRoute
+  '/admin/usage': typeof AdminUsageRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/tts': typeof ApiTtsRoute
   '/cases/$id': typeof CasesIdRoute
@@ -155,6 +169,7 @@ export interface FileRoutesByTo {
   '/staff/$role': typeof StaffRoleRoute
   '/doctors': typeof DoctorsIndexRoute
   '/help': typeof HelpIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/public/push-dispatch': typeof ApiPublicPushDispatchRoute
   '/doctors/$slot/new-case': typeof DoctorsSlotNewCaseRoute
   '/api/public/hooks/monthly-accounting': typeof ApiPublicHooksMonthlyAccountingRoute
@@ -166,7 +181,11 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
-  '/admin/archive': typeof AdminArchiveRoute
+  '/mcp': typeof McpRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/admin/expenses': typeof AdminExpensesRoute
+  '/admin/telegram': typeof AdminTelegramRoute
+  '/admin/usage': typeof AdminUsageRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/tts': typeof ApiTtsRoute
   '/cases/$id': typeof CasesIdRoute
@@ -176,6 +195,7 @@ export interface FileRoutesById {
   '/staff/$role': typeof StaffRoleRoute
   '/doctors/': typeof DoctorsIndexRoute
   '/help/': typeof HelpIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/public/push-dispatch': typeof ApiPublicPushDispatchRoute
   '/doctors_/$slot/new-case': typeof DoctorsSlotNewCaseRoute
   '/api/public/hooks/monthly-accounting': typeof ApiPublicHooksMonthlyAccountingRoute
@@ -188,7 +208,11 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/login'
-    | '/admin/archive'
+    | '/mcp'
+    | '/.well-known/oauth-protected-resource'
+    | '/admin/expenses'
+    | '/admin/telegram'
+    | '/admin/usage'
     | '/admin/users'
     | '/api/tts'
     | '/cases/$id'
@@ -198,6 +222,7 @@ export interface FileRouteTypes {
     | '/staff/$role'
     | '/doctors/'
     | '/help/'
+    | '/.lovable/oauth/consent'
     | '/api/public/push-dispatch'
     | '/doctors/$slot/new-case'
     | '/api/public/hooks/monthly-accounting'
@@ -208,7 +233,11 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/login'
-    | '/admin/archive'
+    | '/mcp'
+    | '/.well-known/oauth-protected-resource'
+    | '/admin/expenses'
+    | '/admin/telegram'
+    | '/admin/usage'
     | '/admin/users'
     | '/api/tts'
     | '/cases/$id'
@@ -218,6 +247,7 @@ export interface FileRouteTypes {
     | '/staff/$role'
     | '/doctors'
     | '/help'
+    | '/.lovable/oauth/consent'
     | '/api/public/push-dispatch'
     | '/doctors/$slot/new-case'
     | '/api/public/hooks/monthly-accounting'
@@ -228,7 +258,11 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/login'
-    | '/admin/archive'
+    | '/mcp'
+    | '/.well-known/oauth-protected-resource'
+    | '/admin/expenses'
+    | '/admin/telegram'
+    | '/admin/usage'
     | '/admin/users'
     | '/api/tts'
     | '/cases/$id'
@@ -238,6 +272,7 @@ export interface FileRouteTypes {
     | '/staff/$role'
     | '/doctors/'
     | '/help/'
+    | '/.lovable/oauth/consent'
     | '/api/public/push-dispatch'
     | '/doctors_/$slot/new-case'
     | '/api/public/hooks/monthly-accounting'
@@ -249,7 +284,11 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
-  AdminArchiveRoute: typeof AdminArchiveRoute
+  McpRoute: typeof McpRoute
+  Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  AdminExpensesRoute: typeof AdminExpensesRoute
+  AdminTelegramRoute: typeof AdminTelegramRoute
+  AdminUsageRoute: typeof AdminUsageRoute
   AdminUsersRoute: typeof AdminUsersRoute
   ApiTtsRoute: typeof ApiTtsRoute
   CasesIdRoute: typeof CasesIdRoute
@@ -259,6 +298,7 @@ export interface RootRouteChildren {
   StaffRoleRoute: typeof StaffRoleRoute
   DoctorsIndexRoute: typeof DoctorsIndexRoute
   HelpIndexRoute: typeof HelpIndexRoute
+  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   ApiPublicPushDispatchRoute: typeof ApiPublicPushDispatchRoute
   DoctorsSlotNewCaseRoute: typeof DoctorsSlotNewCaseRoute
   ApiPublicHooksMonthlyAccountingRoute: typeof ApiPublicHooksMonthlyAccountingRoute
@@ -317,11 +357,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CasesIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/cases/new': {
-      id: '/cases/new'
-      path: '/cases/new'
-      fullPath: '/cases/new'
-      preLoaderRoute: typeof CasesNewRouteImport
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/tts': {
+      id: '/api/tts'
+      path: '/api/tts'
+      fullPath: '/api/tts'
+      preLoaderRoute: typeof ApiTtsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/doctors/': {
@@ -401,7 +448,12 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
-  AdminArchiveRoute: AdminArchiveRoute,
+  McpRoute: McpRoute,
+  Char91DotwellKnownChar93OauthProtectedResourceRoute:
+    Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  AdminExpensesRoute: AdminExpensesRoute,
+  AdminTelegramRoute: AdminTelegramRoute,
+  AdminUsageRoute: AdminUsageRoute,
   AdminUsersRoute: AdminUsersRoute,
   ApiTtsRoute: ApiTtsRoute,
   CasesIdRoute: CasesIdRoute,
@@ -411,6 +463,7 @@ const rootRouteChildren: RootRouteChildren = {
   StaffRoleRoute: StaffRoleRoute,
   DoctorsIndexRoute: DoctorsIndexRoute,
   HelpIndexRoute: HelpIndexRoute,
+  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   ApiPublicPushDispatchRoute: ApiPublicPushDispatchRoute,
   DoctorsSlotNewCaseRoute: DoctorsSlotNewCaseRoute,
   ApiPublicHooksMonthlyAccountingRoute: ApiPublicHooksMonthlyAccountingRoute,

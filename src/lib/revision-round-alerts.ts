@@ -55,8 +55,9 @@ export function useNewRevisionRounds(scope: string, doctorSlot?: number) {
 
   useEffect(() => {
     check();
-    const t = setInterval(check, 30_000);
-    return () => clearInterval(t);
+    const onVis = () => { if (document.visibilityState === "visible") void check(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
   }, [check]);
 
   const clear = useCallback(() => { markRoundsSeen(scope); setCount(0); setLatest(null); }, [scope]);

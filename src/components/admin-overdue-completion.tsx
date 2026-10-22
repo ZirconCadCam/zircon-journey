@@ -176,10 +176,7 @@ export function AdminOverdueCompletion() {
 
   useEffect(() => {
     load();
-    const ch = supabase.channel("admin-overdue-completion")
-      .on("postgres_changes", { event: "*", schema: "public", table: "slot_cases" }, load)
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    // Live updates removed to save database usage — data loads on open.
   }, []);
 
   const filtered = useMemo(() => rows.filter(r => {

@@ -80,7 +80,11 @@ async function handle(): Promise<Response> {
     // Claim the row so a concurrent drain does not resend it.
     const { data: claimed } = await supabaseAdmin
       .from("telegram_outbox")
-      .update({ status: "sending", attempts: (row.attempts ?? 0) + 1 })
+      .update({
+        status: "sending",
+        attempts: (row.attempts ?? 0) + 1,
+        ...(row.docs_total == null ? { docs_total: Array.isArray(row.documents) ? row.documents.length : 0 } : {}),
+      } as any)
       .eq("id", row.id)
       .eq("status", "pending")
       .select("id");
@@ -140,6 +144,14 @@ async function handle(): Promise<Response> {
           const res = await fetch(`${API}/sendDocument`, { method: "POST", body: form });
           const j: any = await res.json().catch(() => ({}));
           if (!res.ok || !j?.ok) throw new Error(String(j?.description ?? `HTTP ${res.status}`));
+          const mid = Number(j?.result?.message_id);
+          if (path && mid) {
+            const { telegramMessageLink } = await import("@/lib/telegram-file-links");
+            await (supabaseAdmin as any).from("telegram_file_links").insert({
+              object_path: path, bucket, file_name: doc.filename, chat_id: chat,
+              message_id: mid, link: telegramMessageLink(chat, mid),
+            });
+          }
         } catch (e: any) {
           failed.push(`${doc.filename}: ${e?.message ?? "خطأ"}`);
           pendingDocs.push(doc);
@@ -158,6 +170,7 @@ async function handle(): Promise<Response> {
           documents: [] as any,
         })
         .eq("id", row.id);
+      await (supabaseAdmin as any).from("telegram_outbox_log").insert({ outbox_id: row.id, action: "send", actor: "البوت", result: "sent" });
       results.push({ id: row.id, ok: true });
     } catch (e: any) {
       const error = String(e?.message ?? "خطأ");
@@ -172,9 +185,18 @@ async function handle(): Promise<Response> {
           ...(captionSent ? { documents: pendingDocs as any } : {}),
         })
         .eq("id", row.id);
+      await (supabaseAdmin as any).from("telegram_outbox_log").insert({ outbox_id: row.id, action: "send", actor: "البوت", result: "failed", error });
       results.push({ id: row.id, ok: false, error });
     }
   }
 
-  return Response.json({ ok: true, processed: results.length, results });
+  let purged = 0;
+  try {
+    const { purgeArchivedCaseFiles } = await import("@/lib/case-file-purge.server");
+    purged = await purgeArchivedCaseFiles();
+  } catch (e) {
+    console.warn("[purge] failed", e);
+  }
+
+  return Response.json({ ok: true, processed: results.length, results, purged });
 }

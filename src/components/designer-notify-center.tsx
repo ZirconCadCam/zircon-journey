@@ -116,8 +116,7 @@ export function DesignerNotifyCenter({
       .on("postgres_changes", { event: "*", schema: "public", table: "chat_messages" }, () => void refreshChat())
       .on("postgres_changes", { event: "*", schema: "public", table: "chat_conversations" }, () => void refreshChat())
       .subscribe();
-    const t = window.setInterval(() => void refreshChat(), 30000);
-    return () => { supabase.removeChannel(ch); window.clearInterval(t); };
+    return () => { supabase.removeChannel(ch); };
   }, [refreshChat]);
 
   /* ------------------------------ groups ------------------------------ */

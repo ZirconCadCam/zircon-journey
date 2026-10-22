@@ -479,6 +479,7 @@ export type Database = {
           id: string
           public_url: string | null
           size_bytes: number | null
+          trashed_at: string | null
           uploaded_by: string
         }
         Insert: {
@@ -490,6 +491,7 @@ export type Database = {
           id?: string
           public_url?: string | null
           size_bytes?: number | null
+          trashed_at?: string | null
           uploaded_by?: string
         }
         Update: {
@@ -501,6 +503,7 @@ export type Database = {
           id?: string
           public_url?: string | null
           size_bytes?: number | null
+          trashed_at?: string | null
           uploaded_by?: string
         }
         Relationships: [
@@ -653,6 +656,60 @@ export type Database = {
           password?: string
           slot?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      expenses: {
+        Row: {
+          amount: number | null
+          category: string
+          created_at: string
+          currency: string | null
+          description: string | null
+          error: string | null
+          expense_date: string | null
+          file_mime: string | null
+          file_name: string
+          file_path: string
+          id: string
+          invoice_number: string | null
+          status: string
+          trashed_at: string | null
+          vendor: string | null
+        }
+        Insert: {
+          amount?: number | null
+          category?: string
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          error?: string | null
+          expense_date?: string | null
+          file_mime?: string | null
+          file_name: string
+          file_path: string
+          id?: string
+          invoice_number?: string | null
+          status?: string
+          trashed_at?: string | null
+          vendor?: string | null
+        }
+        Update: {
+          amount?: number | null
+          category?: string
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          error?: string | null
+          expense_date?: string | null
+          file_mime?: string | null
+          file_name?: string
+          file_path?: string
+          id?: string
+          invoice_number?: string | null
+          status?: string
+          trashed_at?: string | null
+          vendor?: string | null
         }
         Relationships: []
       }
@@ -861,6 +918,7 @@ export type Database = {
           extra_zip_size: number | null
           fabrication_done: boolean
           fabrication_file_sent: boolean
+          files_purged_at: string | null
           final_archived: boolean
           id: string
           idempotency_key: string | null
@@ -913,6 +971,7 @@ export type Database = {
           teeth_count: string | null
           temporary_delivered: boolean
           tooth_number: string | null
+          trashed_at: string | null
           updated_at: string
         }
         Insert: {
@@ -955,6 +1014,7 @@ export type Database = {
           extra_zip_size?: number | null
           fabrication_done?: boolean
           fabrication_file_sent?: boolean
+          files_purged_at?: string | null
           final_archived?: boolean
           id?: string
           idempotency_key?: string | null
@@ -1007,6 +1067,7 @@ export type Database = {
           teeth_count?: string | null
           temporary_delivered?: boolean
           tooth_number?: string | null
+          trashed_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -1049,6 +1110,7 @@ export type Database = {
           extra_zip_size?: number | null
           fabrication_done?: boolean
           fabrication_file_sent?: boolean
+          files_purged_at?: string | null
           final_archived?: boolean
           id?: string
           idempotency_key?: string | null
@@ -1101,6 +1163,7 @@ export type Database = {
           teeth_count?: string | null
           temporary_delivered?: boolean
           tooth_number?: string | null
+          trashed_at?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1171,12 +1234,46 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_file_links: {
+        Row: {
+          bucket: string | null
+          chat_id: string
+          created_at: string
+          file_name: string
+          id: string
+          link: string
+          message_id: number
+          object_path: string
+        }
+        Insert: {
+          bucket?: string | null
+          chat_id: string
+          created_at?: string
+          file_name: string
+          id?: string
+          link: string
+          message_id: number
+          object_path: string
+        }
+        Update: {
+          bucket?: string | null
+          chat_id?: string
+          created_at?: string
+          file_name?: string
+          id?: string
+          link?: string
+          message_id?: number
+          object_path?: string
+        }
+        Relationships: []
+      }
       telegram_outbox: {
         Row: {
           attempts: number
           caption: string
           caption_sent: boolean
           created_at: string
+          docs_total: number | null
           documents: Json
           id: string
           last_error: string | null
@@ -1188,6 +1285,7 @@ export type Database = {
           caption: string
           caption_sent?: boolean
           created_at?: string
+          docs_total?: number | null
           documents?: Json
           id?: string
           last_error?: string | null
@@ -1199,11 +1297,42 @@ export type Database = {
           caption?: string
           caption_sent?: boolean
           created_at?: string
+          docs_total?: number | null
           documents?: Json
           id?: string
           last_error?: string | null
           sent_at?: string | null
           status?: string
+        }
+        Relationships: []
+      }
+      telegram_outbox_log: {
+        Row: {
+          action: string
+          actor: string | null
+          created_at: string
+          error: string | null
+          id: string
+          outbox_id: string
+          result: string | null
+        }
+        Insert: {
+          action: string
+          actor?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          outbox_id: string
+          result?: string | null
+        }
+        Update: {
+          action?: string
+          actor?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          outbox_id?: string
+          result?: string | null
         }
         Relationships: []
       }

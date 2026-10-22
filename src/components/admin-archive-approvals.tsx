@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import {
   Archive, Check, X, Loader2, Clock, AlertTriangle, Calendar,
-  Stethoscope, Filter, Search, ExternalLink, Receipt, Send,
+  Stethoscope, Filter, Search, ExternalLink, Receipt, Send, Trash2,
 } from "lucide-react";
 
 import { DoctorAvatar } from "@/components/doctor-avatar";
@@ -61,6 +61,7 @@ export function AdminArchiveApprovals() {
   const [doctorSlot, setDoctorSlot] = useState<number | "all">("all");
   const [search, setSearch] = useState("");
   const [testing, setTesting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   /** Send a test message to the clinic's Telegram group to verify delivery. */
   async function sendTelegramTest() {
@@ -138,6 +139,43 @@ export function AdminArchiveApprovals() {
     return true;
   }), [rows, status, month, doctorSlot, search, doctors]);
 
+  const visibleIds = new Set(filtered.map(r => r.id));
+  const allVisibleSelected = filtered.length > 0 && filtered.every(r => selectedIds.has(r.id));
+
+  function toggleSelected(id: string) {
+    setSelectedIds(current => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    setSelectedIds(current => {
+      const next = new Set(current);
+      if (allVisibleSelected) visibleIds.forEach(id => next.delete(id));
+      else visibleIds.forEach(id => next.add(id));
+      return next;
+    });
+  }
+
+  async function removeSelectedNotifications() {
+    const selectedRows = rows.filter(r => selectedIds.has(r.id));
+    if (!selectedRows.length) return;
+    if (!window.confirm(`هل تريد حذف ${selectedRows.length} إشعاراً محدداً؟ ستبقى الحالات محفوظة.`)) return;
+    const paths = selectedRows.map(r => r.archive_receipt_path).filter(Boolean) as string[];
+    if (paths.length) await supabase.storage.from("chat-attachments").remove(paths);
+    const { error } = await supabase.from("slot_cases").update({
+      archive_receipt_path: null, archive_receipt_name: null, archive_receipt_sent_at: null,
+      archive_request_note: null, archive_approval: null, archive_reviewed_at: null,
+      archive_reviewed_by: null, archive_reject_reason: null,
+    } as any).in("id", selectedRows.map(r => r.id));
+    if (error) { toast.error(error.message); return; }
+    setSelectedIds(new Set());
+    toast.success(`تم حذف ${selectedRows.length} إشعاراً`);
+    load();
+  }
+
   return (
     <div className="space-y-4">
       <div className="rounded-2xl gradient-brown text-primary-foreground p-5 shadow-luxury flex items-center gap-4">
@@ -213,17 +251,34 @@ export function AdminArchiveApprovals() {
           لا توجد إشعارات أرشفة مطابقة للفلاتر.
         </div>
       ) : (
-        <div className="grid md:grid-cols-2 gap-4">
-          {filtered.map(r => (
-            <ApprovalCard key={r.id} r={r} doctor={doctors[r.doctor_slot]} onDone={load} />
-          ))}
-        </div>
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-3 shadow-luxury">
+            <label className="inline-flex cursor-pointer items-center gap-2 text-xs font-bold">
+              <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll}
+                className="size-4 accent-gold" aria-label="تحديد كل الإشعارات الظاهرة" />
+              تحديد الكل في النتائج
+            </label>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              {selectedIds.size > 0 && <span>تم تحديد {selectedIds.size}</span>}
+              <button type="button" onClick={removeSelectedNotifications} disabled={selectedIds.size === 0}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-destructive/40 px-3 py-2 font-bold text-destructive hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-40">
+                <Trash2 className="size-3.5" /> حذف المحدد
+              </button>
+            </div>
+          </div>
+          <div className="grid md:grid-cols-2 gap-4">
+            {filtered.map(r => (
+              <ApprovalCard key={r.id} r={r} doctor={doctors[r.doctor_slot]} onDone={load}
+                selected={selectedIds.has(r.id)} onSelect={() => toggleSelected(r.id)} />
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
 }
 
-function ApprovalCard({ r, doctor, onDone }: { r: Row; doctor?: DoctorMini; onDone: () => void }) {
+function ApprovalCard({ r, doctor, onDone, selected, onSelect }: { r: Row; doctor?: DoctorMini; onDone: () => void; selected: boolean; onSelect: () => void }) {
   const [url, setUrl] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -286,6 +341,33 @@ function ApprovalCard({ r, doctor, onDone }: { r: Row; doctor?: DoctorMini; onDo
     onDone();
   }
 
+  async function removeNotification() {
+    if (busy) return;
+    if (!window.confirm("هل تريد حذف إشعار الأرشفة هذا؟ ستبقى الحالة محفوظة، ولن يظهر الإشعار في هذه الصفحة مرة أخرى.")) return;
+    setBusy(true);
+    if (r.archive_receipt_path) {
+      await supabase.storage.from("chat-attachments").remove([r.archive_receipt_path]);
+    }
+    const { error } = await supabase.from("slot_cases").update({
+      archive_receipt_path: null,
+      archive_receipt_name: null,
+      archive_receipt_sent_at: null,
+      archive_request_note: null,
+      archive_approval: null,
+      archive_reviewed_at: null,
+      archive_reviewed_by: null,
+      archive_reject_reason: null,
+    } as any).eq("id", r.id);
+    if (error) {
+      setBusy(false);
+      toast.error(error.message);
+      return;
+    }
+    toast.success("تم حذف إشعار الأرشفة");
+    setBusy(false);
+    onDone();
+  }
+
   async function reject() {
     if (busy) return;
     if (!reason.trim()) { toast.error("اكتب سبب عدم الموافقة"); return; }
@@ -313,8 +395,12 @@ function ApprovalCard({ r, doctor, onDone }: { r: Row; doctor?: DoctorMini; onDo
   const statusLabel = status === "approved" ? "تمت الموافقة — مؤرشفة" : status === "rejected" ? "غير موافق" : "بانتظار قرار الإدارة";
 
   return (
-    <div className={`rounded-2xl bg-card border-2 ${tone} p-4 shadow-luxury space-y-3`}>
-      <div className="flex items-start gap-3">
+    <div className={`rounded-2xl bg-card border-2 ${tone} ${selected ? "ring-2 ring-gold ring-offset-2" : ""} p-4 shadow-luxury space-y-3`}>
+      <div className="flex flex-wrap items-start gap-3">
+        <label className="mt-1 shrink-0 cursor-pointer" title="تحديد الإشعار">
+          <input type="checkbox" checked={selected} onChange={onSelect}
+            className="size-4 accent-gold" aria-label={`تحديد إشعار الحالة ${r.case_code}`} />
+        </label>
         <DoctorAvatar name={doctor?.name} className="size-11" rounded="xl" />
         <div className="min-w-0 flex-1">
           <div className="font-bold text-sm truncate">{r.patient_name}</div>
@@ -328,9 +414,16 @@ function ApprovalCard({ r, doctor, onDone }: { r: Row; doctor?: DoctorMini; onDo
             {r.shade ? `اللون: ${r.shade}` : ""}
           </div>
         </div>
-        <span className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-extrabold ${status === "approved" ? "bg-emerald-600 text-white" : status === "rejected" ? "bg-rose-600 text-white" : "bg-amber-500 text-white animate-pulse"}`}>
-          <StatusIcon className="size-3" /> {statusLabel}
-        </span>
+        <div className="shrink-0 flex items-center gap-1.5">
+          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-extrabold ${status === "approved" ? "bg-emerald-600 text-white" : status === "rejected" ? "bg-rose-600 text-white" : "bg-amber-500 text-white animate-pulse"}`}>
+            <StatusIcon className="size-3" /> {statusLabel}
+          </span>
+          <button type="button" onClick={removeNotification} disabled={busy}
+            className="inline-flex items-center gap-1 rounded-lg border border-destructive/50 bg-destructive/5 px-2 py-1.5 text-[10px] font-extrabold text-destructive hover:bg-destructive/15 disabled:cursor-not-allowed disabled:opacity-60"
+            aria-label={`حذف إشعار الحالة ${r.case_code}`} title="حذف إشعار الأرشفة">
+            {busy ? <Loader2 className="size-3 animate-spin" /> : <Trash2 className="size-3" />} حذف
+          </button>
+        </div>
       </div>
 
       {url ? (
@@ -357,6 +450,11 @@ function ApprovalCard({ r, doctor, onDone }: { r: Row; doctor?: DoctorMini; onDo
       )}
 
       <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-border/60">
+        <button type="button" onClick={removeNotification} disabled={busy}
+          className="order-first inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg bg-destructive px-3 py-2 text-[11px] font-bold text-destructive-foreground shadow-sm hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-60"
+          aria-label={`حذف إشعار الحالة ${r.case_code}`} data-testid={`delete-archive-notification-${r.id}`}>
+          {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />} حذف الإشعار
+        </button>
         <Link to="/cases/$id" params={{ id: r.id }}
           className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-[11px] font-bold hover:border-gold">
           <ExternalLink className="size-3.5" /> فتح الحالة

@@ -73,7 +73,7 @@ function useDesignerData() {
     const load = async () => {
       const [{ data: docs }, { data: cs }] = await Promise.all([
         supabase.from("doctor_profiles").select("slot,name,branch,active").order("slot"),
-        supabase.from("slot_cases").select("*").order("created_at", { ascending: false }),
+        supabase.from("slot_cases").select("*").is("trashed_at", null).order("created_at", { ascending: false }),
       ]);
       setDoctors((docs ?? []) as Doctor[]);
       setCases((cs ?? []) as Case[]);

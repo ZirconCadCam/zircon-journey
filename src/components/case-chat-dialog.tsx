@@ -9,6 +9,7 @@ import { isNativeApp, openNativeUri } from "@/lib/native-fs";
 import { InAppFileViewer } from "@/components/in-app-file-viewer";
 import { incomingAlert, stopRing } from "@/lib/notify";
 import { toast } from "sonner";
+import { findTelegramLink } from "@/lib/telegram-file-links";
 
 /**
  * Per-case chat trigger. Opens a modal hosting the standard ChatModule
@@ -195,7 +196,7 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
     let cancelled = false;
     (async () => {
       const { data: row } = await supabase.from("slot_cases").select(
-        "id, case_code, patient_name, patient_phone, patient_age, patient_gender, tooth_number, shade, case_type, notes, scan_path, scan_name, revision_design_file_path, revision_design_file_name, design_html_sent, design_html_path, design_html_name, doctor_decision, final_archived, created_at"
+        "id, case_code, patient_name, patient_phone, patient_age, patient_gender, tooth_number, shade, case_type, notes, scan_path, scan_name, revision_design_file_path, revision_design_file_name, design_html_sent, design_html_path, design_html_name, doctor_decision, final_archived, files_purged_at, created_at"
       ).eq("doctor_slot", doctorSlot).eq("case_code", caseCode).maybeSingle();
       if (cancelled) return;
       setC(row);
@@ -255,6 +256,20 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
 
   async function downloadOne(att: CaseAttachment) {
     setBusy(att.url);
+    // Archived case files are deleted 15 days after archiving; open the copy
+    // kept in the Telegram group instead.
+    const openTelegram = async () => {
+      const link = await findTelegramLink(att.url);
+      if (!link) return false;
+      window.open(link, "_blank", "noopener");
+      toast.success("تم التوجيه إلى الملف في جروب تلجرام");
+      return true;
+    };
+    if (c?.files_purged_at) {
+      if (!(await openTelegram())) toast.error("الملف محذوف ولا يوجد رابط له في تلجرام");
+      setBusy(null);
+      return;
+    }
     setProgress(p => ({ ...p, [att.url]: { pct: 0, loaded: 0, total: 0, phase: "download" } }));
     try {
       const res = await fetch(att.url);
@@ -301,7 +316,7 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
         setViewer(att);
       }
     } catch (e: any) {
-      toast.error(e?.message || "تعذر تنزيل الملف");
+      if (!(await openTelegram())) toast.error(e?.message || "تعذر تنزيل الملف");
     } finally {
       setBusy(null);
       setTimeout(() => setProgress(p => {
@@ -366,6 +381,11 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
                       <span className="text-[10px] rounded-full bg-muted px-1.5 py-0.5 font-bold shrink-0">
                         {sourceLabel(f.source)}
                       </span>
+                      {c.files_purged_at && (
+                        <span className="text-[10px] rounded-full bg-sky-500/15 text-sky-700 px-1.5 py-0.5 font-bold shrink-0">
+                          في تلجرام
+                        </span>
+                      )}
                     </button>
                     <button onClick={() => downloadOne(f)} disabled={busy === f.url}
                       className="rounded-lg border border-border p-1.5 hover:border-gold transition disabled:opacity-60 shrink-0"

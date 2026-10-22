@@ -4,25 +4,27 @@ import { supabase } from "@/integrations/supabase/client";
 import { ChatModule } from "@/components/chat-module";
 import { DesignerCases } from "@/components/designer-cases";
 import { CaseSearch } from "@/components/case-search";
-import { DesignerArchive, DesignerDesignFiles, DesignerReports } from "@/components/designer-panels";
-import { TechnicianReports, TechnicianDesignFiles, TechnicianReadyZircon } from "@/components/technician-panels";
+import { DesignerReports } from "@/components/designer-panels";
+import { TechnicianReports, TechnicianReadyZircon } from "@/components/technician-panels";
 import { AdminSettingsPanel } from "@/components/admin-settings-panel";
 import { AdminArchiveApprovals } from "@/components/admin-archive-approvals";
 import { AdminOverdueCompletion } from "@/components/admin-overdue-completion";
-import { AdminDevicesPanel } from "@/components/admin-devices-panel";
 import { AdminAccountingPanel } from "@/components/admin-accounting-panel";
 import { AdminAccountingReport } from "@/components/admin-accounting-report";
+import { AdminSystemStatus } from "@/components/admin-system-status";
+import { AdminTrashPanel } from "@/components/admin-trash-panel";
 import { AdminVoiceListener } from "@/components/admin-voice-listener";
+import { ToolGate } from "@/components/tool-gate";
+import { Gauge, Receipt, Trash2, Send } from "lucide-react";
 import { RoleNotifications } from "@/components/role-notifications";
 import { NotificationSettings } from "@/components/notification-settings";
 import { DoctorAvatar } from "@/components/doctor-avatar";
-import { SecretaryPhotoInbox } from "@/components/secretary-photo-inbox";
 
 
 import { ROLE_LABEL, STAFF_PASSWORDS, type RoleKey } from "@/lib/chat";
 import { saveStaffSession, hasValidStaffSession, clearStaffSession } from "@/lib/staff-session";
 import { getStage, deriveStageKey } from "@/lib/case-stages";
-import { Sparkles, ArrowRight, Lock, Stethoscope, MessageSquare, ClipboardList, Settings, Archive, FileArchive, FileText, Search, Bell, BellRing, Camera, RefreshCw, Timer, MonitorSmartphone, Eye, EyeOff, Calculator, FileSpreadsheet, PackageCheck } from "lucide-react";
+import { Sparkles, ArrowRight, Lock, Stethoscope, MessageSquare, ClipboardList, Settings, Archive, FileArchive, FileText, Search, Bell, BellRing, Camera, RefreshCw, Timer, MonitorSmartphone, Eye, EyeOff, Calculator, FileSpreadsheet, PackageCheck, Activity } from "lucide-react";
 import { DesignerFollowupPanel } from "@/components/designer-followup-panel";
 import { useNewRevisionRounds } from "@/lib/revision-round-alerts";
 import { toast } from "sonner";
@@ -31,7 +33,7 @@ export const Route = createFileRoute("/staff/$role")({
   component: StaffPortal,
 });
 
-const VALID: RoleKey[] = ["designer", "technician", "secretary_sanaa", "secretary_ibb", "admin"];
+const VALID: RoleKey[] = ["designer", "technician", "admin"]; // secretary pages removed
 
 // Roles whose login is bound to a single device (logging in elsewhere signs the
 // previous device out).
@@ -132,8 +134,10 @@ function StaffPortal() {
     const ch = supabase.channel(`staff-session-${role}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "staff_sessions" }, verify)
       .subscribe();
-    const interval = window.setInterval(verify, 30000);
-    return () => { cancelled = true; supabase.removeChannel(ch); window.clearInterval(interval); };
+    // No polling: re-verify only when the tab becomes visible again.
+    const onVis = () => { if (document.visibilityState === "visible") void verify(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { cancelled = true; supabase.removeChannel(ch); document.removeEventListener("visibilitychange", onVis); };
   }, [authed, role]);
 
   if (!VALID.includes(role)) {
@@ -244,8 +248,8 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
   const [selected, setSelected] = useState<Doctor | null>(null);
   const [unread, setUnread] = useState<Record<number, number>>({});
   // Default tab: roles with a case list land on "cases"; admin stays on "chat".
-  const initialTab: "chat" | "cases" | "settings" = role === "admin" ? "chat" : "cases";
-  const [tab, setTab] = useState<"chat" | "cases" | "settings" | "archive" | "designfiles" | "reports" | "search" | "notify" | "photos" | "followup" | "archiveapprovals" | "overdue" | "devices" | "accounts" | "accreport" | "readyzircon">(initialTab);
+  const initialTab: "chat" | "cases" | "settings" = "cases";
+  const [tab, setTab] = useState<"chat" | "cases" | "settings" | "archive" | "designfiles" | "reports" | "search" | "notify" | "photos" | "followup" | "archiveapprovals" | "overdue" | "devices" | "accounts" | "accreport" | "readyzircon" | "status" | "trash">(initialTab);
   const { count: newRounds, clear: clearRounds } = useNewRevisionRounds(role === "technician" ? "technician" : "designer");
 
   useEffect(() => {
@@ -257,7 +261,7 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
 
   // unread badges per doctor
   useEffect(() => {
-    if (doctors.length === 0) return;
+    if (doctors.length === 0 || role === "admin") return;
     let active = true;
     const refresh = async () => {
       const { data: convs } = await supabase.from("chat_conversations").select("id,doctor_slot,participants");
@@ -310,23 +314,18 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
             دليل الاستخدام
           </Link>
         )}
-        {role === "admin" && (
-          <Link to="/admin/archive" className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-bold hover:border-gold transition">
-            أرشيف الإدارة
-          </Link>
-        )}
         <button onClick={onLogout} className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-bold hover:bg-destructive hover:text-destructive-foreground transition">
           خروج
         </button>
       </>
     }>
       <main className="container mx-auto px-4 sm:px-6 py-6">
-        {role === "admin" && <AdminVoiceListener />}
+        {role === "admin" && <ToolGate id="voice"><AdminVoiceListener /></ToolGate>}
         {(role === "designer" ||
           role === "technician" ||
           role === "secretary_sanaa" ||
           role === "secretary_ibb" ||
-          role === "admin") && <RoleNotifications role={role} />}
+          role === "admin") && <ToolGate id="notifications"><RoleNotifications role={role} /></ToolGate>}
 
 
         <div className="rounded-3xl gradient-brown text-primary-foreground p-6 sm:p-8 shadow-luxury flex items-center justify-between flex-wrap gap-4">
@@ -358,12 +357,6 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
               className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "search" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
               <Search className="size-4" /> بحث
             </button>
-            {role === "admin" && (
-              <button onClick={() => setTab("chat")}
-                className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "chat" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
-                <MessageSquare className="size-4" /> المحادثات
-              </button>
-            )}
             {role !== "admin" && (
               <button onClick={() => setTab("cases")}
                 className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "cases" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
@@ -372,14 +365,6 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
             )}
             {role === "designer" && (
               <>
-                <button onClick={() => setTab("archive")}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "archive" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
-                  <Archive className="size-4" /> الأرشيف
-                </button>
-                <button onClick={() => setTab("designfiles")}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "designfiles" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
-                  <FileArchive className="size-4" /> ملفات التصاميم
-                </button>
                 <button onClick={() => setTab("reports")}
                   className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "reports" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
                   <FileText className="size-4" /> الكشوفات
@@ -401,10 +386,6 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
                   <FileText className="size-4" /> الكشوفات
                 </button>
 
-                <button onClick={() => setTab("designfiles")}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "designfiles" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
-                  <FileArchive className="size-4" /> ملفات التصاميم
-                </button>
                 <button onClick={() => { setTab("followup"); clearRounds(); }}
                   className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "followup" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
                   <RefreshCw className="size-4" /> متابعة
@@ -439,15 +420,15 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
               </button>
             )}
             {role === "admin" && (
-              <button onClick={() => setTab("overdue")}
-                className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "overdue" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
-                <Timer className="size-4" /> إكمال المتأخرة
+              <button onClick={() => setTab("status")}
+                className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "status" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
+                <Activity className="size-4" /> حالة النظام
               </button>
             )}
             {role === "admin" && (
-              <button onClick={() => setTab("devices")}
-                className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "devices" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
-                <MonitorSmartphone className="size-4" /> عناوين الأجهزة
+              <button onClick={() => setTab("overdue")}
+                className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "overdue" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
+                <Timer className="size-4" /> إكمال المتأخرة
               </button>
             )}
             {role === "admin" && (
@@ -463,6 +444,30 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
               </button>
             )}
 
+            {role === "admin" && (
+              <Link to="/admin/usage"
+                className="px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition hover:bg-muted/40">
+                <Gauge className="size-4" /> تفاصيل الاستهلاك
+              </Link>
+            )}
+            {role === "admin" && (
+              <Link to="/admin/telegram"
+                className="px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition hover:bg-muted/40">
+                <Send className="size-4" /> المتعذر إرسالها للتلجرام
+              </Link>
+            )}
+            {role === "admin" && (
+              <Link to="/admin/expenses"
+                className="px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition hover:bg-muted/40">
+                <Receipt className="size-4" /> المصروفات
+              </Link>
+            )}
+            {role === "admin" && (
+              <button onClick={() => setTab("trash")}
+                className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "trash" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
+                <Trash2 className="size-4" /> سلة المهملات
+              </button>
+            )}
             {role === "admin" && (
               <button onClick={() => setTab("settings")}
                 className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition ${tab === "settings" ? "gradient-gold text-gold-foreground shadow-gold" : "hover:bg-muted/40"}`}>
@@ -481,14 +486,14 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
         <div className="mt-6">
           {tab === "notify" ? (
             <NotificationSettings />
-          ) : tab === "photos" && (role === "secretary_sanaa" || role === "secretary_ibb") ? (
-            <SecretaryPhotoInbox role={role} />
           ) : tab === "archiveapprovals" && role === "admin" ? (
             <AdminArchiveApprovals />
+          ) : tab === "status" && role === "admin" ? (
+            <AdminSystemStatus />
+          ) : tab === "trash" && role === "admin" ? (
+            <AdminTrashPanel />
           ) : tab === "overdue" && role === "admin" ? (
             <AdminOverdueCompletion />
-          ) : tab === "devices" && role === "admin" ? (
-            <AdminDevicesPanel />
           ) : tab === "accounts" && role === "admin" ? (
             <AdminAccountingPanel />
           ) : tab === "accreport" && role === "admin" ? (
@@ -499,10 +504,6 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
             <AdminSettingsPanel />
           ) : role === "designer" && tab === "followup" ? (
             <DesignerFollowupPanel />
-          ) : role === "designer" && tab === "archive" ? (
-            <DesignerArchive />
-          ) : role === "designer" && tab === "designfiles" ? (
-            <DesignerDesignFiles />
           ) : role === "designer" && tab === "reports" ? (
             <DesignerReports />
           ) : role === "technician" && tab === "followup" ? (
@@ -511,8 +512,6 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
             <TechnicianReadyZircon />
           ) : role === "technician" && tab === "reports" ? (
             <TechnicianReports />
-          ) : role === "technician" && tab === "designfiles" ? (
-            <TechnicianDesignFiles />
           ) : role === "admin" && tab === "reports" ? (
             <div className="space-y-8">
               <div>

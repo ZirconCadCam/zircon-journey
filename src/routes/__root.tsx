@@ -1,3 +1,4 @@
+import { installUsageTracker } from "@/lib/usage-tracker";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
@@ -11,7 +12,6 @@ import { InstallPrompt } from "@/components/install-prompt";
 import { TransferOverlay, BackgroundKeepAlive } from "@/lib/transfer-manager";
 import { NativeBootstrap } from "@/components/native-bootstrap";
 import { StoragePermissionPrompt } from "@/components/storage-permission-prompt";
-import { DeviceGuard } from "@/components/device-guard";
 import appCss from "../styles.css?url";
 
 function NotFoundComponent() {
@@ -86,6 +86,8 @@ function RootShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+if (typeof window !== "undefined") installUsageTracker();
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
@@ -95,7 +97,6 @@ function RootComponent() {
       <InstallPrompt />
       <NativeBootstrap />
       <StoragePermissionPrompt />
-      <DeviceGuard />
       <TransferOverlay />
       <BackgroundKeepAlive />
     </QueryClientProvider>
