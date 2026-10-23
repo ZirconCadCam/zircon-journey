@@ -1,3 +1,4 @@
+import { hasTicket } from "@/lib/staff-tickets";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Gauge, Power, SlidersHorizontal, Trash2, ArrowRight, Activity } from "lucide-react";
@@ -49,7 +50,7 @@ function UsagePage() {
   const [showControl, setShowControl] = useState(false);
 
   useEffect(() => {
-    if (!hasValidStaffSession("admin")) { nav({ to: "/staff/$role", params: { role: "admin" } }); return; }
+    if (!hasValidStaffSession("admin") && !hasTicket("admin")) { nav({ to: "/staff/$role", params: { role: "admin" } }); return; }
     setEvents(loadEvents()); setCfg(loadConfig()); setReady(true);
   }, [nav]);
 

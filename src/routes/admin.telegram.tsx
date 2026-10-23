@@ -1,3 +1,4 @@
+import { hasTicket } from "@/lib/staff-tickets";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Send, RefreshCw, Trash2, AlertTriangle, Clock, Loader2, FileText, Search, Pause, History, X, ShieldCheck } from "lucide-react";
@@ -78,7 +79,7 @@ function TelegramOutboxPage() {
   }
 
   useEffect(() => {
-    if (!hasValidStaffSession("admin")) { nav({ to: "/staff/$role", params: { role: "admin" } }); return; }
+    if (!hasValidStaffSession("admin") && !hasTicket("admin")) { nav({ to: "/staff/$role", params: { role: "admin" } }); return; }
     void load();
     void getTelegramPerms().then(setPerms).catch(() => {});
   }, [nav]);
