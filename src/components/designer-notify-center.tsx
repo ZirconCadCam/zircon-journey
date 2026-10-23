@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Z } from "@/lib/z-index";
+import { sdb } from "@/lib/secure-db";
 
 /**
  * Designer notification center.
@@ -84,7 +85,7 @@ export function DesignerNotifyCenter({
 
   /* ---- live chat unread, grouped by case code (conversation title "[CODE] …") ---- */
   const refreshChat = useCallback(async () => {
-    const { data: convs } = await supabase
+    const { data: convs } = await sdb
       .from("chat_conversations").select("id,title,participants");
     const mine = ((convs ?? []) as any[]).filter(cv =>
       Array.isArray(cv.participants) && cv.participants.includes("designer")
@@ -96,7 +97,7 @@ export function DesignerNotifyCenter({
       const m = /^\[([^\]]+)\]/.exec(cv.title as string);
       if (m) codeByConv.set(cv.id as string, m[1]);
     }
-    const { data: msgs } = await supabase.from("chat_messages")
+    const { data: msgs } = await sdb.from("chat_messages")
       .select("id,conversation_id")
       .in("conversation_id", Array.from(codeByConv.keys()))
       .neq("sender", "designer")

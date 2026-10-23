@@ -10,6 +10,7 @@ import { InAppFileViewer } from "@/components/in-app-file-viewer";
 import { incomingAlert, stopRing } from "@/lib/notify";
 import { toast } from "sonner";
 import { findTelegramLink } from "@/lib/telegram-file-links";
+import { sdb } from "@/lib/secure-db";
 
 /**
  * Per-case chat trigger. Opens a modal hosting the standard ChatModule
@@ -40,7 +41,7 @@ export function CaseChatButton(props: {
     let cancelled = false;
     const prefix = `[${caseCode}]`;
     const refresh = async () => {
-      const { data: convs } = await supabase
+      const { data: convs } = await sdb
         .from("chat_conversations").select("id,participants,title")
         .eq("doctor_slot", doctorSlot);
       const mine = ((convs ?? []) as any[]).filter(c =>
@@ -50,7 +51,7 @@ export function CaseChatButton(props: {
       myConvIds.current = new Set(mine.map(c => c.id as string));
       if (mine.length === 0) { if (!cancelled) setUnread(0); return; }
       const ids = mine.map(c => c.id);
-      const { count } = await supabase.from("chat_messages")
+      const { count } = await sdb.from("chat_messages")
         .select("id", { count: "exact", head: true })
         .in("conversation_id", ids)
         .neq("sender", me)
@@ -195,7 +196,7 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data: row } = await supabase.from("slot_cases").select(
+      const { data: row } = await sdb.from("slot_cases").select(
         "id, case_code, patient_name, patient_phone, patient_age, patient_gender, tooth_number, shade, case_type, notes, scan_path, scan_name, revision_design_file_path, revision_design_file_name, design_html_sent, design_html_path, design_html_name, doctor_decision, final_archived, files_purged_at, created_at"
       ).eq("doctor_slot", doctorSlot).eq("case_code", caseCode).maybeSingle();
       if (cancelled) return;
@@ -218,11 +219,11 @@ function CaseHeaderPanel({ doctorSlot, doctorName, caseCode }: {
       });
 
       // Pull any .rar/.zip attachments referencing this case from chat messages.
-      const { data: convs } = await supabase.from("chat_conversations")
+      const { data: convs } = await sdb.from("chat_conversations")
         .select("id").eq("doctor_slot", doctorSlot);
       const ids = ((convs ?? []) as any[]).map(x => x.id);
       if (ids.length) {
-        const { data: msgs } = await supabase.from("chat_messages")
+        const { data: msgs } = await sdb.from("chat_messages")
           .select("attachment_path, attachment_name, content, created_at, sender, message_type")
           .in("conversation_id", ids).eq("message_type", "file")
           .order("created_at", { ascending: false }).limit(200);

@@ -1,10 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
+import { sdb } from "@/lib/secure-db";
 
 export const DOCTOR_PASSWORD_REQUIRED = "doctor_password_required";
 
 /** Read a boolean app flag (defaults to true when missing/unreachable). */
 export async function getAppFlag(key: string, fallback = true): Promise<boolean> {
-  const { data, error } = await supabase
+  const { data, error } = await sdb
     .from("app_settings")
     .select("bool_value")
     .eq("key", key)

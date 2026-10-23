@@ -18,6 +18,7 @@ import { fileManagerSupported, openCachedFile } from "@/lib/file-manager";
 import { transferDownload } from "@/lib/transfer-manager";
 import type { CaseFileLocation } from "@/lib/case-folders";
 import { printHtmlDocument } from "@/lib/print-report";
+import { sdb } from "@/lib/secure-db";
 
 interface Doctor { slot: number; name: string; branch: string | null }
 interface Case {
@@ -85,7 +86,7 @@ function useTechnicianData() {
     const load = async () => {
       const [{ data: docs }, { data: cs }] = await Promise.all([
         supabase.from("doctor_profiles").select("slot,name,branch,active").order("slot"),
-        supabase.from("slot_cases").select("*").is("trashed_at", null).order("created_at", { ascending: false }),
+        sdb.from("slot_cases").select("*").is("trashed_at", null).order("created_at", { ascending: false }),
       ]);
       setDoctors((docs ?? []) as Doctor[]);
       setCases((cs ?? []) as Case[]);
@@ -365,7 +366,7 @@ export function TechnicianDesignFiles() {
     let active = true;
     (async () => {
       setLoadingFiles(true);
-      const { data: msgs } = await supabase.from("chat_messages")
+      const { data: msgs } = await sdb.from("chat_messages")
         .select("id, attachment_path, attachment_name, attachment_size, content, created_at, message_type")
         .eq("message_type", "file")
         .order("created_at", { ascending: false }).limit(800);
@@ -590,7 +591,7 @@ export function TechnicianReadyZircon() {
       }
 
       const now = new Date().toISOString();
-      const { error } = await supabase
+      const { error } = await sdb
         .from("slot_cases")
         .update({ ready_zircon_sent_at: now })
         .in("id", rows.map((c) => c.id));

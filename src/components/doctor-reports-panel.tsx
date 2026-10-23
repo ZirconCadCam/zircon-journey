@@ -7,6 +7,7 @@ import { getStage, deriveStageKey } from "@/lib/case-stages";
 import { teethOf as teethOfRow } from "@/lib/report-build";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import { sdb } from "@/lib/secure-db";
 
 type ReportKey = "pending" | "uninstalled" | "completed";
 
@@ -65,7 +66,7 @@ export function DoctorReportsPanel({ doctor }: { doctor: { slot: number; name: s
   const tableRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
-    const { data, error } = await supabase.from("slot_cases").select("*")
+    const { data, error } = await sdb.from("slot_cases").select("*")
       .eq("doctor_slot", doctor.slot)
       .order("created_at", { ascending: false });
     if (error) toast.error(error.message);

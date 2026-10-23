@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { sdb } from "@/lib/secure-db";
 
 /**
  * Live store for admin-assigned avatar photos (doctors + designer + technician).
@@ -29,7 +30,7 @@ function emit() {
 }
 
 export async function loadAvatarOverrides() {
-  const { data } = await supabase
+  const { data } = await sdb
     .from("avatar_overrides")
     .select("subject,image_url,label");
   cache = new Map((data ?? []).map((r: any) => [r.subject as string, r.image_url as string]));

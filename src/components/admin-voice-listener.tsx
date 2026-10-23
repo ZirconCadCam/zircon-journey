@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { speak } from "@/lib/voice-notify";
 import { deriveStageKey, getStage } from "@/lib/case-stages";
+import { sdb } from "@/lib/secure-db";
 
 /**
  * Admin-only background listener. On every change to `slot_cases` it derives
@@ -21,7 +22,7 @@ export function AdminVoiceListener() {
     async function refresh(initial = false) {
       const [{ data: docs }, { data: cs }] = await Promise.all([
         supabase.from("doctor_profiles").select("slot,name"),
-        supabase.from("slot_cases").select("*").eq("archived", false),
+        sdb.from("slot_cases").select("*").eq("archived", false),
       ]);
       if (cancelled) return;
       doctorNames.current = new Map(

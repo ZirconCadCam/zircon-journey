@@ -28,6 +28,7 @@ import { Sparkles, ArrowRight, Lock, Stethoscope, MessageSquare, ClipboardList, 
 import { DesignerFollowupPanel } from "@/components/designer-followup-panel";
 import { useNewRevisionRounds } from "@/lib/revision-round-alerts";
 import { toast } from "sonner";
+import { sdb } from "@/lib/secure-db";
 
 export const Route = createFileRoute("/staff/$role")({
   component: StaffPortal,
@@ -264,11 +265,11 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
     if (doctors.length === 0 || role === "admin") return;
     let active = true;
     const refresh = async () => {
-      const { data: convs } = await supabase.from("chat_conversations").select("id,doctor_slot,participants");
+      const { data: convs } = await sdb.from("chat_conversations").select("id,doctor_slot,participants");
       const mine = ((convs ?? []) as any[]).filter(c => c.participants.includes(role));
       if (mine.length === 0) { if (active) setUnread({}); return; }
       const ids = mine.map(c => c.id);
-      const { data: msgs } = await supabase.from("chat_messages").select("conversation_id,sender,read_by")
+      const { data: msgs } = await sdb.from("chat_messages").select("conversation_id,sender,read_by")
         .in("conversation_id", ids).neq("sender", role);
       const map: Record<number, number> = {};
       for (const m of (msgs ?? []) as any[]) {

@@ -6,6 +6,7 @@ import {
   FileSpreadsheet, Loader2, RefreshCw, Printer, Stethoscope, MonitorCog, Wrench,
 } from "lucide-react";
 import { listPointWithdrawals } from "@/lib/secure-ops.functions";
+import { sdb } from "@/lib/secure-db";
 
 
 /* ------------------------------ helpers ------------------------------ */
@@ -107,7 +108,7 @@ export function AdminAccountingReport() {
   async function load() {
     setLoading(true);
     const [cases, docs, wdRows] = await Promise.all([
-      supabase.from("slot_cases").select(SELECT).order("created_at", { ascending: true }),
+      sdb.from("slot_cases").select(SELECT).order("created_at", { ascending: true }),
       supabase.from("doctor_profiles").select("slot,name,branch").order("slot"),
       listPointWithdrawals({ data: {} }).catch(() => [] as any[]),
     ]);

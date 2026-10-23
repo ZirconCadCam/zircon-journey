@@ -10,6 +10,7 @@ import {
 import { DoctorAvatar } from "@/components/doctor-avatar";
 import { ImageLightbox } from "@/components/image-lightbox";
 import { signPrivateUrl } from "@/lib/secure-storage";
+import { sdb } from "@/lib/secure-db";
 
 interface Row {
   id: string;
@@ -92,7 +93,7 @@ export function AdminArchiveApprovals() {
 
   async function load() {
     const [{ data: cases }, { data: docs }] = await Promise.all([
-      supabase.from("slot_cases")
+      sdb.from("slot_cases")
         .select("id,case_code,patient_name,patient_phone,tooth_number,teeth_count,shade,doctor_slot,final_archived,archive_receipt_path,archive_receipt_name,archive_receipt_sent_at,archive_request_note,archive_approval,archive_reviewed_at,archive_reviewed_by,archive_reject_reason")
         .not("archive_receipt_sent_at", "is", null)
         .order("archive_receipt_sent_at", { ascending: false }),
@@ -165,7 +166,7 @@ export function AdminArchiveApprovals() {
     if (!window.confirm(`هل تريد حذف ${selectedRows.length} إشعاراً محدداً؟ ستبقى الحالات محفوظة.`)) return;
     const paths = selectedRows.map(r => r.archive_receipt_path).filter(Boolean) as string[];
     if (paths.length) await supabase.storage.from("chat-attachments").remove(paths);
-    const { error } = await supabase.from("slot_cases").update({
+    const { error } = await sdb.from("slot_cases").update({
       archive_receipt_path: null, archive_receipt_name: null, archive_receipt_sent_at: null,
       archive_request_note: null, archive_approval: null, archive_reviewed_at: null,
       archive_reviewed_by: null, archive_reject_reason: null,
@@ -297,14 +298,14 @@ function ApprovalCard({ r, doctor, onDone, selected, onSelect }: { r: Row; docto
   }, [r.archive_receipt_path]);
 
   async function notifyDoctor(content: string) {
-    const { data: convs } = await supabase.from("chat_conversations")
+    const { data: convs } = await sdb.from("chat_conversations")
       .select("id,participants").eq("doctor_slot", r.doctor_slot);
     const conv = (convs ?? []).find((x: any) =>
       Array.isArray(x.participants) && x.participants.length === 2
       && x.participants.includes("doctor") && x.participants.includes("admin")) as { id: string } | undefined;
     let convId = conv?.id;
     if (!convId) {
-      const { data: created } = await supabase.from("chat_conversations").insert({
+      const { data: created } = await sdb.from("chat_conversations").insert({
         doctor_slot: r.doctor_slot,
         participants: ["doctor", "admin"],
         title: `حالات ${doctor?.name ?? `Slot #${r.doctor_slot}`} — الإدارة`,
@@ -313,7 +314,7 @@ function ApprovalCard({ r, doctor, onDone, selected, onSelect }: { r: Row; docto
       convId = created?.id;
     }
     if (convId) {
-      await supabase.from("chat_messages").insert({
+      await sdb.from("chat_messages").insert({
         conversation_id: convId, sender: "admin", sender_name: "الإدارة",
         content, message_type: "text",
       });
@@ -324,7 +325,7 @@ function ApprovalCard({ r, doctor, onDone, selected, onSelect }: { r: Row; docto
     if (busy) return;
     setBusy(true);
     const now = new Date().toISOString();
-    const { error } = await supabase.from("slot_cases").update({
+    const { error } = await sdb.from("slot_cases").update({
       archive_approval: "approved",
       archive_reviewed_at: now,
       archive_reviewed_by: "الإدارة",
@@ -333,7 +334,7 @@ function ApprovalCard({ r, doctor, onDone, selected, onSelect }: { r: Row; docto
       archived: true,
     } as any).eq("id", r.id);
     if (error) { setBusy(false); toast.error(error.message); return; }
-    await supabase.from("chat_conversations").update({ archived: true })
+    await sdb.from("chat_conversations").update({ archived: true })
       .eq("doctor_slot", r.doctor_slot).like("title", `[${r.case_code}]%`);
     await notifyDoctor(`✅ وافقت الإدارة على أرشفة الحالة ${r.case_code} (${r.patient_name}) بعد الاطلاع على سند حساب المريض. الحالة مؤرشفة نهائياً.`);
     toast.success("تمت الموافقة وأُرشفت الحالة نهائياً");
@@ -348,7 +349,7 @@ function ApprovalCard({ r, doctor, onDone, selected, onSelect }: { r: Row; docto
     if (r.archive_receipt_path) {
       await supabase.storage.from("chat-attachments").remove([r.archive_receipt_path]);
     }
-    const { error } = await supabase.from("slot_cases").update({
+    const { error } = await sdb.from("slot_cases").update({
       archive_receipt_path: null,
       archive_receipt_name: null,
       archive_receipt_sent_at: null,
@@ -373,7 +374,7 @@ function ApprovalCard({ r, doctor, onDone, selected, onSelect }: { r: Row; docto
     if (!reason.trim()) { toast.error("اكتب سبب عدم الموافقة"); return; }
     setBusy(true);
     const now = new Date().toISOString();
-    const { error } = await supabase.from("slot_cases").update({
+    const { error } = await sdb.from("slot_cases").update({
       archive_approval: "rejected",
       archive_reviewed_at: now,
       archive_reviewed_by: "الإدارة",

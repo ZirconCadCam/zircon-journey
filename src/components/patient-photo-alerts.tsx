@@ -5,6 +5,7 @@ import { Camera, Loader2, Check, Sparkles, BellRing } from "lucide-react";
 import { ROLE_LABEL, type RoleKey } from "@/lib/chat";
 import { ImageLightbox } from "@/components/image-lightbox";
 import { signPrivateUrl } from "@/lib/secure-storage";
+import { sdb } from "@/lib/secure-db";
 
 export interface PhotoAlertCase {
   id: string;
@@ -34,14 +35,14 @@ async function branchSecretary(slot: number): Promise<RoleKey | null> {
 
 /** Find (or create) the doctor↔secretary conversation for this doctor slot. */
 async function ensureSecretaryConv(slot: number, secretary: RoleKey, doctorName: string): Promise<string | null> {
-  const { data: existing } = await supabase.from("chat_conversations")
+  const { data: existing } = await sdb.from("chat_conversations")
     .select("id,participants").eq("doctor_slot", slot);
   const conv = (existing ?? []).find((x: any) =>
     Array.isArray(x.participants) && x.participants.length === 2
     && x.participants.includes("doctor") && x.participants.includes(secretary)
   ) as { id: string } | undefined;
   if (conv) return conv.id;
-  const { data: created } = await supabase.from("chat_conversations")
+  const { data: created } = await sdb.from("chat_conversations")
     .insert({
       doctor_slot: slot,
       participants: ["doctor", secretary],
@@ -113,7 +114,7 @@ function PhotoAlertCard({ c, phase, actorName, doctorName }: {
       const head = phase === "before"
         ? "📷 صورة حالة الأسنان قبل التجميل"
         : "✨ صورة حالة المريض بعد التجميل (الحالة مؤرشفة)";
-      const { error: msgErr } = await supabase.from("chat_messages").insert({
+      const { error: msgErr } = await sdb.from("chat_messages").insert({
         conversation_id: conv,
         sender: "doctor",
         sender_name: actorName,
@@ -129,7 +130,7 @@ function PhotoAlertCard({ c, phase, actorName, doctorName }: {
       const patch = phase === "before"
         ? { before_photo_path: path, before_photo_name: file.name, before_photo_sent_at: new Date().toISOString() }
         : { after_photo_path: path, after_photo_name: file.name, after_photo_sent_at: new Date().toISOString() };
-      const { error } = await supabase.from("slot_cases").update(patch as any).eq("id", c.id);
+      const { error } = await sdb.from("slot_cases").update(patch as any).eq("id", c.id);
       if (error) throw error;
 
       // Auto-forward the photo to the clinic's Telegram group (fire-and-forget).

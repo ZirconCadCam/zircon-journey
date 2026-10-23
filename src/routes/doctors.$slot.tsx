@@ -29,6 +29,7 @@ import { CaseSearch } from "@/components/case-search";
 import { RoleNotifications } from "@/components/role-notifications";
 import { NotificationSettings } from "@/components/notification-settings";
 import { DoctorAvatar } from "@/components/doctor-avatar";
+import { sdb } from "@/lib/secure-db";
 
 /** Compute WhatsApp-style tick state for each visible stage from case flags + timing. */
 function stageTickState(stageKey: string, c: any): TickState {
@@ -329,11 +330,11 @@ function ChatNotificationsListener({ doctorSlot, me, onUnread }: { doctorSlot: n
     }
     let convIds: string[] = [];
     const refresh = async () => {
-      const { data } = await supabase.from("chat_conversations").select("id,participants")
+      const { data } = await sdb.from("chat_conversations").select("id,participants")
         .eq("doctor_slot", doctorSlot);
       convIds = ((data ?? []) as any[]).filter(c => c.participants.includes(me)).map(c => c.id);
       if (convIds.length === 0) { onUnread(0); return; }
-      const { count } = await supabase.from("chat_messages")
+      const { count } = await sdb.from("chat_messages")
         .select("id", { count: "exact", head: true })
         .in("conversation_id", convIds)
         .neq("sender", me)
@@ -378,7 +379,7 @@ function FilesPanel({ doctor, actor }: { doctor: Doctor; actor: string }) {
   const fileInput = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
-    const { data } = await supabase.from("doctor_files").select("*")
+    const { data } = await sdb.from("doctor_files").select("*")
       .eq("doctor_slot", doctor.slot).is("trashed_at", null).order("created_at", { ascending: false });
     setFiles((data as DocFile[]) ?? []);
   }, [doctor.slot]);
@@ -399,7 +400,7 @@ function FilesPanel({ doctor, actor }: { doctor: Doctor; actor: string }) {
     const { error: upErr } = await supabase.storage.from("doctor-files").upload(path, f, { upsert: false });
     if (upErr) { toast.error(upErr.message); setUploading(false); return; }
     const { data: pub } = supabase.storage.from("doctor-files").getPublicUrl(path);
-    const { error } = await supabase.from("doctor_files").insert({
+    const { error } = await sdb.from("doctor_files").insert({
       doctor_slot: doctor.slot, file_name: f.name, file_path: path,
       public_url: pub.publicUrl, size_bytes: f.size, uploaded_by: actor,
     });
@@ -418,7 +419,7 @@ function FilesPanel({ doctor, actor }: { doctor: Doctor; actor: string }) {
   }
 
   async function archive(f: DocFile, val: boolean) {
-    const { error } = await supabase.from("doctor_files").update({ archived: val }).eq("id", f.id);
+    const { error } = await sdb.from("doctor_files").update({ archived: val }).eq("id", f.id);
     if (error) toast.error(error.message); else toast.success(val ? "تمت الأرشفة" : "تم الإسترجاع");
   }
   async function remove(f: DocFile) {
@@ -443,20 +444,20 @@ function FilesPanel({ doctor, actor }: { doctor: Doctor; actor: string }) {
    */
   async function sendToRole(f: DocFile, target: RoleKey) {
     const participants: RoleKey[] = ["doctor", target];
-    const { data: existing } = await supabase.from("chat_conversations")
+    const { data: existing } = await sdb.from("chat_conversations")
       .select("id,participants").eq("doctor_slot", doctor.slot);
     let conv = (existing ?? []).find((c: any) =>
       Array.isArray(c.participants) && c.participants.length === 2
       && c.participants.includes("doctor") && c.participants.includes(target)
     ) as { id: string } | undefined;
     if (!conv) {
-      const { data: created, error } = await supabase.from("chat_conversations")
+      const { data: created, error } = await sdb.from("chat_conversations")
         .insert({ doctor_slot: doctor.slot, participants, title: `ملف من ${doctor.name}`, created_by: "doctor" })
         .select("id").single();
       if (error || !created) { toast.error(error?.message ?? "تعذر إنشاء المحادثة"); return; }
       conv = created;
     }
-    const { error: mErr } = await supabase.from("chat_messages").insert({
+    const { error: mErr } = await sdb.from("chat_messages").insert({
       conversation_id: conv.id, sender: "doctor", sender_name: doctor.name,
       content: `📎 ${f.file_name}\n${f.public_url ?? ""}`,
       message_type: "text",
@@ -662,7 +663,7 @@ function CasesPanel({ doctor, me, myName }: { doctor: Doctor; me: RoleKey; myNam
   const [stageFilter, setStageFilter] = useState<CaseStage | "all">("all");
 
   const load = useCallback(async () => {
-    const { data } = await supabase.from("slot_cases").select("*")
+    const { data } = await sdb.from("slot_cases").select("*")
       .eq("doctor_slot", doctor.slot)
       .is("trashed_at", null)
       .order("pinned", { ascending: false })
@@ -691,7 +692,7 @@ function CasesPanel({ doctor, me, myName }: { doctor: Doctor; me: RoleKey; myNam
   }, [doctor.slot, load]);
 
   async function togglePin(c: SlotCase) {
-    const { error } = await supabase.from("slot_cases")
+    const { error } = await sdb.from("slot_cases")
       .update({ pinned: !c.pinned, updated_at: new Date().toISOString() }).eq("id", c.id);
     if (error) toast.error(error.message);
     else toast.success(!c.pinned ? "تم تثبيت الحالة" : "تم إلغاء التثبيت");
@@ -948,7 +949,7 @@ function EditCaseModal({ c, onClose, onSaved }: { c: SlotCase; onClose: () => vo
       toast.error("رقم السن غير صالح (نظام FDI)"); return;
     }
     setSaving(true);
-    const { error } = await supabase.from("slot_cases").update({
+    const { error } = await sdb.from("slot_cases").update({
       patient_name: form.patient_name.trim(),
       patient_phone: form.patient_phone.trim() || null,
       patient_age: form.patient_age ? Number(form.patient_age) : null,

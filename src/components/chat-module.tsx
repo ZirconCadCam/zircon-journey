@@ -20,6 +20,7 @@ import { compareByCreatedAt, formatChatTime, formatChatFull, formatDayLabel, isN
 import { getDoctorAvatar } from "@/lib/doctor-avatars";
 import { getOverrideUrl, roleSubject, useAvatarVersion } from "@/lib/avatar-store";
 import { removePrivateObjects } from "@/lib/secure-storage";
+import { sdb } from "@/lib/secure-db";
 
 
 
@@ -60,7 +61,7 @@ export function ChatModule({ doctorSlot, doctorName, me, myName, caseCode, caseL
   const titlePrefix = caseCode ? `[${caseCode}]` : null;
 
   const load = useCallback(async () => {
-    const { data } = await supabase
+    const { data } = await sdb
       .from("chat_conversations").select("*")
       .eq("doctor_slot", doctorSlot)
       .order("last_message_at", { ascending: false });
@@ -168,7 +169,7 @@ function ConversationRow({ conv, me, onOpen, onChange }: { conv: ChatConversatio
   const [unread, setUnread] = useState(0);
   useEffect(() => {
     (async () => {
-      const { count } = await supabase.from("chat_messages")
+      const { count } = await sdb.from("chat_messages")
         .select("id", { count: "exact", head: true })
         .eq("conversation_id", conv.id)
         .neq("sender", me)
@@ -179,13 +180,13 @@ function ConversationRow({ conv, me, onOpen, onChange }: { conv: ChatConversatio
 
   async function toggleArchive(e: React.MouseEvent) {
     e.stopPropagation();
-    await supabase.from("chat_conversations").update({ archived: !conv.archived }).eq("id", conv.id);
+    await sdb.from("chat_conversations").update({ archived: !conv.archived }).eq("id", conv.id);
     onChange();
   }
   async function remove(e: React.MouseEvent) {
     e.stopPropagation();
     if (!confirm("حذف هذه المحادثة وكل رسائلها؟")) return;
-    await supabase.from("chat_conversations").delete().eq("id", conv.id);
+    await sdb.from("chat_conversations").delete().eq("id", conv.id);
     onChange();
   }
 
@@ -243,7 +244,7 @@ function ComposeNew({ doctorSlot, me, myName, onClose, onCreated, titlePrefix, c
     const composedTitle = titlePrefix
       ? `${titlePrefix} ${title.trim() || caseLabel || ""}`.trim()
       : (title.trim() || null);
-    const { data, error } = await supabase.from("chat_conversations").insert({
+    const { data, error } = await sdb.from("chat_conversations").insert({
       doctor_slot: doctorSlot, participants,
       title: composedTitle, created_by: me,
     }).select("id").single();
@@ -315,13 +316,13 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
   }
 
   const initialLoad = useCallback(async () => {
-    const { data } = await supabase.from("chat_messages").select("*")
+    const { data } = await sdb.from("chat_messages").select("*")
       .eq("conversation_id", conv.id).order("created_at");
     const list = (data ?? []) as ChatMessage[];
     setMsgs(list);
     const unread = list.filter(m => m.sender !== me && !(m.read_by ?? []).includes(me));
     if (unread.length) {
-      await Promise.all(unread.map(m => supabase.from("chat_messages")
+      await Promise.all(unread.map(m => sdb.from("chat_messages")
         .update({ read_by: Array.from(new Set([...(m.read_by ?? []), me])) }).eq("id", m.id)));
     }
   }, [conv.id, me]);
@@ -345,7 +346,7 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
           return next.slice().sort(compareByCreatedAt);
         });
         if (m.sender !== me && !(m.read_by ?? []).includes(me)) {
-          supabase.from("chat_messages")
+          sdb.from("chat_messages")
             .update({ read_by: Array.from(new Set([...(m.read_by ?? []), me])) })
             .eq("id", m.id);
         }
@@ -397,7 +398,7 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
       read_by: [me], created_at: new Date().toISOString(), _local: "sending",
     };
     setMsgs(prev => [...prev, optimistic]);
-    const { error } = await supabase.from("chat_messages").insert({
+    const { error } = await sdb.from("chat_messages").insert({
       id, conversation_id: conv.id, sender: me, sender_name: myName,
       content: finalContent, message_type: "text", read_by: [me],
     });
@@ -437,7 +438,7 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
           const cur = msgs.find(m => m.id === id);
           const insertContent = cur?.content ?? (file.name || "ملف");
           const kind = (cur?.message_type ?? "file") as "file" | "audio";
-          const { error } = await supabase.from("chat_messages").insert({
+          const { error } = await sdb.from("chat_messages").insert({
             id, conversation_id: conv.id, sender: me, sender_name: myName,
             content: insertContent, message_type: kind,
             attachment_path: path, attachment_name: file.name,
@@ -565,7 +566,7 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
     } else if (m.attachment_path) {
       // re-share existing file as a new message (no re-upload needed)
       const id = newId();
-      const { error } = await supabase.from("chat_messages").insert({
+      const { error } = await sdb.from("chat_messages").insert({
         id, conversation_id: conv.id, sender: me, sender_name: myName,
         content: m.content, message_type: m.message_type,
         attachment_path: m.attachment_path, attachment_name: m.attachment_name,
@@ -637,7 +638,7 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
     if (m.attachment_path) {
       await removePrivateObjects("chat-attachments", [m.attachment_path]);
     }
-    const { error } = await supabase.from("chat_messages").delete().eq("id", m.id);
+    const { error } = await sdb.from("chat_messages").delete().eq("id", m.id);
     if (error) toast.error(error.message);
     else { setMsgs(prev => prev.filter(x => x.id !== m.id)); toast.success("تم الحذف"); }
   }
@@ -648,7 +649,7 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
     if (next == null) return;
     const trimmed = next.trim();
     if (!trimmed || trimmed === m.content) return;
-    const { error } = await supabase.from("chat_messages")
+    const { error } = await sdb.from("chat_messages")
       .update({ content: trimmed, edited_at: new Date().toISOString() }).eq("id", m.id);
     if (error) toast.error(error.message);
     else { setMsgs(prev => prev.map(x => x.id === m.id ? { ...x, content: trimmed } : x)); toast.success("تم تعديل الرسالة"); }
@@ -702,7 +703,7 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
           <button
             onClick={async () => {
               const next = Array.from(new Set<RoleKey>([...conv.participants, "admin"]));
-              const { error } = await supabase.from("chat_conversations").update({ participants: next }).eq("id", conv.id);
+              const { error } = await sdb.from("chat_conversations").update({ participants: next }).eq("id", conv.id);
               if (error) toast.error(error.message);
               else { toast.success("تم انضمامك كطرف ثالث"); onChange(); }
             }}

@@ -50,6 +50,7 @@ import html2canvas from "html2canvas";
 import { saveToCenter, downloadUrlToCenter, fileManagerSupported, CENTER_FOLDER_NAME, openCachedFile } from "@/lib/file-manager";
 import { loadZipDownloads, markZipDownloaded, clearZipDownloaded } from "@/lib/zip-download-state";
 import { CaseShadeConfirm } from "@/components/shade-confirm";
+import { sdb } from "@/lib/secure-db";
 
 interface Doctor { slot: number; name: string; branch: string | null; active: boolean }
 interface Case {
@@ -156,7 +157,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
 
   /** Re-fetch the case list. Shared by realtime, polling, focus and the button. */
   const refreshCases = useCallback(async () => {
-    const { data: cs } = await supabase.from("slot_cases").select("*").is("trashed_at", null).order("created_at", { ascending: false });
+    const { data: cs } = await sdb.from("slot_cases").select("*").is("trashed_at", null).order("created_at", { ascending: false });
     setCases((cs ?? []) as Case[]);
   }, []);
 
@@ -174,7 +175,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     (async () => {
       const [{ data: docs }, { data: cs }] = await Promise.all([
         supabase.from("doctor_profiles").select("slot,name,branch,active").order("slot"),
-        supabase.from("slot_cases").select("*").is("trashed_at", null).order("created_at", { ascending: false }),
+        sdb.from("slot_cases").select("*").is("trashed_at", null).order("created_at", { ascending: false }),
       ]);
       setDoctors(((docs ?? []) as Doctor[]).filter(d => d.active));
       setCases((cs ?? []) as Case[]);
@@ -548,14 +549,14 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     let active = true;
     (async () => {
       // Conversations that involve both designer and technician.
-      const { data: convs } = await supabase.from("chat_conversations")
+      const { data: convs } = await sdb.from("chat_conversations")
         .select("id, participants");
       const convIds = ((convs ?? []) as any[])
         .filter(cv => Array.isArray(cv.participants)
           && cv.participants.includes("designer") && cv.participants.includes("technician"))
         .map(cv => cv.id);
       if (convIds.length === 0) return;
-      const { data: msgs } = await supabase.from("chat_messages")
+      const { data: msgs } = await sdb.from("chat_messages")
         .select("content, sender, conversation_id, message_type, created_at")
         .eq("message_type", "text")
         .eq("sender", "designer")
@@ -802,7 +803,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
   async function archiveCase(c: Case) {
     if (!confirm(`أرشفة الحالة ${c.case_code}؟ لن تظهر بعدها في القائمة.`)) return;
     setBusyId(c.id);
-    const { error } = await supabase.from("slot_cases").update({ archived: true }).eq("id", c.id);
+    const { error } = await sdb.from("slot_cases").update({ archived: true }).eq("id", c.id);
     setBusyId(null);
     if (error) { toast.error("تعذرت الأرشفة"); return; }
     setCases(prev => prev.filter(x => x.id !== c.id));
@@ -813,7 +814,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
   async function togglePin(c: Case) {
     setBusyId(c.id);
     const next = !c.pinned;
-    const { error } = await supabase.from("slot_cases").update({ pinned: next }).eq("id", c.id);
+    const { error } = await sdb.from("slot_cases").update({ pinned: next }).eq("id", c.id);
     setBusyId(null);
     if (error) { toast.error("تعذر التثبيت"); return; }
     setCases(prev => prev.map(x => x.id === c.id ? { ...x, pinned: next } : x));
@@ -922,7 +923,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
       if ((c as any).revision_design_file_path) {
         url = (c as any).revision_design_file_path as string;
       } else {
-        const { data: convs } = await supabase.from("chat_conversations")
+        const { data: convs } = await sdb.from("chat_conversations")
           .select("id, participants").eq("doctor_slot", c.doctor_slot);
         const ids = ((convs ?? []) as any[])
           .filter(cv => Array.isArray(cv.participants)
@@ -930,7 +931,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
             && cv.participants.includes("technician"))
           .map(cv => cv.id);
         if (ids.length) {
-          const { data: msgs } = await supabase.from("chat_messages")
+          const { data: msgs } = await sdb.from("chat_messages")
             .select("attachment_path, attachment_name, content, created_at")
             .in("conversation_id", ids)
             .eq("sender", "designer")
@@ -977,7 +978,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
   async function buildAndUploadConversationsPdf(c: Case, convIds: string[]): Promise<string | null> {
     try {
       if (!convIds.length) return null;
-      const { data: msgs } = await supabase.from("chat_messages")
+      const { data: msgs } = await sdb.from("chat_messages")
         .select("sender, sender_name, content, created_at, message_type, attachment_name")
         .in("conversation_id", convIds)
         .order("created_at", { ascending: true }).limit(500);
@@ -1056,7 +1057,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
 
       // Gather conversation messages once (files + designer→technician text revision).
       prog(25, "جلب المحادثات وملفات الحالة…");
-      const { data: convs } = await supabase.from("chat_conversations")
+      const { data: convs } = await sdb.from("chat_conversations")
         .select("id, participants").eq("doctor_slot", c.doctor_slot);
       const convList = ((convs ?? []) as any[]);
       const convIds = convList.map(cv => cv.id);
@@ -1072,7 +1073,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
       let designerTextRevision: string | null = null;
 
       if (convIds.length) {
-        const { data: msgs } = await supabase.from("chat_messages")
+        const { data: msgs } = await sdb.from("chat_messages")
           .select("attachment_path, attachment_name, content, message_type, sender, conversation_id, created_at")
           .in("conversation_id", convIds)
           .order("created_at", { ascending: true }).limit(400);
