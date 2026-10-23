@@ -6,7 +6,10 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
 function createSupabaseAdminClient() {
-  const SUPABASE_URL = process.env.SUPABASE_URL;
+  const rawSupabaseUrl = process.env.SUPABASE_URL?.trim() ?? "";
+  // Vercel variables can be pasted from Markdown as [url](url); accept that
+  // format safely while keeping the normalized URL server-side.
+  const SUPABASE_URL = rawSupabaseUrl.match(/^\[([^\]]+)\]\((https?:\/\/[^)]+)\)$/)?.[2] ?? rawSupabaseUrl;
   const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
