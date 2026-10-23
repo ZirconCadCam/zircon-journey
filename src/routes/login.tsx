@@ -58,6 +58,7 @@ function LoginPage() {
       // The server checks the password and returns a signed ticket.
       const res = await signInWithPassword({ data: { password } });
       if (!res.ok) { setErr(res.error); return; }
+      clearAllPortalSessions();
       saveTicket(res.role, res.slot, res.ticket);
       markSignedIn();
       if (res.role === "admin") {
