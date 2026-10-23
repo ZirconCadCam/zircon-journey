@@ -37,7 +37,7 @@ export function AppGate({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen grid place-items-center p-6 gradient-brown">
-      <form onSubmit={submit} className="w-full max-w-sm rounded-2xl bg-card p-8 shadow-luxury text-center space-y-4">
+      <form onSubmit={submit} className="w-full max-w-sm rounded-2xl bg-card p-8 text-foreground shadow-luxury text-center space-y-4">
         <div className="mx-auto size-16 rounded-full gradient-gold grid place-items-center shadow-gold">
           <Sparkles className="size-7 text-gold-foreground" />
         </div>
