@@ -8,6 +8,7 @@ import {
 } from "@/lib/expenses.functions";
 import { batchTrash } from "@/lib/secure-ops.functions";
 import { BatchToolbar, RowCheck, useBatchSelection } from "@/components/batch-toolbar";
+import { safeCsvCell } from "@/lib/report-safety";
 
 export const Route = createFileRoute("/admin/expenses")({
   head: () => ({
@@ -96,9 +97,8 @@ function ExpensesPage() {
 
   function exportCsv() {
     const head = ["التاريخ", "المورد", "التصنيف", "المبلغ", "العملة", "رقم الفاتورة", "الوصف", "الملف"];
-    const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
     const lines = [head, ...filtered.map((r) => [r.expense_date, r.vendor, r.category, r.amount, r.currency, r.invoice_number, r.description, r.file_name])]
-      .map((l) => l.map(esc).join(","));
+      .map((l) => l.map(safeCsvCell).join(","));
     const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
