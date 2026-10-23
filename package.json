@@ -3,9 +3,10 @@
   "private": true,
   "sideEffects": false,
   "type": "module",
+  "packageManager": "bun@1.4.0",
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build",
+    "build": "vite build -c vite.config.vercel.ts",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "test": "vitest run",
