@@ -1,16 +1,17 @@
 import { supabase } from "@/integrations/supabase/client";
+import { getPublicFlag } from "./public-data.functions";
 
 export const DOCTOR_PASSWORD_REQUIRED = "doctor_password_required";
 
 /** Read a boolean app flag (defaults to true when missing/unreachable). */
 export async function getAppFlag(key: string, fallback = true): Promise<boolean> {
-  const { data, error } = await supabase
-    .from("app_settings")
-    .select("bool_value")
-    .eq("key", key)
-    .maybeSingle();
-  if (error || !data) return fallback;
-  return Boolean((data as { bool_value: boolean }).bool_value);
+  if (key !== DOCTOR_PASSWORD_REQUIRED) return fallback;
+  try {
+    const { value } = await getPublicFlag({ data: { key } });
+    return value === null ? fallback : value;
+  } catch {
+    return fallback;
+  }
 }
 
 /**

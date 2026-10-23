@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { listAvatarOverrides } from "./public-data.functions";
 
 /**
  * Live store for admin-assigned avatar photos (doctors + designer + technician).
@@ -29,10 +30,9 @@ function emit() {
 }
 
 export async function loadAvatarOverrides() {
-  const { data } = await supabase
-    .from("avatar_overrides")
-    .select("subject,image_url,label");
-  cache = new Map((data ?? []).map((r: any) => [r.subject as string, r.image_url as string]));
+  let data: { subject: string; image_url: string }[] = [];
+  try { data = await listAvatarOverrides(); } catch { /* keep previous cache */ return; }
+  cache = new Map(data.map((r) => [r.subject, r.image_url]));
   emit();
 }
 
@@ -40,14 +40,10 @@ function ensureLoaded() {
   if (loaded || typeof window === "undefined") return;
   loaded = true;
   void loadAvatarOverrides();
-  supabase
-    .channel("avatar-overrides-rt")
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "avatar_overrides" },
-      () => void loadAvatarOverrides(),
-    )
-    .subscribe();
+  // No live feed (table is closed to the browser): refresh when the tab returns.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") void loadAvatarOverrides();
+  });
 }
 
 function subscribe(cb: () => void) {
