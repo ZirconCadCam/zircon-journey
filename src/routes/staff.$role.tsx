@@ -22,7 +22,7 @@ import { DoctorAvatar } from "@/components/doctor-avatar";
 
 
 import { ROLE_LABEL, type RoleKey } from "@/lib/chat";
-import { signInWithPassword } from "@/lib/staff-auth.functions";
+import { signInWithPassword, validateStaffSession } from "@/lib/staff-auth.functions";
 import { saveTicket, hasTicket, clearTicket, markSignedIn } from "@/lib/staff-tickets";
 import { saveStaffSession, hasValidStaffSession, clearStaffSession } from "@/lib/staff-session";
 import { getStage, deriveStageKey } from "@/lib/case-stages";
@@ -34,117 +34,33 @@ import { sdb } from "@/lib/secure-db";
 import { rt } from "@/lib/realtime-shim";
 
 export const Route = createFileRoute("/staff/$role")({
+  head: () => ({ meta: [
+    { title: "بوابة الفريق — مركز زركون CAD CAM" },
+    { name: "description", content: "بوابة العمل الآمنة للمصمم والفني وإدارة مركز زركون." },
+    { property: "og:title", content: "بوابة الفريق — مركز زركون CAD CAM" },
+    { property: "og:description", content: "دخول فريق مركز زركون إلى صفحات العمل المخصصة." },
+    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+  ] }),
   component: StaffPortal,
 });
 
 const VALID: RoleKey[] = ["designer", "technician", "admin"]; // secretary pages removed
-
-// Roles whose login is bound to a single device (logging in elsewhere signs the
-// previous device out).
-const SINGLE_DEVICE_ROLES: RoleKey[] = [];
-
-// Roles that enter their portal directly without a password gate.
-const NO_PASSWORD_ROLES: RoleKey[] = []; // every portal needs its password (server-verified)
-
-/** Stable per-browser device identifier (persisted across refresh/login). */
-function getDeviceId(): string {
-  let id = localStorage.getItem("zircon_device_id");
-  if (!id) {
-    id = (crypto as any)?.randomUUID?.() ?? `dev-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    localStorage.setItem("zircon_device_id", id as string);
-  }
-  return id as string;
-}
 
 interface Doctor { slot: number; name: string; branch: string | null; active: boolean }
 
 function StaffPortal() {
   const { role } = Route.useParams() as { role: RoleKey };
   const nav = useNavigate();
-  const [authed, setAuthed] = useState(() => {
-    if (typeof window === "undefined") return false;
-    // Designer (and any no-password role) enters directly on every device.
-    if (NO_PASSWORD_ROLES.includes(role)) return true;
-    if (localStorage.getItem("zircon_admin_all") === "1" && hasTicket("admin")) return true;
-    // A previously established, non-expired session keeps the role signed in.
-    if (hasValidStaffSession(role) && hasTicket(role)) return true;
-    return false;
-  });
-
+  const [authed, setAuthed] = useState(false);
   useEffect(() => {
-    if (!VALID.includes(role)) return;
-    if (typeof window === "undefined") return;
-    if (localStorage.getItem("zircon_admin_all") === "1" && hasTicket("admin")) { setAuthed(true); return; }
-    // Without a server ticket (old sign-ins) the password must be entered again.
-    if (!hasTicket(role)) return;
-    // Designer enters directly and gets a durable session refreshed on each open.
-    if (NO_PASSWORD_ROLES.includes(role)) {
-      saveStaffSession(role);
-      setAuthed(true);
-      return;
-    }
-    // Restore a still-valid stored session without asking for the password again.
-    if (hasValidStaffSession(role)) {
-      // Refresh the sliding expiry so active users stay signed in.
-      saveStaffSession(role);
-      if (localStorage.getItem(`zircon_staff_${role}`) !== "1") {
-        localStorage.setItem(`zircon_staff_${role}`, "1");
-      }
-      setAuthed(true);
-      return;
-    }
-    if (localStorage.getItem(`zircon_staff_${role}`) !== "1") return;
-
-    // For single-device roles, verify this device still owns the session.
-    if (SINGLE_DEVICE_ROLES.includes(role)) {
-      let cancelled = false;
-      (async () => {
-        const { data, error } = await supabase.rpc("check_staff_session", {
-          p_role: role, p_device: getDeviceId(),
-        });
-        if (cancelled) return;
-        if (!error && data === true) {
-          saveStaffSession(role);
-          setAuthed(true);
-        } else {
-          // Another device took over the session — require the password again.
-          localStorage.removeItem(`zircon_staff_${role}`);
-          clearStaffSession(role);
-          setAuthed(false);
-          toast("تم تسجيل الدخول من جهاز آخر. يرجى إدخال كلمة المرور مجددًا.");
-        }
-      })();
-      return () => { cancelled = true; };
-    }
-
-    saveStaffSession(role);
-    setAuthed(true);
-  }, [role]);
-
-  // Watch for cross-device takeover while logged in on a single-device role.
-  useEffect(() => {
-    if (!authed) return;
-    if (!SINGLE_DEVICE_ROLES.includes(role)) return;
     let cancelled = false;
-    const verify = async () => {
-      const { data, error } = await supabase.rpc("check_staff_session", {
-        p_role: role, p_device: getDeviceId(),
-      });
-      if (cancelled) return;
-      if (!error && data === false) {
-        localStorage.removeItem(`zircon_staff_${role}`);
-        setAuthed(false);
-        toast("تم تسجيل الدخول من جهاز آخر. تم تسجيل خروجك من هذا الجهاز.");
-      }
-    };
-    const ch = rt.channel(`staff-session-${role}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "staff_sessions" }, verify)
-      .subscribe();
-    // No polling: re-verify only when the tab becomes visible again.
-    const onVis = () => { if (document.visibilityState === "visible") void verify(); };
-    document.addEventListener("visibilitychange", onVis);
-    return () => { cancelled = true; rt.removeChannel(ch); document.removeEventListener("visibilitychange", onVis); };
-  }, [authed, role]);
+    setAuthed(false);
+    if (!VALID.includes(role)) return;
+    void validateStaffSession({ data: { role: role as "admin" | "designer" | "technician" } }).then(({ ok }) => {
+      if (!cancelled) setAuthed(ok);
+    }).catch(() => { if (!cancelled) setAuthed(false); });
+    return () => { cancelled = true; };
+  }, [role]);
 
   if (!VALID.includes(role)) {
     return (
@@ -161,10 +77,6 @@ function StaffPortal() {
     localStorage.setItem(`zircon_staff_${role}`, "1");
     // Persist a durable session so reopening the app does not ask again.
     saveStaffSession(role);
-    // Bind this login to the current device for single-device roles (designer).
-    if (SINGLE_DEVICE_ROLES.includes(role)) {
-      await supabase.rpc("claim_staff_session", { p_role: role, p_device: getDeviceId() });
-    }
     setAuthed(true);
   }} />;
 
@@ -172,9 +84,6 @@ function StaffPortal() {
     localStorage.removeItem(`zircon_staff_${role}`);
     clearStaffSession(role);
     clearTicket(role);
-    if (SINGLE_DEVICE_ROLES.includes(role)) {
-      await supabase.rpc("clear_staff_session", { p_role: role, p_device: getDeviceId() });
-    }
     nav({ to: "/" });
   }} />;
 }
