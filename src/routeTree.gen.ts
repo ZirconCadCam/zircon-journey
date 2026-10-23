@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as AdminArchiveRouteImport } from './routes/admin.archive'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AdminExpensesRouteImport } from './routes/admin.expenses'
@@ -26,7 +27,6 @@ import { Route as DoctorsSlotRouteImport } from './routes/doctors.$slot'
 import { Route as HelpIndexRouteImport } from './routes/help.index'
 import { Route as HelpRoleRouteImport } from './routes/help.$role'
 import { Route as StaffRoleRouteImport } from './routes/staff.$role'
-import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as ApiPublicPushDispatchRouteImport } from './routes/api/public/push-dispatch'
 import { Route as DoctorsSlotNewCaseRouteImport } from './routes/doctors_.$slot.new-case'
 import { Route as ApiPublicHooksMonthlyAccountingRouteImport } from './routes/api/public/hooks/monthly-accounting'
@@ -48,30 +48,9 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const McpRoute = McpRouteImport.update({
-  id: '/mcp',
-  path: '/mcp',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const Char91DotwellKnownChar93OauthProtectedResourceRoute =
-  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
-    id: '/.well-known/oauth-protected-resource',
-    path: '/.well-known/oauth-protected-resource',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const AdminExpensesRoute = AdminExpensesRouteImport.update({
-  id: '/admin/expenses',
-  path: '/admin/expenses',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminTelegramRoute = AdminTelegramRouteImport.update({
-  id: '/admin/telegram',
-  path: '/admin/telegram',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminUsageRoute = AdminUsageRouteImport.update({
-  id: '/admin/usage',
-  path: '/admin/usage',
+const AdminArchiveRoute = AdminArchiveRouteImport.update({
+  id: '/admin/archive',
+  path: '/admin/archive',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminUsersRoute = AdminUsersRouteImport.update({
@@ -89,9 +68,9 @@ const CasesIdRoute = CasesIdRouteImport.update({
   path: '/cases/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CasesNewRoute = CasesNewRouteImport.update({
-  id: '/cases/new',
-  path: '/cases/new',
+const ApiTtsRoute = ApiTtsRouteImport.update({
+  id: '/api/tts',
+  path: '/api/tts',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DoctorsIndexRoute = DoctorsIndexRouteImport.update({
@@ -117,11 +96,6 @@ const HelpRoleRoute = HelpRoleRouteImport.update({
 const StaffRoleRoute = StaffRoleRouteImport.update({
   id: '/staff/$role',
   path: '/staff/$role',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
-  id: '/.lovable/oauth/consent',
-  path: '/.lovable/oauth/consent',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicPushDispatchRoute = ApiPublicPushDispatchRouteImport.update({
@@ -355,39 +329,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/mcp': {
-      id: '/mcp'
-      path: '/mcp'
-      fullPath: '/mcp'
-      preLoaderRoute: typeof McpRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/.well-known/oauth-protected-resource': {
-      id: '/.well-known/oauth-protected-resource'
-      path: '/.well-known/oauth-protected-resource'
-      fullPath: '/.well-known/oauth-protected-resource'
-      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/expenses': {
-      id: '/admin/expenses'
-      path: '/admin/expenses'
-      fullPath: '/admin/expenses'
-      preLoaderRoute: typeof AdminExpensesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/telegram': {
-      id: '/admin/telegram'
-      path: '/admin/telegram'
-      fullPath: '/admin/telegram'
-      preLoaderRoute: typeof AdminTelegramRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/usage': {
-      id: '/admin/usage'
-      path: '/admin/usage'
-      fullPath: '/admin/usage'
-      preLoaderRoute: typeof AdminUsageRouteImport
+    '/admin/archive': {
+      id: '/admin/archive'
+      path: '/admin/archive'
+      fullPath: '/admin/archive'
+      preLoaderRoute: typeof AdminArchiveRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/users': {
@@ -411,11 +357,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CasesIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/cases/new': {
-      id: '/cases/new'
-      path: '/cases/new'
-      fullPath: '/cases/new'
-      preLoaderRoute: typeof CasesNewRouteImport
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/tts': {
+      id: '/api/tts'
+      path: '/api/tts'
+      fullPath: '/api/tts'
+      preLoaderRoute: typeof ApiTtsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/doctors/': {
@@ -451,13 +404,6 @@ declare module '@tanstack/react-router' {
       path: '/staff/$role'
       fullPath: '/staff/$role'
       preLoaderRoute: typeof StaffRoleRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/.lovable/oauth/consent': {
-      id: '/.lovable/oauth/consent'
-      path: '/.lovable/oauth/consent'
-      fullPath: '/.lovable/oauth/consent'
-      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/push-dispatch': {
