@@ -11,6 +11,7 @@
  */
 import { toast } from "sonner";
 import { queueTelegramOutbox } from "@/lib/secure-ops.functions";
+import { allTickets } from "@/lib/staff-tickets";
 
 export interface OutboxDoc {
   url?: string | null;
@@ -22,7 +23,9 @@ export interface OutboxDoc {
 /** Ask the server to flush the queue now (best-effort, never throws). */
 export function kickTelegramDrain(): void {
   try {
-    void fetch("/api/public/telegram/drain", { method: "POST", keepalive: true }).catch(() => {});
+    void fetch("/api/public/telegram/drain", { method: "POST", keepalive: true,
+      headers: { "x-staff-tickets": JSON.stringify(allTickets()) },
+    }).catch(() => {});
   } catch {
     /* ignore */
   }

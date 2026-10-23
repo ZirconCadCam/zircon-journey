@@ -30,27 +30,26 @@ function chatId(): string {
 }
 
 /** Extract bucket + object path out of a Supabase signed/public storage URL. */
-function parseStorageUrl(url: string): { bucket: string; path: string } | null {
-  try {
-    const u = new URL(url);
-    const m = u.pathname.match(/\/storage\/v1\/object\/(?:sign|public|authenticated)\/([^/]+)\/(.+)$/);
-    if (!m) return null;
-    return { bucket: decodeURIComponent(m[1]!), path: decodeURIComponent(m[2]!) };
-  } catch {
-    return null;
-  }
-}
-
 export const Route = createFileRoute("/api/public/telegram/drain")({
   server: {
     handlers: {
-      GET: async () => handle(),
-      POST: async () => handle(),
+      GET: async ({ request }) => {
+        const { validCronRequest } = await import("@/lib/drain-auth.server");
+        if (!await validCronRequest(request)) return Response.json({ ok: false }, { status: 401 });
+        return handle();
+      },
+      POST: async ({ request }) => {
+        const { validStaffRequest } = await import("@/lib/drain-auth.server");
+        if (!await validStaffRequest(request)) return Response.json({ ok: false }, { status: 401 });
+        return handle();
+      },
     },
   },
 });
 
 async function handle(): Promise<Response> {
+  const { assertStorageUrl, fetchStorageFile } = await import("@/lib/storage-destination.server");
+  const { validateStorageObject } = await import("@/lib/storage-destination");
   const token = process.env["TELEGRAM_BOT_TOKEN"];
   if (!token) return Response.json({ ok: false, error: "TELEGRAM_BOT_TOKEN missing" }, { status: 200 });
   const API = `https://api.telegram.org/bot${token}`;
@@ -119,18 +118,19 @@ async function handle(): Promise<Response> {
           let bucket = doc.bucket ?? null;
           let path = doc.path ?? null;
           if ((!bucket || !path) && doc.url) {
-            const parsed = parseStorageUrl(doc.url);
+            const parsed = assertStorageUrl(doc.url);
             if (parsed) { bucket = parsed.bucket; path = parsed.path; }
           }
 
-          let fetchUrl = doc.url ?? null;
+          let fetchUrl: string | null = null;
           if (bucket && path) {
+            validateStorageObject(bucket, path);
             const { data: signed } = await supabaseAdmin.storage.from(bucket).createSignedUrl(path, 3600);
             if (signed?.signedUrl) fetchUrl = signed.signedUrl;
           }
           if (!fetchUrl) throw new Error("لا يوجد رابط للملف");
 
-          const fileRes = await fetch(fetchUrl);
+          const fileRes = await fetchStorageFile(fetchUrl);
           if (!fileRes.ok) throw new Error(`تنزيل الملف فشل [HTTP ${fileRes.status}]`);
           const bytes = await fileRes.arrayBuffer();
           if (bytes.byteLength > MAX_UPLOAD_BYTES) {
