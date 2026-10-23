@@ -8,6 +8,7 @@ import { addDoctor } from "@/lib/secure-ops.functions";
 import { DoctorAvatar } from "@/components/doctor-avatar";
 import { getDoctorAvatar } from "@/lib/doctor-avatars";
 import { StalledDoctorBadge, useStalledCases, type StalledCase } from "@/components/stalled-alerts";
+import { saveDoctorProfile, setDoctorPassword } from "@/lib/staff-auth.functions";
 
 /**
  * The slot workflow authenticates admins via a localStorage flag set on the
@@ -200,16 +201,12 @@ function EditDialog({ d, onClose, onSaved }: { d: Doctor; onClose: () => void; o
 
   async function save() {
     setSaving(true);
-    const { error } = await supabase.rpc("upsert_doctor", {
-      p_slot: d.slot,
-      p_name: name,
-      p_branch: (branch || null) as string,
-      p_active: active,
-    });
-    let secErr = error;
+    const fail = { ok: false, error: "غير مصرح — سجّل دخول الإدارة" };
+    const r1 = await saveDoctorProfile({ data: { slot: d.slot, name, branch: branch || null, active } }).catch(() => fail);
+    let secErr = r1.ok ? null : { message: r1.error ?? "تعذر الحفظ" };
     if (!secErr && password.trim()) {
-      const sec = await supabase.rpc("set_doctor_secret", { p_slot: d.slot, p_password: password.trim() });
-      secErr = sec.error;
+      const r2 = await setDoctorPassword({ data: { slot: d.slot, password: password.trim() } }).catch(() => fail);
+      if (!r2.ok) secErr = { message: r2.error ?? "تعذر الحفظ" };
     }
     setSaving(false);
     if (secErr) toast.error(secErr.message); else { toast.success("تم الحفظ"); onSaved(); }
