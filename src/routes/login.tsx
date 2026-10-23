@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ROLE_LABEL, type RoleKey } from "@/lib/chat";
 import { signInWithPassword } from "@/lib/staff-auth.functions";
-import { saveTicket, markSignedIn } from "@/lib/staff-tickets";
+import { saveTicket, markSignedIn, hasTicket } from "@/lib/staff-tickets";
 import { Sparkles, Lock, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 
