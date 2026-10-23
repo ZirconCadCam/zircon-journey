@@ -32,6 +32,7 @@ function telegramApi(): string {
 export const sendCaseToTelegram = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => schema.parse(d))
   .handler(async ({ data }) => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(); }
     // Destination group. Only accept a real group/channel id (negative, e.g.
     // -1003242061826) or a public @username. A positive numeric id is a private
     // user/bot id — sending there fails with 403 — so it is ignored in favour of
