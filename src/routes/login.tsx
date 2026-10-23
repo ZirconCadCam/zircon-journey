@@ -1,7 +1,8 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { STAFF_PASSWORDS, ROLE_LABEL, type RoleKey } from "@/lib/chat";
+import { ROLE_LABEL, type RoleKey } from "@/lib/chat";
+import { signInWithPassword } from "@/lib/staff-auth.functions";
+import { saveTicket, markSignedIn } from "@/lib/staff-tickets";
 import { Sparkles, Lock, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 
@@ -39,51 +40,28 @@ function LoginPage() {
     if (!password) return;
     setLoading(true);
     try {
-      // Resolve current staff passwords (admin-managed in DB, fallback to defaults)
-      const { data: secrets } = await supabase.rpc("list_staff_secrets");
-      const pwMap: Record<string, string> = { ...STAFF_PASSWORDS };
-      for (const r of (secrets ?? []) as { role: string; password: string }[]) {
-        if (r.password) pwMap[r.role] = r.password;
-      }
-
-      // 1) Admin master password — full access everywhere
-      if (password === pwMap.admin) {
+      // The server checks the password and returns a signed ticket.
+      const res = await signInWithPassword({ data: { password } });
+      if (!res.ok) { setErr(res.error); return; }
+      saveTicket(res.role, res.slot, res.ticket);
+      markSignedIn();
+      if (res.role === "admin") {
         localStorage.setItem(ADMIN_ALL_KEY, "1");
         localStorage.setItem("zircon_staff_admin", "1");
         toast.success(`مرحبًا — ${ROLE_LABEL.admin}`);
         nav({ to: "/staff/$role", params: { role: "admin" } });
         return;
       }
-
-      // 2) Staff passwords
-      const staffMatch = (Object.entries(pwMap) as [Exclude<RoleKey, "doctor">, string][])
-        .find(([, p]) => p === password);
-      if (staffMatch) {
-        const role = staffMatch[0];
-        localStorage.setItem(`zircon_staff_${role}`, "1");
-        toast.success(`مرحبًا — ${ROLE_LABEL[role]}`);
-        nav({ to: "/staff/$role", params: { role } });
+      if (res.role === "doctor" && res.slot) {
+        localStorage.setItem(`zircon_doctor_${res.slot}_authed`, "1");
+        toast.success(`مرحبًا ${res.name ?? ""}`);
+        nav({ to: "/doctors/$slot", params: { slot: String(res.slot) } });
         return;
       }
-
-      // 3) Doctor password — verified server-side (password never leaves the server)
-      const { data, error } = await supabase.rpc("verify_doctor_login", {
-        p_password: password,
-      });
-      if (error) throw error;
-      const row = Array.isArray(data) ? data[0] : null;
-      if (row && row.active) {
-        localStorage.setItem(`zircon_doctor_${row.slot}_authed`, "1");
-        toast.success(`مرحبًا ${row.name}`);
-        nav({ to: "/doctors/$slot", params: { slot: String(row.slot) } });
-        return;
-      }
-      if (row && !row.active) {
-        setErr("هذه الخانة غير مفعّلة. تواصل مع الإدارة.");
-        return;
-      }
-
-      setErr("كلمة المرور غير صحيحة");
+      const role = res.role as Exclude<RoleKey, "doctor">;
+      localStorage.setItem(`zircon_staff_${role}`, "1");
+      toast.success(`مرحبًا — ${ROLE_LABEL[role]}`);
+      nav({ to: "/staff/$role", params: { role } });
     } catch (e: any) {
       setErr(e.message ?? "حدث خطأ");
     } finally {
