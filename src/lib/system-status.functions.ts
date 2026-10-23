@@ -18,6 +18,7 @@ async function timed(key: string, fn: () => Promise<void>, timeoutMs = 6000): Pr
 }
 
 export const getSystemStatus = createServerFn({ method: "GET" }).handler(async () => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(["admin"]); }
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_ANON_KEY;
   const headers = { apikey: key ?? "", Authorization: `Bearer ${key ?? ""}` };
@@ -60,6 +61,7 @@ const CONFIG_SPEC: { name: string; scope: "browser" | "server"; required: boolea
 ];
 
 export const getConfigCheck = createServerFn({ method: "GET" }).handler(async () => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(["admin"]); }
   const browserEnv = import.meta.env as Record<string, string | undefined>;
   const items: ConfigItem[] = CONFIG_SPEC.map((s) => {
     const raw = (s.scope === "browser" ? browserEnv[s.name] ?? process.env[s.name] : process.env[s.name]) ?? "";

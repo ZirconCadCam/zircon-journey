@@ -108,6 +108,7 @@ export const uploadExpense = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data }) => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(["admin"]); }
     const db = await admin();
     const safe = data.fileName.replace(/[^\w.\-]+/g, "_").slice(-80);
     const path = `${new Date().toISOString().slice(0, 7)}/${crypto.randomUUID()}-${safe}`;
@@ -133,6 +134,7 @@ export const uploadExpense = createServerFn({ method: "POST" })
   });
 
 export const listExpenses = createServerFn({ method: "GET" }).handler(async () => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(["admin"]); }
   const db = await admin();
   const { data } = await db.from("expenses").select(COLS).is("trashed_at", null).order("created_at", { ascending: false }).limit(1000);
   return (data ?? []) as Array<{
@@ -157,6 +159,7 @@ export const updateExpense = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data }) => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(["admin"]); }
     const db = await admin();
     const { error } = await db.from("expenses").update(data.patch as never).eq("id", data.id);
     return { ok: !error, error: error?.message ?? null };
@@ -165,6 +168,7 @@ export const updateExpense = createServerFn({ method: "POST" })
 export const deleteExpense = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(["admin"]); }
     const db = await admin();
     const { error } = await db.from("expenses").update({ trashed_at: new Date().toISOString() } as never).eq("id", data.id);
     return { ok: !error, error: error?.message ?? null };
@@ -173,6 +177,7 @@ export const deleteExpense = createServerFn({ method: "POST" })
 export const expenseFileUrl = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(["admin"]); }
     const db = await admin();
     const { data: row } = await db.from("expenses").select("file_path").eq("id", data.id).maybeSingle();
     if (!row) return { url: null as string | null };
@@ -190,6 +195,7 @@ function bytesToBase64(bytes: Uint8Array) {
 export const retryExpense = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(["admin"]); }
     const db = await admin();
     const { data: row } = await db.from("expenses").select("file_path,file_name,file_mime").eq("id", data.id).maybeSingle();
     if (!row) return { ok: false, error: "المصروف غير موجود" };

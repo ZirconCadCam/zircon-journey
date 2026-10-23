@@ -98,6 +98,7 @@ export const queueTelegramOutbox = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data }) => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(); }
     const db = await admin();
     const { error } = await db
       .from("telegram_outbox")
@@ -122,6 +123,7 @@ export const revisionRoundOpen = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data }) => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(); }
     const db = await admin();
     const { count } = await db
       .from("case_revision_rounds")
@@ -157,6 +159,7 @@ export const revisionRoundAttach = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data }) => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(); }
     const db = await admin();
     const { data: rows } = await db
       .from("case_revision_rounds")
@@ -179,6 +182,7 @@ export const revisionRoundAttach = createServerFn({ method: "POST" })
   });
 
 export const revisionRoundList = createServerFn({ method: "GET" }).handler(async () => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(); }
   const db = await admin();
   const { data } = await db
     .from("case_revision_rounds")
@@ -194,6 +198,7 @@ const scopeSchema = z.enum(["designer", "technician", "doctor"]);
 export const listPointWithdrawals = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ doctorSlot: z.number().int().nullish() }).parse(d ?? {}))
   .handler(async ({ data }) => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(); }
     const db = await admin();
     let q = db.from("doctor_point_withdrawals").select("doctor_slot,points");
     if (typeof data.doctorSlot === "number") q = q.eq("doctor_slot", data.doctorSlot);
@@ -206,6 +211,7 @@ export const addPointWithdrawal = createServerFn({ method: "POST" })
     z.object({ doctorSlot: z.number().int(), points: z.number().int().min(1).max(100000) }).parse(d),
   )
   .handler(async ({ data }) => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(); }
     const db = await admin();
     const { error } = await db
       .from("doctor_point_withdrawals")
@@ -216,6 +222,7 @@ export const addPointWithdrawal = createServerFn({ method: "POST" })
 export const listMonthSettlements = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ scope: scopeSchema, year: z.number().int() }).parse(d))
   .handler(async ({ data }) => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(); }
     const db = await admin();
     const { data: rows } = await db
       .from("staff_month_settlements")
@@ -237,6 +244,7 @@ export const setMonthSettlement = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data }) => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(); }
     const db = await admin();
     const { error } = await db
       .from("staff_month_settlements")
@@ -259,6 +267,7 @@ export const getAccountingReview = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data }) => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(); }
     const db = await admin();
     const { data: row } = await db
       .from("accounting_reviews")
@@ -284,6 +293,7 @@ export const setAccountingReview = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data }) => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(); }
     const db = await admin();
     const { error } = await db.from("accounting_reviews").upsert(
       {
@@ -305,6 +315,7 @@ export const listAccountingReviews = createServerFn({ method: "POST" })
     z.object({ year: z.number().int(), month: z.number().int().min(1).max(12) }).parse(d),
   )
   .handler(async ({ data }) => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(); }
     const db = await admin();
     const { data: rows } = await db
       .from("accounting_reviews")
@@ -332,6 +343,7 @@ export const addDoctor = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data }) => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(["admin"]); }
     const db = await admin();
     const { data: dup } = await db
       .from("doctor_profiles")
@@ -378,6 +390,7 @@ export const updateDoctor = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data }) => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(["admin"]); }
     const db = await admin();
     const { data: dup } = await db
       .from("doctor_profiles")
@@ -410,6 +423,7 @@ const trashTable = z.enum(["slot_cases", "doctor_files", "expenses"]);
 export const batchTrash = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ table: trashTable, ids: idList }).parse(d))
   .handler(async ({ data }) => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(["admin"]); }
     const db = await admin();
     const { error } = await db
       .from(data.table)
@@ -422,6 +436,7 @@ export const batchTrash = createServerFn({ method: "POST" })
 export const batchRestore = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ table: trashTable, ids: idList }).parse(d))
   .handler(async ({ data }) => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(["admin"]); }
     const db = await admin();
     const { error } = await db
       .from(data.table)
@@ -434,6 +449,7 @@ export const batchRestore = createServerFn({ method: "POST" })
 export const batchDeletePermanent = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ table: trashTable, ids: idList }).parse(d))
   .handler(async ({ data }) => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(["admin"]); }
     const db = await admin();
     // Collect storage paths before deleting the rows.
     const pathCol = data.table === "doctor_files" ? "file_path" : data.table === "expenses" ? "file_path" : "scan_path";
@@ -450,6 +466,7 @@ export const batchDeletePermanent = createServerFn({ method: "POST" })
 export const listTrashed = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ table: trashTable }).parse(d))
   .handler(async ({ data }) => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(["admin"]); }
     const db = await admin();
     const cols =
       data.table === "slot_cases"
@@ -469,6 +486,7 @@ export const listTrashed = createServerFn({ method: "POST" })
 export const batchPinCases = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ ids: idList, pinned: z.boolean() }).parse(d))
   .handler(async ({ data }) => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(["admin"]); }
     const db = await admin();
     const { error } = await db.from("slot_cases").update({ pinned: data.pinned } as never).in("id", data.ids);
     return { ok: !error, error: error?.message ?? null };
@@ -478,6 +496,7 @@ export const batchPinCases = createServerFn({ method: "POST" })
 export const batchMoveCases = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ ids: idList, doctorSlot: z.number().int().min(1) }).parse(d))
   .handler(async ({ data }) => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(["admin"]); }
     const db = await admin();
     const { data: doc } = await db.from("doctor_profiles").select("slot").eq("slot", data.doctorSlot).eq("active", true).maybeSingle();
     if (!doc) return { ok: false, error: "الطبيب غير موجود أو غير مفعّل" };
@@ -503,6 +522,7 @@ export const batchUpdateCases = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data }) => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(["admin"]); }
     if (Object.keys(data.patch).length === 0) return { ok: false, error: "لا يوجد تعديل" };
     const db = await admin();
     const { error } = await db.from("slot_cases").update(data.patch as never).in("id", data.ids);
@@ -513,6 +533,7 @@ export const batchUpdateCases = createServerFn({ method: "POST" })
 export const batchArchiveCases = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ ids: idList }).parse(d))
   .handler(async ({ data }) => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(["admin"]); }
     const db = await admin();
     const { error } = await db
       .from("slot_cases")
@@ -525,6 +546,7 @@ export const batchArchiveCases = createServerFn({ method: "POST" })
 export const batchCasesToTelegram = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ ids: idList }).parse(d))
   .handler(async ({ data }) => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(["admin"]); }
     const db = await admin();
     const { data: rows } = await db
       .from("slot_cases")
@@ -545,6 +567,7 @@ export const batchCasesToTelegram = createServerFn({ method: "POST" })
 export const deleteDoctor = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ slot: z.number().int().min(1) }).parse(d))
   .handler(async ({ data }) => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(["admin"]); }
     const db = await admin();
     const { count } = await db
       .from("slot_cases")
@@ -563,6 +586,7 @@ export const deleteDoctor = createServerFn({ method: "POST" })
 export const listTelegramOutbox = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ status: z.enum(["failed", "pending", "sending", "paused", "all"]).default("all") }).parse(d))
   .handler(async ({ data }) => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(["admin"]); }
     const db = await admin();
     let q = db
       .from("telegram_outbox")
@@ -600,6 +624,7 @@ async function tgAllowed(db: any, key: string): Promise<boolean> {
 const DENIED = { ok: false, error: "ليست لديك صلاحية لهذا الإجراء" };
 
 export const getTelegramPerms = createServerFn({ method: "POST" }).handler(async () => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(); }
   const db = await admin();
   return {
     retry: await tgAllowed(db, TG_PERMS.retry),
@@ -614,6 +639,7 @@ const actorSchema = z.string().trim().max(80).default("الإدارة");
 export const retryTelegramOutbox = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ ids: z.array(z.string().uuid()).min(1).max(300), actor: actorSchema }).parse(d))
   .handler(async ({ data }) => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(["admin"]); }
     const db = await admin();
     if (!(await tgAllowed(db, TG_PERMS.retry))) return DENIED;
     const { error } = await db
@@ -629,6 +655,7 @@ export const retryTelegramOutbox = createServerFn({ method: "POST" })
 export const pauseTelegramOutbox = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ ids: z.array(z.string().uuid()).min(1).max(300), actor: actorSchema }).parse(d))
   .handler(async ({ data }) => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(["admin"]); }
     const db = await admin();
     if (!(await tgAllowed(db, TG_PERMS.pause))) return DENIED;
     const { error } = await db.from("telegram_outbox").update({ status: "paused" } as never)
@@ -641,6 +668,7 @@ export const pauseTelegramOutbox = createServerFn({ method: "POST" })
 export const removeTelegramOutboxDoc = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ id: z.string().uuid(), index: z.number().int().min(0), actor: actorSchema }).parse(d))
   .handler(async ({ data }) => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(["admin"]); }
     const db = await admin();
     if (!(await tgAllowed(db, TG_PERMS.remove))) return DENIED;
     const { data: row, error: e1 } = await db.from("telegram_outbox").select("documents,docs_total").eq("id", data.id).maybeSingle();
@@ -657,6 +685,7 @@ export const removeTelegramOutboxDoc = createServerFn({ method: "POST" })
 export const deleteTelegramOutbox = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ ids: z.array(z.string().uuid()).min(1).max(300) }).parse(d))
   .handler(async ({ data }) => {
+    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(["admin"]); }
     const db = await admin();
     if (!(await tgAllowed(db, TG_PERMS.remove))) return DENIED;
     const { error } = await db.from("telegram_outbox").delete().in("id", data.ids);
