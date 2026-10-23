@@ -32,7 +32,7 @@ export const signInWithPassword = createServerFn({ method: "POST" })
     const { signTicket } = await import("./staff-ticket.server");
     const db = await admin();
     const { data: matches, error } = await db.rpc("verify_portal_password", {
-      p_password: data.password.trim(), p_role: data.role ?? null, p_slot: data.slot ?? null,
+      p_password: data.password.trim(), ...(data.role ? { p_role: data.role } : {}), ...(data.slot ? { p_slot: data.slot } : {}),
     });
     const match = matches?.[0];
     if (error || !match) return { ok: false as const, error: "كلمة المرور غير صحيحة أو الصفحة غير مفعّلة" };
