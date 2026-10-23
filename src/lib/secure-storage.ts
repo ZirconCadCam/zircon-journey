@@ -11,7 +11,7 @@ import {
 } from "@/lib/secure-ops.functions";
 import { supabase } from "@/integrations/supabase/client";
 
-export type PrivateBucket = "chat-attachments" | "case-files";
+export type PrivateBucket = "chat-attachments" | "case-files" | "doctor-files";
 
 /**
  * Upload a file into a private bucket through a server-minted upload ticket.
@@ -22,11 +22,13 @@ export async function uploadPrivateFile(
   bucket: PrivateBucket,
   path: string,
   file: File | Blob,
+  opts?: { contentType?: string; upsert?: boolean },
 ): Promise<{ ok: boolean; error: string | null }> {
   try {
-    const ticket = await createPrivateUploadUrl({ data: { bucket, path } });
+    const ticket = await createPrivateUploadUrl({ data: { bucket, path, upsert: opts?.upsert } });
     if (!ticket?.token) return { ok: false, error: ticket?.error ?? "تعذر تهيئة الرفع" };
-    const { error } = await supabase.storage.from(bucket).uploadToSignedUrl(path, ticket.token, file);
+    const { error } = await supabase.storage.from(bucket).uploadToSignedUrl(path, ticket.token, file,
+      opts?.contentType || (file as File).type ? { contentType: opts?.contentType || (file as File).type } : undefined);
     return { ok: !error, error: error?.message ?? null };
   } catch (e: any) {
     return { ok: false, error: e?.message ?? "تعذر رفع الملف" };
@@ -57,5 +59,15 @@ export async function removePrivateObjects(
     return !!res?.ok;
   } catch {
     return false;
+  }
+}
+
+/** Signed upload token for resumable (TUS) uploads into a bucket. */
+export async function getUploadToken(bucket: PrivateBucket, path: string): Promise<string | null> {
+  try {
+    const t = await createPrivateUploadUrl({ data: { bucket, path } });
+    return t?.token ?? null;
+  } catch {
+    return null;
   }
 }
