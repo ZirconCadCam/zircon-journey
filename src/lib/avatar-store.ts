@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { assignAvatar, removeAvatar } from "./avatar-management.functions";
 import { listAvatarOverrides } from "./public-data.functions";
 
 /**
@@ -70,18 +70,14 @@ export function getOverrideUrl(subject: string | null | undefined): string | nul
 
 /** Assign (or replace) a photo for a subject. */
 export async function setAvatarOverride(subject: string, imageUrl: string, label: string) {
-  const { error } = await supabase.rpc("set_avatar_override", {
-    p_subject: subject,
-    p_image_url: imageUrl,
-    p_label: label,
-  });
+  const { error } = await assignAvatar({ data: { subject, imageUrl, label } });
   if (!error) await loadAvatarOverrides();
   return error;
 }
 
 /** Remove a photo assignment for a subject. */
 export async function clearAvatarOverride(subject: string) {
-  const { error } = await supabase.rpc("clear_avatar_override", { p_subject: subject });
+  const { error } = await removeAvatar({ data: { subject } });
   if (!error) await loadAvatarOverrides();
   return error;
 }
