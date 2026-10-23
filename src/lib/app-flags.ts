@@ -1,5 +1,4 @@
 import { supabase } from "@/integrations/supabase/client";
-import { sdb } from "@/lib/secure-db";
 
 export const DOCTOR_PASSWORD_REQUIRED = "doctor_password_required";
 

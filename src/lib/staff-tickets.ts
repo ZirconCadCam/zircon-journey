@@ -51,6 +51,10 @@ export const attachStaffTickets = createMiddleware({ type: "function" }).client(
 export function handleStaffAuthRequired(): void {
   if (typeof window === "undefined") return;
   if (sessionStorage.getItem("zircon_reauth") === "1") return;
+  // Only bounce people who believe they are signed in; public pages just get the error.
+  const signedIn = Object.keys(localStorage).some((k) =>
+    k.startsWith("zircon_session_") || k.startsWith("zircon_staff_") || /^zircon_doctor_\d+_authed$/.test(k) || k === "zircon_admin_all");
+  if (!signedIn) return;
   sessionStorage.setItem("zircon_reauth", "1");
   clearAllTickets();
   try {

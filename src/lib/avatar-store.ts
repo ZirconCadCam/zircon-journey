@@ -1,6 +1,5 @@
 import { useSyncExternalStore } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { sdb } from "@/lib/secure-db";
 
 /**
  * Live store for admin-assigned avatar photos (doctors + designer + technician).
