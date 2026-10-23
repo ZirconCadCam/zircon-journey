@@ -32,6 +32,7 @@ import { DoctorAvatar } from "@/components/doctor-avatar";
 import { sdb } from "@/lib/secure-db";
 import { signInWithPassword } from "@/lib/staff-auth.functions";
 import { saveTicket, hasTicket, markSignedIn } from "@/lib/staff-tickets";
+import { uploadStorage } from "@/lib/secure-storage";
 
 /** Compute WhatsApp-style tick state for each visible stage from case flags + timing. */
 function stageTickState(stageKey: string, c: any): TickState {
@@ -399,7 +400,7 @@ function FilesPanel({ doctor, actor }: { doctor: Doctor; actor: string }) {
     if (!f) return;
     setUploading(true);
     const path = `${doctor.slot}/${Date.now()}-${f.name}`;
-    const { error: upErr } = await supabase.storage.from("doctor-files").upload(path, f, { upsert: false });
+    const { error: upErr } = await uploadStorage("doctor-files", path, f, { upsert: false });
     if (upErr) { toast.error(upErr.message); setUploading(false); return; }
     const { data: pub } = supabase.storage.from("doctor-files").getPublicUrl(path);
     const { error } = await sdb.from("doctor_files").insert({

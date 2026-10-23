@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Camera, Loader2, Check, Sparkles, BellRing } from "lucide-react";
 import { ROLE_LABEL, type RoleKey } from "@/lib/chat";
 import { ImageLightbox } from "@/components/image-lightbox";
-import { signPrivateUrl } from "@/lib/secure-storage";
+import { signPrivateUrl, uploadStorage } from "@/lib/secure-storage";
 import { sdb } from "@/lib/secure-db";
 
 export interface PhotoAlertCase {
@@ -104,8 +104,7 @@ function PhotoAlertCard({ c, phase, actorName, doctorName }: {
 
       const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
       const path = `${c.doctor_slot}/patient-photos/${phase}-${Date.now()}-${safe}`;
-      const { error: upErr } = await supabase.storage.from("chat-attachments")
-        .upload(path, file, { contentType: file.type, upsert: false });
+      const { error: upErr } = await uploadStorage("chat-attachments", path, file, { contentType: file.type, upsert: false });
       if (upErr) throw upErr;
 
       const conv = await ensureSecretaryConv(c.doctor_slot, secretary, doctorName);

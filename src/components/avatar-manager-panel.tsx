@@ -11,6 +11,7 @@ import {
   getOverrideUrl,
   useAvatarVersion,
 } from "@/lib/avatar-store";
+import { uploadStorage } from "@/lib/secure-storage";
 
 interface Doctor {
   slot: number;
@@ -24,7 +25,7 @@ const AVATAR_BUCKET = "doctor-files";
 async function uploadAvatarFile(file: File, subjectSafe: string): Promise<string | null> {
   const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
   const path = `avatars/${subjectSafe}-${Date.now()}.${ext}`;
-  const { error } = await supabase.storage.from(AVATAR_BUCKET).upload(path, file, {
+  const { error } = await uploadStorage(AVATAR_BUCKET, path, file, {
     upsert: false,
     contentType: file.type || "image/jpeg",
   });

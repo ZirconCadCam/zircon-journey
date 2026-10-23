@@ -9,7 +9,7 @@ import {
 
 import { DoctorAvatar } from "@/components/doctor-avatar";
 import { ImageLightbox } from "@/components/image-lightbox";
-import { signPrivateUrl } from "@/lib/secure-storage";
+import { signPrivateUrl, removePrivateObjects } from "@/lib/secure-storage";
 import { sdb } from "@/lib/secure-db";
 
 interface Row {
@@ -165,7 +165,7 @@ export function AdminArchiveApprovals() {
     if (!selectedRows.length) return;
     if (!window.confirm(`هل تريد حذف ${selectedRows.length} إشعاراً محدداً؟ ستبقى الحالات محفوظة.`)) return;
     const paths = selectedRows.map(r => r.archive_receipt_path).filter(Boolean) as string[];
-    if (paths.length) await supabase.storage.from("chat-attachments").remove(paths);
+    if (paths.length) await removePrivateObjects("chat-attachments", paths);
     const { error } = await sdb.from("slot_cases").update({
       archive_receipt_path: null, archive_receipt_name: null, archive_receipt_sent_at: null,
       archive_request_note: null, archive_approval: null, archive_reviewed_at: null,
@@ -347,7 +347,7 @@ function ApprovalCard({ r, doctor, onDone, selected, onSelect }: { r: Row; docto
     if (!window.confirm("هل تريد حذف إشعار الأرشفة هذا؟ ستبقى الحالة محفوظة، ولن يظهر الإشعار في هذه الصفحة مرة أخرى.")) return;
     setBusy(true);
     if (r.archive_receipt_path) {
-      await supabase.storage.from("chat-attachments").remove([r.archive_receipt_path]);
+      await removePrivateObjects("chat-attachments", [r.archive_receipt_path]);
     }
     const { error } = await sdb.from("slot_cases").update({
       archive_receipt_path: null,

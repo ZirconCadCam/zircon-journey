@@ -71,3 +71,14 @@ export async function getUploadToken(bucket: PrivateBucket, path: string): Promi
     return null;
   }
 }
+
+/** supabase-like upload result shape, routed through a signed upload token. */
+export async function uploadStorage(
+  bucket: PrivateBucket,
+  path: string,
+  file: File | Blob,
+  opts?: { contentType?: string; upsert?: boolean },
+): Promise<{ error: { message: string } | null }> {
+  const r = await uploadPrivateFile(bucket, path, file, opts);
+  return { error: r.ok ? null : { message: r.error ?? "تعذر رفع الملف" } };
+}

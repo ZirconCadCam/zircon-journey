@@ -51,6 +51,7 @@ import { saveToCenter, downloadUrlToCenter, fileManagerSupported, CENTER_FOLDER_
 import { loadZipDownloads, markZipDownloaded, clearZipDownloaded } from "@/lib/zip-download-state";
 import { CaseShadeConfirm } from "@/components/shade-confirm";
 import { sdb } from "@/lib/secure-db";
+import { uploadStorage } from "@/lib/secure-storage";
 
 interface Doctor { slot: number; name: string; branch: string | null; active: boolean }
 interface Case {
@@ -1010,7 +1011,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
       else { let remaining = imgH, y = 0; while (remaining > 0) { pdf.addImage(img, "JPEG", 0, y, imgW, imgH); remaining -= pageH; if (remaining > 0) { pdf.addPage(); y -= pageH; } } }
       const blob = pdf.output("blob");
       const path = `${c.case_code}/telegram/conversations-${Date.now()}.pdf`;
-      const { error } = await supabase.storage.from("chat-attachments").upload(path, blob, { contentType: "application/pdf", upsert: true });
+      const { error } = await uploadStorage("chat-attachments", path, blob, { contentType: "application/pdf", upsert: true });
       if (error) { console.error(error); return null; }
       return await getSignedUrl(path, 3600);
     } catch (e) { console.error(e); return null; }

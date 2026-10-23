@@ -7,6 +7,7 @@ import { z } from "zod";
 import { ToothQuadrantPicker } from "@/components/tooth-quadrant-picker";
 import type { ResumableHandle } from "@/lib/resumable-upload";
 import { sdb } from "@/lib/secure-db";
+import { uploadStorage } from "@/lib/secure-storage";
 
 const patientSchema = z.object({
   patient_name: z.string().trim()
@@ -153,7 +154,7 @@ function NewSlotCase() {
         const ext = (f.name.match(/\.([a-zA-Z0-9]+)$/)?.[1] || "jpg").toLowerCase();
         const rand = Math.random().toString(36).slice(2, 8);
         const path = `${slot}/note-images/${Date.now()}-${rand}.${ext}`;
-        const { error } = await supabase.storage.from("doctor-files").upload(path, f, {
+        const { error } = await uploadStorage("doctor-files", path, f, {
           contentType: f.type || "image/jpeg", upsert: false,
         });
         if (error) throw error;

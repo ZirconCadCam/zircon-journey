@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { ATTACHMENTS_BUCKET, type RoleKey } from "@/lib/chat";
 import { sdb } from "@/lib/secure-db";
+import { uploadStorage } from "@/lib/secure-storage";
 
 /** A comment left by a team member (designer/technician) on an image the
  *  doctor attached to a case. Comments are stored on the case row and also
@@ -102,9 +103,7 @@ export async function postImageVoiceToChat(opts: {
 
   const fileName = `voice-${Date.now()}.webm`;
   const path = `${opts.doctorSlot}/${convId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${fileName}`;
-  const { error: upErr } = await supabase.storage
-    .from(ATTACHMENTS_BUCKET)
-    .upload(path, opts.blob, { contentType: opts.blob.type || "audio/webm", upsert: false });
+  const { error: upErr } = await uploadStorage(ATTACHMENTS_BUCKET, path, opts.blob, { contentType: opts.blob.type || "audio/webm", upsert: false });
   if (upErr) throw upErr;
 
   const secs = opts.durationSec ? ` (${opts.durationSec}s)` : "";
