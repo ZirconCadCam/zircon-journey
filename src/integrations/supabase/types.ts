@@ -642,18 +642,21 @@ export type Database = {
         Row: {
           created_at: string
           password: string
+          password_hash: string | null
           slot: number
           updated_at: string
         }
         Insert: {
           created_at?: string
           password: string
+          password_hash?: string | null
           slot: number
           updated_at?: string
         }
         Update: {
           created_at?: string
           password?: string
+          password_hash?: string | null
           slot?: number
           updated_at?: string
         }
@@ -1201,16 +1204,19 @@ export type Database = {
       staff_secrets: {
         Row: {
           password: string
+          password_hash: string | null
           role: string
           updated_at: string
         }
         Insert: {
           password: string
+          password_hash?: string | null
           role: string
           updated_at?: string
         }
         Update: {
           password?: string
+          password_hash?: string | null
           role?: string
           updated_at?: string
         }
@@ -1525,6 +1531,14 @@ export type Database = {
         Returns: {
           active: boolean
           name: string
+          slot: number
+        }[]
+      }
+      verify_portal_password: {
+        Args: { p_password: string; p_role?: string; p_slot?: number }
+        Returns: {
+          name: string
+          role: string
           slot: number
         }[]
       }

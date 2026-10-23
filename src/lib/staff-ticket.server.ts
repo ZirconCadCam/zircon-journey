@@ -43,21 +43,34 @@ async function key(): Promise<CryptoKey> {
 }
 
 export async function signTicket(actor: StaffActor): Promise<string> {
-  const payload = b64url(enc.encode(JSON.stringify({ r: actor.role, s: actor.slot, e: Date.now() + TICKET_TTL_MS })));
+  const now = Date.now();
+  const payload = b64url(enc.encode(JSON.stringify({ r: actor.role, s: actor.slot, i: now, e: now + TICKET_TTL_MS })));
   const sig = new Uint8Array(await crypto.subtle.sign("HMAC", await key(), enc.encode(payload)));
   return `${payload}.${b64url(sig)}`;
 }
 
 export async function verifyTicket(token: string): Promise<StaffActor | null> {
   if (typeof token !== "string" || token.length > 600) return null;
-  const [payload, sig] = token.split(".");
-  if (!payload || !sig) return null;
+  const parts = token.split(".");
+  const [payload, sig] = parts;
+  if (parts.length !== 2 || !payload || !sig) return null;
   try {
     const ok = await crypto.subtle.verify("HMAC", await key(), fromB64url(sig), enc.encode(payload));
     if (!ok) return null;
-    const p = JSON.parse(new TextDecoder().decode(fromB64url(payload))) as { r: string; s: number | null; e: number };
-    if (!ROLES.includes(p.r as StaffRole) || typeof p.e !== "number" || p.e < Date.now()) return null;
+    const p = JSON.parse(new TextDecoder().decode(fromB64url(payload))) as { r: string; s: number | null; e: number; i?: number };
+    if (!ROLES.includes(p.r as StaffRole) || !Number.isFinite(p.e) || p.e <= Date.now()) return null;
     if (p.r === "doctor" && !(Number.isInteger(p.s) && (p.s as number) > 0)) return null;
+    const issued = p.i ?? (p.e - TICKET_TTL_MS);
+    if (!Number.isFinite(issued) || issued > Date.now() || p.e - issued > TICKET_TTL_MS) return null;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const credentials = p.r === "doctor"
+      ? await supabaseAdmin.from("doctor_secrets").select("updated_at").eq("slot", p.s as number).maybeSingle()
+      : await supabaseAdmin.from("staff_secrets").select("updated_at").eq("role", p.r).maybeSingle();
+    if (credentials.error || !credentials.data || Date.parse(credentials.data.updated_at) > issued) return null;
+    if (p.r === "doctor") {
+      const { data: profile, error } = await supabaseAdmin.from("doctor_profiles").select("active").eq("slot", p.s as number).maybeSingle();
+      if (error || !profile?.active) return null;
+    }
     return { role: p.r as StaffRole, slot: p.r === "doctor" ? (p.s as number) : null };
   } catch {
     return null;

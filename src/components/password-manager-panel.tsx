@@ -18,13 +18,13 @@ const STAFF_ROLE_KEYS: Exclude<RoleKey, "doctor">[] = [
 
 interface StaffSecret {
   role: string;
-  password: string | null;
+  configured: boolean;
 }
 interface DoctorSecret {
   slot: number;
   name: string;
   active: boolean;
-  password: string | null;
+  configured: boolean;
 }
 
 export function PasswordManagerPanel() {
@@ -34,13 +34,13 @@ export function PasswordManagerPanel() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    let s: { role: string; password: string }[] = [];
+    let s: { role: string; configured: boolean }[] = [];
     let d: DoctorSecret[] = [];
     try { const r = await listPasswords(); s = r.staff; d = r.doctors; }
     catch { toast.error("تعذر تحميل كلمات المرور — سجّل دخول الإدارة"); }
-    const sMap = new Map((s ?? []).map((r: any) => [r.role, r.password]));
+    const sMap = new Map((s ?? []).map((r: any) => [r.role, r.configured]));
     setStaff(
-      STAFF_ROLE_KEYS.map((role) => ({ role, password: sMap.get(role) ?? null })),
+      STAFF_ROLE_KEYS.map((role) => ({ role, configured: sMap.get(role) ?? false })),
     );
     setDoctors(((d ?? []) as DoctorSecret[]));
     setLoading(false);
@@ -60,7 +60,7 @@ export function PasswordManagerPanel() {
           <div>
             <div className="font-bold">إدارة كلمات المرور</div>
             <div className="text-[11px] text-muted-foreground">
-              تغيير وعرض كلمات مرور مسؤولي الصفحات والأطباء
+              تغيير كلمات مرور مسؤولي الصفحات والأطباء
             </div>
           </div>
         </div>
@@ -85,7 +85,7 @@ export function PasswordManagerPanel() {
             <PasswordRow
               key={s.role}
               title={ROLE_LABEL[s.role as RoleKey]}
-              value={s.password}
+              configured={s.configured}
               onSave={async (pw) => {
                 const r = await setStaffPassword({ data: { role: s.role as "admin" | "designer" | "technician", password: pw } }).catch(() => ({ ok: false, error: "غير مصرح" }));
                 if (!r.ok) { toast.error(r.error ?? "تعذر الحفظ"); return false; }
@@ -114,7 +114,7 @@ export function PasswordManagerPanel() {
                 key={d.slot}
                 title={d.name}
                 subtitle={`خانة #${d.slot}${d.active ? "" : " • معطّلة"}`}
-                value={d.password}
+                configured={d.configured}
                 onSave={async (pw) => {
                   const r = await setDoctorPassword({ data: { slot: d.slot, password: pw } }).catch(() => ({ ok: false, error: "غير مصرح" }));
                   if (!r.ok) { toast.error(r.error ?? "تعذر الحفظ"); return false; }
@@ -199,111 +199,33 @@ function DoctorLoginToggle() {
   );
 }
 
-function PasswordRow({
-
-  title,
-  subtitle,
-  value,
-  onSave,
-}: {
-  title: string;
-  subtitle?: string;
-  value: string | null;
-  onSave: (pw: string) => Promise<boolean>;
+function PasswordRow({ title, subtitle, configured, onSave }: {
+  title: string; subtitle?: string; configured: boolean; onSave: (pw: string) => Promise<boolean>;
 }) {
-  const [show, setShow] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
-  const [copied, setCopied] = useState(false);
-
   async function save() {
     const pw = draft.trim();
-    if (pw.length < 3) { toast.error("كلمة المرور قصيرة جداً"); return; }
+    if (pw.length < 4 || new TextEncoder().encode(pw).length > 72) { toast.error("أدخل كلمة مرور من 4 حروف على الأقل وبحد أقصى 72 بايت"); return; }
     setSaving(true);
-    const ok = await onSave(pw);
-    setSaving(false);
-    if (ok) { setEditing(false); setDraft(""); }
+    try { if (await onSave(pw)) { setEditing(false); setDraft(""); } }
+    finally { setSaving(false); }
   }
-
-  async function copy() {
-    if (!value) return;
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      /* ignore */
-    }
-  }
-
-  return (
-    <div className="rounded-xl border border-border bg-muted/20 p-3">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="font-bold text-sm truncate">{title}</div>
-          {subtitle && <div className="text-[10px] text-muted-foreground">{subtitle}</div>}
-        </div>
-      </div>
-
-      {!editing ? (
-        <div className="mt-2 flex items-center gap-1.5">
-          <div className="flex-1 rounded-lg border border-input bg-background px-2.5 py-1.5 font-mono text-sm truncate" dir="ltr">
-            {value ? (show ? value : "•".repeat(Math.min(value.length, 10))) : "— لا توجد —"}
-          </div>
-          <button
-            onClick={() => setShow((v) => !v)}
-            disabled={!value}
-            className="rounded-lg border border-border bg-background p-1.5 hover:border-gold disabled:opacity-40"
-            title={show ? "إخفاء" : "عرض"}
-            aria-label={show ? "إخفاء" : "عرض"}
-          >
-            {show ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
-          </button>
-          <button
-            onClick={copy}
-            disabled={!value}
-            className="rounded-lg border border-border bg-background p-1.5 hover:border-gold disabled:opacity-40"
-            title="نسخ"
-            aria-label="نسخ"
-          >
-            {copied ? <Check className="size-3.5 text-emerald-600" /> : <Copy className="size-3.5" />}
-          </button>
-          <button
-            onClick={() => { setEditing(true); setDraft(value ?? ""); }}
-            className="rounded-lg gradient-gold text-gold-foreground px-2.5 py-1.5 text-xs font-bold"
-          >
-            تغيير
-          </button>
-        </div>
-      ) : (
-        <div className="mt-2 flex items-center gap-1.5">
-          <input
-            autoFocus
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && save()}
-            placeholder="كلمة المرور الجديدة"
-            className="flex-1 rounded-lg border border-input bg-background px-2.5 py-1.5 font-mono text-sm outline-none focus:border-gold"
-            dir="ltr"
-          />
-          <button
-            onClick={save}
-            disabled={saving}
-            className="rounded-lg gradient-brown text-primary-foreground p-1.5 disabled:opacity-50"
-            title="حفظ"
-            aria-label="حفظ"
-          >
-            {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
-          </button>
-          <button
-            onClick={() => { setEditing(false); setDraft(""); }}
-            className="rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs"
-          >
-            إلغاء
-          </button>
-        </div>
-      )}
-    </div>
-  );
+  return <div className="rounded-xl border border-border bg-muted/20 p-3">
+    <div className="font-bold text-sm truncate">{title}</div>
+    {subtitle && <div className="text-[10px] text-muted-foreground">{subtitle}</div>}
+    {!editing ? <div className="mt-2 flex items-center justify-between gap-2">
+      <span className="text-xs text-muted-foreground">{configured ? "كلمة المرور مضبوطة" : "لم تُضبط كلمة المرور"}</span>
+      <button onClick={() => setEditing(true)} className="rounded-lg gradient-gold text-gold-foreground px-2.5 py-1.5 text-xs font-bold">تغيير</button>
+    </div> : <div className="mt-2 flex items-center gap-1.5">
+      <input type="password" autoComplete="new-password" autoFocus value={draft} onChange={e => setDraft(e.target.value)}
+        onKeyDown={e => e.key === "Enter" && save()} placeholder="كلمة المرور الجديدة" dir="ltr"
+        className="min-w-0 flex-1 rounded-lg border border-input bg-background px-2.5 py-1.5 font-mono text-sm" />
+      <button onClick={save} disabled={saving} title="حفظ" aria-label="حفظ" className="rounded-lg gradient-brown text-primary-foreground p-1.5">
+        {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+      </button>
+      <button onClick={() => { setEditing(false); setDraft(""); }} className="text-xs">إلغاء</button>
+    </div>}
+  </div>;
 }

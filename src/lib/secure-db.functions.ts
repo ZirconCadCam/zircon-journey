@@ -8,6 +8,7 @@
  */
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { validateCaseFinancialWrite } from "./case-write-policy";
 
 const TABLES = [
   "slot_cases",
@@ -64,13 +65,19 @@ export const secureDb = createServerFn({ method: "POST" })
   .handler(async ({ data: q }): Promise<Result> => {
     const { allowedSlots, StaffAuthError } = await import("./staff-ticket.server");
     let slots: number[] | null;
+    let actorRole: string;
     try {
-      ({ slots } = await allowedSlots());
+      const access = await allowedSlots();
+      slots = access.slots;
+      actorRole = access.actor.role;
     } catch (e) {
       if (e instanceof StaffAuthError) return { data: null, error: { message: "STAFF_AUTH_REQUIRED", code: "401" }, count: null };
       throw e;
     }
     if (FORBIDDEN[q.table]?.includes(q.op)) return { data: null, error: { message: "غير مسموح", code: "403" }, count: null };
+    if (q.table === "slot_cases" && q.op !== "select" && q.op !== "delete" && !validateCaseFinancialWrite(actorRole, q.values)) {
+      return { data: null, error: { message: "تعديل المبالغ من صلاحيات الإدارة فقط", code: "403" }, count: null };
+    }
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const db = supabaseAdmin as any;
@@ -100,7 +107,7 @@ export const secureDb = createServerFn({ method: "POST" })
       const rows = Array.isArray(q.values) ? q.values : [q.values];
       for (const r of rows) {
         if (!r || typeof r !== "object") continue;
-        if (scopeCol in r && !scopeVals!.includes((r as any)[scopeCol])) {
+        if (scopeCol in r && !scopeVals?.includes((r as any)[scopeCol])) {
           return { data: null, error: { message: "غير مسموح", code: "403" }, count: null };
         }
         if ((q.op === "insert" || q.op === "upsert") && !(scopeCol in r)) {
@@ -120,7 +127,7 @@ export const secureDb = createServerFn({ method: "POST" })
       case "delete": b = base.delete(q.count ? { count: q.count } : undefined); break;
     }
     if (q.op !== "select" && q.returning !== undefined) b = b.select(q.returning || "*");
-    if (scopeCol && q.op !== "insert" && q.op !== "upsert") b = b.in(scopeCol, scopeVals!.length ? scopeVals : ["00000000-0000-0000-0000-000000000000"]);
+    if (scopeCol && q.op !== "insert" && q.op !== "upsert") b = b.in(scopeCol, scopeVals?.length ? scopeVals : ["00000000-0000-0000-0000-000000000000"]);
     for (const f of q.filters) {
       if (f.m !== "or" && f.m !== "match" && typeof f.a[0] === "string" && !IDENT.test(f.a[0])) {
         return { data: null, error: { message: "bad filter" }, count: null };

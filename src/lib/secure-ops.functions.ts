@@ -99,10 +99,19 @@ export const queueTelegramOutbox = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(); }
+    const { assertStorageUrl } = await import("./storage-destination.server");
+    const { validateStorageObject } = await import("./storage-destination");
+    const documents = data.documents.map((doc) => {
+      const source = doc.bucket && doc.path
+        ? validateStorageObject(doc.bucket, doc.path)
+        : doc.url ? assertStorageUrl(doc.url) : null;
+      if (!source) throw new Error("مصدر الملف غير مسموح");
+      return { ...source, filename: doc.filename };
+    });
     const db = await admin();
     const { error } = await db
       .from("telegram_outbox")
-      .insert({ caption: data.caption, documents: data.documents as any });
+      .insert({ caption: data.caption, documents: documents as any });
     return { ok: !error, error: error?.message ?? null };
   });
 

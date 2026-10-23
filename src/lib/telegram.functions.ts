@@ -33,6 +33,9 @@ export const sendCaseToTelegram = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => schema.parse(d))
   .handler(async ({ data }) => {
     { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(); }
+    const { assertStorageUrl, fetchStorageFile } = await import("./storage-destination.server");
+    // Validate every source before sending any caption or handing URLs to Telegram.
+    for (const doc of data.documents) assertStorageUrl(doc.url);
     // Destination group. Only accept a real group/channel id (negative, e.g.
     // -1003242061826) or a public @username. A positive numeric id is a private
     // user/bot id — sending there fails with 403 — so it is ignored in favour of
@@ -77,7 +80,7 @@ export const sendCaseToTelegram = createServerFn({ method: "POST" })
 
         // --- Preferred path: download + multipart upload ---
         try {
-          const fileRes = await fetch(doc.url);
+          const fileRes = await fetchStorageFile(doc.url);
           if (!fileRes.ok) {
             lastError = `تعذّر تنزيل الملف من المصدر [HTTP ${fileRes.status}]`;
           } else {
@@ -107,30 +110,6 @@ export const sendCaseToTelegram = createServerFn({ method: "POST" })
           }
         } catch (e: any) {
           lastError = e?.message ?? "خطأ أثناء التنزيل";
-        }
-
-        // --- Fallback path: let Telegram fetch the URL directly ---
-        if (!uploaded) {
-          try {
-            const res = await fetch(`${API}/sendDocument`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                chat_id: chatId,
-                document: doc.url,
-                caption: doc.filename,
-              }),
-            });
-            const j: any = await res.json().catch(() => ({}));
-            if (res.ok && j?.ok) {
-              uploaded = true;
-              lastError = null;
-            } else {
-              lastError = j?.description ?? lastError ?? `HTTP ${res.status}`;
-            }
-          } catch (e: any) {
-            lastError = e?.message ?? lastError ?? "خطأ";
-          }
         }
 
         sent.push({ filename: doc.filename, ok: uploaded, error: uploaded ? null : lastError });

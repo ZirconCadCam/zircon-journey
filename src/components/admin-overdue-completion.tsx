@@ -9,6 +9,7 @@ import {
 import { DoctorAvatar } from "@/components/doctor-avatar";
 import { printHtmlDocument } from "@/lib/print-report";
 import { sdb } from "@/lib/secure-db";
+import { escapeReportText } from "@/lib/report-safety";
 
 /** Cases that have been sitting in the doctor's page for longer than this
  *  many days become eligible for administrative completion. */
@@ -109,18 +110,18 @@ function buildOverdueReportHtml(doctorName: string, branch: string | null, rows:
   const body = rows.map((r, i) => `
     <tr>
       <td>${i + 1}</td>
-      <td>${r.case_code ?? ""}</td>
-      <td>${r.patient_name ?? ""}</td>
-      <td>${r.tooth_number ?? "—"}</td>
-      <td>${r.teeth_count ?? "—"}</td>
-      <td>${r.shade ?? "—"}</td>
+      <td>${escapeReportText(r.case_code)}</td>
+      <td>${escapeReportText(r.patient_name)}</td>
+      <td>${escapeReportText(r.tooth_number ?? "—")}</td>
+      <td>${escapeReportText(r.teeth_count ?? "—")}</td>
+      <td>${escapeReportText(r.shade ?? "—")}</td>
       <td>${daysSince(r.created_at)} يوم</td>
       <td>${pendingStepLabel(r)}</td>
     </tr>`).join("");
 
   return `<!doctype html>
 <html dir="rtl" lang="ar"><head><meta charset="utf-8" />
-<title>${title}</title>
+<title>${escapeReportText(title)}</title>
 <style>
   @page { size: A4; margin: 14mm; }
   * { font-family: "Segoe UI", Tahoma, sans-serif; }
@@ -134,7 +135,7 @@ function buildOverdueReportHtml(doctorName: string, branch: string | null, rows:
 </style></head>
 <body>
   <h1>كشف الحالات غير المكتملة (متأخرة أكثر من ${OVERDUE_DAYS} يوماً)</h1>
-  <div class="sub">الطبيب: <b>${doctorName}</b>${branchLabel ? ` • ${branchLabel}` : ""} • عدد الحالات: <b>${rows.length}</b> • تاريخ الطباعة: ${today}</div>
+  <div class="sub">الطبيب: <b>${escapeReportText(doctorName)}</b>${branchLabel ? ` • ${branchLabel}` : ""} • عدد الحالات: <b>${rows.length}</b> • تاريخ الطباعة: ${today}</div>
   <table>
     <thead><tr>
       <th>#</th><th>رقم الحالة</th><th>المريض</th><th>السن</th><th>عدد الأسنان</th>
@@ -216,7 +217,7 @@ export function AdminOverdueCompletion() {
       .update(patchFor(step) as any).eq("id", r.id);
     setBusy(null);
     if (error) { toast.error(error.message); return; }
-    toast.success(`تم تنفيذ «${STEPS.find(s => s.key === step)!.label}» للحالة ${r.case_code}`);
+    toast.success(`تم تنفيذ «${STEPS.find(s => s.key === step)?.label ?? step}» للحالة ${r.case_code}`);
     load();
   }
 
