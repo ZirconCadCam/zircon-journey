@@ -30,8 +30,23 @@ function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
 
-  // On mount, sign out of any active portal so the password drives the destination.
-  useEffect(() => { clearAllPortalSessions(); }, []);
+  // Remembered sign-in on this device (30 days): go straight to the user's own page.
+  useEffect(() => {
+    if (localStorage.getItem(ADMIN_ALL_KEY) === "1" && hasTicket("admin")) {
+      nav({ to: "/staff/$role", params: { role: "admin" }, replace: true }); return;
+    }
+    for (const role of ["technician", "designer"] as const) {
+      if (localStorage.getItem(`zircon_staff_${role}`) === "1" && hasTicket(role)) {
+        nav({ to: "/staff/$role", params: { role }, replace: true }); return;
+      }
+    }
+    for (let i = 0; i < localStorage.length; i++) {
+      const m = /^zircon_doctor_(\d+)_authed$/.exec(localStorage.key(i) ?? "");
+      if (m && hasTicket("doctor", Number(m[1]))) {
+        nav({ to: "/doctors/$slot", params: { slot: m[1] }, replace: true }); return;
+      }
+    }
+  }, [nav]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
