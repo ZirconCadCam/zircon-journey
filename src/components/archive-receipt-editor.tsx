@@ -6,6 +6,10 @@ import { ROLE_LABEL, type RoleKey } from "@/lib/chat";
 import { ImageLightbox } from "@/components/image-lightbox";
 import { signPrivateUrl, uploadStorage } from "@/lib/secure-storage";
 import { sdb } from "@/lib/secure-db";
+import { useServerFn } from "@tanstack/react-start";
+import { confirmPermanentInstall } from "@/lib/permanent-install.functions";
+import { permanentInstallSchema } from "@/lib/permanent-install";
+import { Button } from "@/components/ui/button";
 
 export interface ArchiveReceiptCase {
   id: string;
@@ -43,13 +47,14 @@ async function ensureConv(slot: number, target: RoleKey, doctorName: string): Pr
 
 /**
  * Doctor-facing editor opened when confirming the permanent install:
- * the patient's account receipt photo (سند حساب المريض) is uploaded and sent to
+ * the remaining balance and an optional receipt photo are sent to
  * the administration, which then approves or rejects the archiving request.
  */
 export function ArchiveReceiptEditor({ c, actorName, doctorName, onClose, onSent }: {
   c: ArchiveReceiptCase; actorName: string; doctorName: string;
   onClose: () => void; onSent?: () => void;
 }) {
+  const confirmInstall = useServerFn(confirmPermanentInstall);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [note, setNote] = useState("");
@@ -67,54 +72,42 @@ export function ArchiveReceiptEditor({ c, actorName, doctorName, onClose, onSent
 
   function pick(f: File | undefined | null) {
     if (!f) return;
-    if (!f.type.startsWith("image/")) { toast.error("الرجاء اختيار صورة سند الحساب"); return; }
+    if (!f.type.startsWith("image/")) { toast.error("الرجاء اختيار صورة سند الحساب (اختياري)"); return; }
     setFile(f);
   }
 
   async function submit() {
     if (busy) return;
-    if (!file) { toast.error("أرفق صورة سند حساب المريض أولاً"); return; }
+    const amount = remaining.trim() === "" ? NaN : Number(remaining);
+    if (!permanentInstallSchema.safeParse({ caseId: c.id, remaining: amount, note }).success) {
+      toast.error("أدخل المبلغ المتبقي بشكل صحيح (صفر عند السداد الكامل)"); return;
+    }
     setBusy(true);
     try {
-      const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const path = `${c.doctor_slot}/archive-receipts/${c.case_code}-${Date.now()}-${safe}`;
-      const { error: upErr } = await uploadStorage("chat-attachments", path, file, { contentType: file.type, upsert: false });
-      if (upErr) throw upErr;
-
-      const now = new Date().toISOString();
-      const { error } = await sdb.from("slot_cases").update({
-        permanent_installed_by_doctor: true,
-        permanent_delivered_to_doctor: true,
-        perm_ship_read_at: now,
-        archive_receipt_path: path,
-        archive_receipt_name: file.name,
-        archive_receipt_mime: file.type,
-        archive_receipt_size: file.size,
-        archive_receipt_sent_at: now,
-        archive_request_note: note.trim() || null,
-        remaining_amount: remaining.trim() === "" ? null : Number(remaining),
-        archive_approval: "pending",
-        archive_reviewed_at: null,
-        archive_reviewed_by: null,
-        archive_reject_reason: null,
-      } as any).eq("id", c.id);
-      if (error) throw error;
+      let path: string | null = null;
+      if (file) {
+        const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        path = `${c.doctor_slot}/archive-receipts/${c.case_code}-${Date.now()}-${safe}`;
+        const { error: upErr } = await uploadStorage("chat-attachments", path, file, { contentType: file.type, upsert: false });
+        if (upErr) throw upErr;
+      }
+      await confirmInstall({ data: {
+        caseId: c.id, remaining: amount, note,
+        ...(file && path ? { receipt: { path, name: file.name, mime: file.type, size: file.size } } : {}),
+      } });
 
       const conv = await ensureConv(c.doctor_slot, "admin", doctorName);
       if (conv) {
         await sdb.from("chat_messages").insert({
           conversation_id: conv, sender: "doctor", sender_name: actorName,
-          content: `🗂️ طلب أرشفة الحالة ${c.case_code} — المريض: ${c.patient_name}\n🦷 تم تركيب الأسنان الدائمة.\n🧾 مرفق: صورة سند حساب المريض${note.trim() ? `\n📝 ${note.trim()}` : ""}\nبانتظار موافقة الإدارة على الأرشفة.`,
-          message_type: "image",
-          attachment_path: path,
-          attachment_name: file.name,
-          attachment_mime: file.type,
-          attachment_size: file.size,
+          content: `🗂️ طلب أرشفة الحالة ${c.case_code} — المريض: ${c.patient_name}\n🦷 تم تركيب الأسنان الدائمة.\n💰 المبلغ المتبقي: ${amount}${file ? "\n🧾 مرفق: صورة سند حساب المريض" : ""}${note.trim() ? `\n📝 ${note.trim()}` : ""}\nبانتظار موافقة الإدارة على الأرشفة.`,
+          message_type: file ? "image" : "text",
+          ...(file && path ? { attachment_path: path, attachment_name: file.name, attachment_mime: file.type, attachment_size: file.size } : {}),
         });
       }
 
-      // Mirror the receipt image to the clinic's Telegram group.
-      {
+      // Mirror an optional receipt image to the clinic's Telegram group.
+      if (file && path) {
         const { queueTelegram } = await import("@/lib/telegram-outbox");
         void queueTelegram(
           `🧾 إرسال تلقائي — سند حساب المريض\n──────────────\n👤 المريض: ${c.patient_name}\n🔖 رقم الحالة: ${c.case_code}\n🩺 الطبيب: ${doctorName}\n📤 المصدر: ${actorName}\n📁 الملف: ${file.name}`,
@@ -122,7 +115,7 @@ export function ArchiveReceiptEditor({ c, actorName, doctorName, onClose, onSent
         );
       }
 
-      toast.success("✅ تم إرسال طلب الأرشفة مع سند الحساب إلى الإدارة");
+      toast.success("✅ تم إرسال طلب الأرشفة والمبلغ المتبقي إلى الإدارة");
       onSent?.();
       onClose();
     } catch (e: any) {
@@ -138,12 +131,11 @@ export function ArchiveReceiptEditor({ c, actorName, doctorName, onClose, onSent
           <div className="font-bold flex items-center gap-2">
             <Archive className="size-4 text-gold" /> طلب أرشفة الحالة
           </div>
-          <button onClick={onClose} className="rounded-lg p-1 hover:bg-muted"><X className="size-4" /></button>
+          <Button onClick={onClose} className="rounded-lg p-1 hover:bg-muted"><X className="size-4" /></Button>
         </div>
 
         <div className="rounded-lg border border-amber-500/50 bg-amber-50/60 p-2.5 text-[11px] font-bold text-amber-900">
-          لإتمام أرشفة الحالة {c.case_code} ({c.patient_name}) أرفق صورة <b>سند حساب المريض</b>؛
-          سيتم إرسالها إلى الإدارة لاعتماد الأرشفة.
+          الحالة {c.case_code} ({c.patient_name}) — المبلغ المتبقي مطلوب، وصورة سند الحساب اختيارية.
         </div>
 
         <div
@@ -162,15 +154,15 @@ export function ArchiveReceiptEditor({ c, actorName, doctorName, onClose, onSent
           )}
           <input ref={inputRef} type="file" accept="image/*" className="hidden"
             onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; pick(f); }} />
-          <button type="button" onClick={() => inputRef.current?.click()}
+          <Button type="button" onClick={() => inputRef.current?.click()}
             className="mt-3 inline-flex items-center gap-2 rounded-lg border border-gold/60 bg-gold/5 px-3 py-2 text-xs font-bold hover:bg-gold/10">
-            <Camera className="size-3.5" /> {file ? "تغيير الصورة" : "اختيار صورة سند الحساب"}
-          </button>
+            <Camera className="size-3.5" /> {file ? "تغيير الصورة" : "اختيار صورة سند الحساب (اختياري)"}
+          </Button>
         </div>
 
         <div className="mt-3">
-          <label className="text-[11px] font-bold mb-1 block">المبلغ المتبقي على المريض</label>
-          <input value={remaining} onChange={(e) => setRemaining(e.target.value)} inputMode="decimal" placeholder="0"
+          <label className="text-[11px] font-bold mb-1 block">المبلغ المتبقي على المريض (مطلوب)</label>
+          <input value={remaining} onChange={(e) => setRemaining(e.target.value)} inputMode="decimal" aria-label="المبلغ المتبقي على المريض" placeholder="0"
             className="w-full rounded-xl border border-input bg-background px-3 py-2 text-xs font-mono outline-none focus:border-gold" />
         </div>
 
@@ -179,15 +171,15 @@ export function ArchiveReceiptEditor({ c, actorName, doctorName, onClose, onSent
           className="mt-3 w-full rounded-xl border border-input bg-background px-3 py-2 text-xs outline-none focus:border-gold resize-y" />
 
         <div className="mt-4 flex items-center gap-2 flex-wrap">
-          <button onClick={onClose} disabled={busy}
+          <Button onClick={onClose} disabled={busy}
             className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-bold hover:border-gold">
             <X className="size-3.5" /> إلغاء
-          </button>
-          <button onClick={submit} disabled={busy || !file}
+          </Button>
+          <Button onClick={submit} disabled={busy || remaining.trim() === "" || !Number.isFinite(Number(remaining)) || Number(remaining) < 0}
             className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 text-white px-3 py-2 text-xs font-bold shadow disabled:opacity-60">
             {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
             إرسال الطلب للإدارة
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -230,10 +222,10 @@ export function ArchiveRequestStatus({ c }: { c: ArchiveReceiptCase }) {
         <div className="text-[11px] whitespace-pre-wrap">سبب الرفض: {c.archive_reject_reason}</div>
       )}
       {url && (
-        <button type="button" onClick={() => setOpen(true)} className="inline-flex items-center gap-2 text-[11px] font-bold">
+        <Button type="button" onClick={() => setOpen(true)} className="inline-flex items-center gap-2 text-[11px] font-bold">
           <img src={url} alt={c.archive_receipt_name ?? "سند الحساب"} className="size-10 rounded-md object-cover border border-border" />
           سند حساب المريض
-        </button>
+        </Button>
       )}
       {open && url && (
         <ImageLightbox images={[{ url, name: c.archive_receipt_name ?? "سند الحساب" }]} index={0}

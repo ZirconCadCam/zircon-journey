@@ -1338,7 +1338,7 @@ function DoctorControls({ c, actorName, doctorName }: {
 
 
   // Installing the permanent now goes through the archive-request editor
-  // (receipt photo → administration approval), see ArchiveReceiptEditor.
+  // (remaining balance + optional receipt → administration approval), see ArchiveReceiptEditor.
 
 
   // The doctor's decision panel stays open for as many revision rounds as
@@ -1347,8 +1347,8 @@ function DoctorControls({ c, actorName, doctorName }: {
   const hasAction = canDecide || (permReady && !installed);
   const stageHint =
     archived ? "تمت أرشفة الحالة نهائياً ✅" :
-    installed && c.archive_approval === "pending" ? "أُرسل سند حساب المريض — بانتظار موافقة الإدارة على الأرشفة" :
-    installed && c.archive_approval === "rejected" ? "لم توافق الإدارة على الأرشفة — أعد إرسال سند الحساب" :
+    installed && c.archive_approval === "pending" ? "أُرسل المبلغ المتبقي — بانتظار موافقة الإدارة على الأرشفة" :
+    installed && c.archive_approval === "rejected" ? "لم توافق الإدارة على الأرشفة — أعد إرسال طلب الأرشفة" :
     permReady ? "تم نحت الأسنان الدائمة — أكد التركيب عند الانتهاء" :
 
     decision === "approved" ? "تم الاعتماد — بانتظار نحت الدائم من الفني" :

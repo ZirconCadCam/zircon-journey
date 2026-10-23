@@ -9,3 +9,5 @@
 - Patient balance mutations through the generic case gateway require an admin ticket and finite, nonnegative amounts; local session flags are only UI hints, not authorization.
 - Storage writes go through server-issued signed upload tokens (`secure-storage.ts`); no browser insert policies on storage.
 - The app-wide entry gate (`app-gate.functions.ts` + `AppGate` in __root) checks APP_GATE_PASSWORD on the server and stores its signed token under `zgate_token` (outside the `zircon_` prefix so page sign-out keeps the app unlocked).
+
+- Permanent-install confirmation uses a dedicated staff-verified server action scoped to the doctor’s case; generic balance writes remain admin-only to prevent broader financial access.
