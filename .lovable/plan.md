@@ -1,30 +1,29 @@
-# Staff sign-in accounts + closing the open access rules
+# Move case saving to the server (staff-verified)
 
-You chose to require real accounts for staff, and admin-only file deletes. Today doctors and staff get in with a shared password and the database treats them as anonymous. So the rules can only be tightened after each person has a real account. Otherwise every page stops working.
+## Goal
+Close the open access rules on cases, chat, doctor files, file activity, Telegram links, app settings, avatars and stored files, so that only signed-in staff (via their existing passwords) can read or change data — without creating personal accounts.
 
-## What changes for staff
-- Each doctor, the designer, the technician, the secretary and admin get their own sign-in account (email + password). Admin creates them from the admin page, next to each doctor.
-- The current password screens stay as they are. Behind the scenes the password signs into that person's account, so nobody learns a new login flow.
-- A doctor sees only their own cases, chats and files. Staff see the cases they work on. Admin sees everything.
+## How it works
+1. **Staff session ticket**: when a doctor, designer, technician, secretary or admin enters their password, the server checks it and returns a signed ticket (valid 12 hours, tied to role and doctor). Screens look the same.
+2. **All saving and deleting goes through the server**: every action (move a case stage, archive, pin, delete, chat send/delete, doctor files, file activity, archive receipts, shade confirm, image comments, new case) calls a server action that checks the ticket and the role's permission before saving.
+3. **Reading too**: case lists, chat and files load through the server with the ticket, so patient names and phone numbers are no longer readable by anyone with the app link.
+4. **Lock the database**: remove the "everyone" rules on the affected tables and file folders; files are served via short-lived signed links.
+5. **Live updates**: chat live updates switch to refresh-on-focus plus a short poll while a chat is open (live database feed requires open read access).
 
-## Rules that get tightened
-- Cases: read/add/change limited to the owning doctor, staff roles and admin; delete limited to admin.
-- Chat messages and conversations: participants only; only admin deletes conversations.
-- Doctor files and doctor messages: owning doctor, staff and admin; delete limited to admin.
-- File activity log: signed-in staff only.
-- Telegram file links, app settings and avatar pictures: signed-in users only.
-- Stored files (doctor files, chat attachments, case files): uploads only for signed-in staff; deletes and replacements admin-only.
+## Order (each stage ships working)
+- Stage 1: ticket + cases (all case screens, ~17 files, ~75 save points).
+- Stage 2: chat and conversations, push.
+- Stage 3: doctor files, file activity, archive receipts, Telegram links, settings, avatars.
+- Stage 4: storage folders and lock database rules; mark findings fixed.
 
-## Order of work (so the app never breaks)
-1. Add a link between each doctor slot / staff role and an account.
-2. Admin tool to create the accounts and set their passwords.
-3. Change the password screens to sign in to the linked account.
-4. Only after every account exists and is tested: switch on the stricter rules.
-5. Re-run the security scan and mark the 18 issues fixed.
+## Impact
+- Old devices must re-enter their password once after release.
+- Vercel copy needs the server secret key to work (same as today's admin tools).
+- Large change: expect several rounds; each stage is tested in the preview before the next.
 
 ## Technical details
-- New table `staff_accounts(user_id uuid, role app_role, doctor_slot int)` plus `user_roles` rows; helper `current_doctor_slot()` (security definer).
-- Accounts created by a server function using the admin client, after checking the admin role.
-- Login: `signInWithPassword` with a synthetic email per slot/role (for example `doctor-3@zircon.local`), with auto-confirm on.
-- Policies rewritten using `auth.uid()`, `has_role()` and `current_doctor_slot()`, removing the `USING (true)` / `WITH CHECK (true)` rules on slot_cases, chat_*, doctor_files, doctor_messages, file_activity, telegram_file_links, app_settings, avatar_overrides and the storage.objects rules on the three buckets.
-- The same rules carry over when the data moves to your own database for the Vercel copy.
+- `src/lib/staff-ticket.server.ts`: HMAC (SESSION_SECRET, generated) sign/verify `{role, slot, exp}`.
+- `src/lib/staff-auth.functions.ts`: `issueStaffTicket` (verifies via `get_staff_password` / `verify_doctor_login` / `is_admin_actor`).
+- `src/lib/cases.functions.ts`, `chat.functions.ts`, `files.functions.ts`: typed server fns with zod, `supabaseAdmin` loaded in-handler after ticket check; doctors restricted to their own `doctor_slot`.
+- Client helper `withTicket()` attaches the ticket from localStorage to each call.
+- Migration per stage dropping `USING (true)` policies and revoking anon/authenticated writes.
