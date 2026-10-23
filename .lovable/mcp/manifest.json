@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "sdk_version": "3.0.4",
+  "sdk_version": "3.3.0",
   "path": "/mcp",
   "auth": {
     "type": "oauth",
