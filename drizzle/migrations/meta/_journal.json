@@ -50,6 +50,13 @@
       "when": 1792770634949,
       "tag": "0006_lock_staff_tables_server_gateway",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792778894330,
+      "tag": "0007_protect_avatar_and_device_rpcs",
+      "breakpoints": true
     }
   ]
 }
