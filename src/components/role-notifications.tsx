@@ -13,6 +13,8 @@ import {
   unlockNotificationAudio,
 } from "@/lib/notify";
 import { enablePushForRole } from "@/lib/push";
+import { sdb } from "@/lib/secure-db";
+import { rt } from "@/lib/realtime-shim";
 
 /**
  * Professional, interactive notification center for a role portal.
@@ -57,7 +59,7 @@ export function RoleNotifications({
     let active = true;
 
     async function refreshConvs() {
-      const { data } = await supabase
+      const { data } = await sdb
         .from("chat_conversations")
         .select("id,doctor_slot,participants");
       if (!active) return;
@@ -112,7 +114,7 @@ export function RoleNotifications({
 
     void refreshConvs();
 
-    const ch = supabase
+    const ch = rt
       .channel(`role-notify-${role}-${slot ?? "all"}`)
       .on(
         "postgres_changes",
@@ -157,7 +159,7 @@ export function RoleNotifications({
 
     return () => {
       active = false;
-      supabase.removeChannel(ch);
+      rt.removeChannel(ch);
     };
   }, [role, slot]);
 

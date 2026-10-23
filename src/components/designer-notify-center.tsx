@@ -5,6 +5,8 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Z } from "@/lib/z-index";
+import { sdb } from "@/lib/secure-db";
+import { rt } from "@/lib/realtime-shim";
 
 /**
  * Designer notification center.
@@ -84,7 +86,7 @@ export function DesignerNotifyCenter({
 
   /* ---- live chat unread, grouped by case code (conversation title "[CODE] …") ---- */
   const refreshChat = useCallback(async () => {
-    const { data: convs } = await supabase
+    const { data: convs } = await sdb
       .from("chat_conversations").select("id,title,participants");
     const mine = ((convs ?? []) as any[]).filter(cv =>
       Array.isArray(cv.participants) && cv.participants.includes("designer")
@@ -96,7 +98,7 @@ export function DesignerNotifyCenter({
       const m = /^\[([^\]]+)\]/.exec(cv.title as string);
       if (m) codeByConv.set(cv.id as string, m[1]);
     }
-    const { data: msgs } = await supabase.from("chat_messages")
+    const { data: msgs } = await sdb.from("chat_messages")
       .select("id,conversation_id")
       .in("conversation_id", Array.from(codeByConv.keys()))
       .neq("sender", "designer")
@@ -112,11 +114,11 @@ export function DesignerNotifyCenter({
 
   useEffect(() => {
     void refreshChat();
-    const ch = supabase.channel("designer-notify-center")
+    const ch = rt.channel("designer-notify-center")
       .on("postgres_changes", { event: "*", schema: "public", table: "chat_messages" }, () => void refreshChat())
       .on("postgres_changes", { event: "*", schema: "public", table: "chat_conversations" }, () => void refreshChat())
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => { rt.removeChannel(ch); };
   }, [refreshChat]);
 
   /* ------------------------------ groups ------------------------------ */

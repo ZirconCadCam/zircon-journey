@@ -13,6 +13,8 @@ import {
 import { getSignedUrl } from "@/lib/chat";
 import { fileManagerSupported } from "@/lib/file-manager";
 import { printHtmlDocument } from "@/lib/print-report";
+import { sdb } from "@/lib/secure-db";
+import { rt } from "@/lib/realtime-shim";
 
 interface Doctor { slot: number; name: string; branch: string | null }
 interface Case {
@@ -74,17 +76,17 @@ function useDesignerData() {
     const load = async () => {
       const [{ data: docs }, { data: cs }] = await Promise.all([
         supabase.from("doctor_profiles").select("slot,name,branch,active").order("slot"),
-        supabase.from("slot_cases").select("*").is("trashed_at", null).order("created_at", { ascending: false }),
+        sdb.from("slot_cases").select("*").is("trashed_at", null).order("created_at", { ascending: false }),
       ]);
       setDoctors((docs ?? []) as Doctor[]);
       setCases((cs ?? []) as Case[]);
       setLoading(false);
     };
     load();
-    const ch = supabase.channel("designer-panels-stream")
+    const ch = rt.channel("designer-panels-stream")
       .on("postgres_changes", { event: "*", schema: "public", table: "slot_cases" }, load)
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => { rt.removeChannel(ch); };
   }, []);
 
   const doctorMap = useMemo(() => {
@@ -121,7 +123,7 @@ export function DesignerArchive() {
   async function restore(c: Case) {
     if (!confirm(`استعادة ملف المريض ${c.patient_name}؟ سيعود إلى قائمة الحالات النشطة.`)) return;
     setBusyId(c.id);
-    const { error } = await supabase.from("slot_cases")
+    const { error } = await sdb.from("slot_cases")
       .update({ design_done: false, design_file_sent: false }).eq("id", c.id);
     setBusyId(null);
     if (error) { toast.error("تعذرت الاستعادة"); return; }
@@ -220,7 +222,7 @@ export function DesignerDesignFiles() {
     let active = true;
     (async () => {
       setLoadingFiles(true);
-      const { data: msgs } = await supabase.from("chat_messages")
+      const { data: msgs } = await sdb.from("chat_messages")
         .select("id, attachment_path, attachment_name, attachment_size, content, created_at, sender, message_type")
         .eq("sender", "designer").eq("message_type", "file")
         .order("created_at", { ascending: false }).limit(500);

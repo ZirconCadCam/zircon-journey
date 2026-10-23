@@ -15,6 +15,7 @@ import { ImageAnnotator } from "@/components/image-annotator";
 import { ImageLightbox } from "@/components/image-lightbox";
 import { ArchiveReceiptEditor, ArchiveRequestStatus } from "@/components/archive-receipt-editor";
 import { signPrivateUrl } from "@/lib/secure-storage";
+import { sdb } from "@/lib/secure-db";
 
 
 
@@ -116,14 +117,14 @@ export function CaseWorkflowControls({ c, actor, actorName, doctorName, target, 
 
 // ---------- helpers ----------
 async function ensureConv(c: WorkflowCase, sender: RoleKey, target: RoleKey, doctorName: string): Promise<string | null> {
-  const { data: existing } = await supabase.from("chat_conversations")
+  const { data: existing } = await sdb.from("chat_conversations")
     .select("id,participants").eq("doctor_slot", c.doctor_slot);
   const conv = (existing ?? []).find((x: any) =>
     Array.isArray(x.participants) && x.participants.length === 2
     && x.participants.includes(sender) && x.participants.includes(target)
   ) as { id: string } | undefined;
   if (conv) return conv.id;
-  const { data: created, error } = await supabase.from("chat_conversations")
+  const { data: created, error } = await sdb.from("chat_conversations")
     .insert({
       doctor_slot: c.doctor_slot,
       participants: [sender, target],
@@ -139,7 +140,7 @@ async function ensureConv(c: WorkflowCase, sender: RoleKey, target: RoleKey, doc
  *  per-case chat. Returns the conversation id. */
 async function ensureCaseConvForDoctor(c: WorkflowCase): Promise<string | null> {
   const prefix = `[${c.case_code}]`;
-  const { data: existing } = await supabase.from("chat_conversations")
+  const { data: existing } = await sdb.from("chat_conversations")
     .select("id,participants,title").eq("doctor_slot", c.doctor_slot);
   const conv = (existing ?? []).find((x: any) =>
     Array.isArray(x.participants)
@@ -147,7 +148,7 @@ async function ensureCaseConvForDoctor(c: WorkflowCase): Promise<string | null> 
     && typeof x.title === "string" && x.title.startsWith(prefix)
   ) as { id: string } | undefined;
   if (conv) return conv.id;
-  const { data: created, error } = await supabase.from("chat_conversations")
+  const { data: created, error } = await sdb.from("chat_conversations")
     .insert({
       doctor_slot: c.doctor_slot,
       participants: ["doctor", "designer"],
@@ -164,7 +165,7 @@ async function ensureCaseConvForDoctor(c: WorkflowCase): Promise<string | null> 
  *  technician pages simultaneously. Returns the conversation id. */
 async function ensureCaseConvAll(c: WorkflowCase): Promise<string | null> {
   const prefix = `[${c.case_code}]`;
-  const { data: existing } = await supabase.from("chat_conversations")
+  const { data: existing } = await sdb.from("chat_conversations")
     .select("id,participants,title").eq("doctor_slot", c.doctor_slot);
   const conv = (existing ?? []).find((x: any) =>
     Array.isArray(x.participants)
@@ -174,7 +175,7 @@ async function ensureCaseConvAll(c: WorkflowCase): Promise<string | null> {
     && typeof x.title === "string" && x.title.startsWith(prefix)
   ) as { id: string } | undefined;
   if (conv) return conv.id;
-  const { data: created, error } = await supabase.from("chat_conversations")
+  const { data: created, error } = await sdb.from("chat_conversations")
     .insert({
       doctor_slot: c.doctor_slot,
       participants: ["doctor", "designer", "technician"],
@@ -290,7 +291,7 @@ function DesignerControls({ c, actorName, doctorName, target, blockedByPending }
       if (!up) return;
       const convId = await ensureConv(c, "designer", target, doctorName);
       if (!convId) { toast.error("تعذر إنشاء المحادثة"); return; }
-      await supabase.from("chat_messages").insert({
+      await sdb.from("chat_messages").insert({
         conversation_id: convId,
         sender: "designer",
         sender_name: actorName,
@@ -305,7 +306,7 @@ function DesignerControls({ c, actorName, doctorName, target, blockedByPending }
       // up automatically on the doctor's page conversation for this case.
       const docConvId = await ensureCaseConvForDoctor(c);
       if (docConvId) {
-        await supabase.from("chat_messages").insert({
+        await sdb.from("chat_messages").insert({
           conversation_id: docConvId,
           sender: "designer",
           sender_name: actorName,
@@ -317,7 +318,7 @@ function DesignerControls({ c, actorName, doctorName, target, blockedByPending }
           attachment_size: f.size,
         });
       }
-      await supabase.from("slot_cases").update({
+      await sdb.from("slot_cases").update({
         design_html_sent: true,
         design_html_path: up.url,
         design_html_name: f.name,
@@ -347,7 +348,7 @@ function DesignerControls({ c, actorName, doctorName, target, blockedByPending }
       if (!up) return;
       const convId = await ensureConv(c, "designer", target, doctorName);
       if (!convId) { toast.error("تعذر إنشاء المحادثة"); return; }
-      await supabase.from("chat_messages").insert({
+      await sdb.from("chat_messages").insert({
         conversation_id: convId,
         sender: "designer",
         sender_name: actorName,
@@ -360,7 +361,7 @@ function DesignerControls({ c, actorName, doctorName, target, blockedByPending }
       });
       // Auto-mark design as done. design_received_by_tech now flips when the
       // technician opens the case (handled in TechnicianControls / list view).
-      await supabase.from("slot_cases").update({
+      await sdb.from("slot_cases").update({
         design_file_sent: true,
         design_done: true,
         design_sent_at: new Date().toISOString(),
@@ -497,13 +498,13 @@ function DesignerRevisionSection({ c, actorName, doctorName }: {
     if (c.doctor_decision !== "revision") return;
     let cancelled = false;
     (async () => {
-      const { data: convs } = await supabase.from("chat_conversations")
+      const { data: convs } = await sdb.from("chat_conversations")
         .select("id,participants").eq("doctor_slot", c.doctor_slot);
       const conv = (convs ?? []).find((x: any) =>
         Array.isArray(x.participants) && x.participants.length === 2
         && x.participants.includes("doctor") && x.participants.includes("designer"));
       if (!conv) return;
-      const { data: msgs } = await supabase.from("chat_messages")
+      const { data: msgs } = await sdb.from("chat_messages")
         .select("attachment_path,attachment_name,attachment_mime,content,message_type,sender,created_at")
         .eq("conversation_id", (conv as { id: string }).id)
         .eq("sender", "doctor")
@@ -535,7 +536,7 @@ function DesignerRevisionSection({ c, actorName, doctorName }: {
       if (!up) return;
       // Notify the technician
       const conv = await ensureConv(c, "designer", "technician", doctorName);
-      if (conv) await supabase.from("chat_messages").insert({
+      if (conv) await sdb.from("chat_messages").insert({
         conversation_id: conv, sender: "designer", sender_name: actorName,
         content: `🔁 تعديل تصميم نهائي — الحالة ${c.case_code} (${c.patient_name})`,
         message_type: "file",
@@ -544,12 +545,12 @@ function DesignerRevisionSection({ c, actorName, doctorName }: {
       });
       // Notify the doctor
       const dconv = await ensureConv(c, "designer", "doctor", doctorName);
-      if (dconv) await supabase.from("chat_messages").insert({
+      if (dconv) await sdb.from("chat_messages").insert({
         conversation_id: dconv, sender: "designer", sender_name: actorName,
         content: `✏️ تم إنجاز التعديل المطلوب وإرساله للفني — الحالة ${c.case_code}`,
         message_type: "text",
       });
-      await supabase.from("slot_cases").update({
+      await sdb.from("slot_cases").update({
         revision_design_file_path: up.url,
         revision_design_file_name: f.name,
         revision_design_done: true,
@@ -580,7 +581,7 @@ function DesignerRevisionSection({ c, actorName, doctorName }: {
       const up = await uploadAttachment(f, c, "revision-html");
       if (!up) return;
       const conv = await ensureConv(c, "designer", "technician", doctorName);
-      if (conv) await supabase.from("chat_messages").insert({
+      if (conv) await sdb.from("chat_messages").insert({
         conversation_id: conv, sender: "designer", sender_name: actorName,
         content: `🧾 ملف HTML مرفق مع التعديل — الحالة ${c.case_code} (${c.patient_name})`,
         message_type: "file",
@@ -588,14 +589,14 @@ function DesignerRevisionSection({ c, actorName, doctorName }: {
         attachment_mime: f.type || "text/html", attachment_size: f.size,
       });
       const dconv = await ensureConv(c, "designer", "doctor", doctorName);
-      if (dconv) await supabase.from("chat_messages").insert({
+      if (dconv) await sdb.from("chat_messages").insert({
         conversation_id: dconv, sender: "designer", sender_name: actorName,
         content: `🧾 ملف HTML مرفق مع التعديل — الحالة ${c.case_code}`,
         message_type: "file",
         attachment_path: up.url, attachment_name: f.name,
         attachment_mime: f.type || "text/html", attachment_size: f.size,
       });
-      await supabase.from("slot_cases").update({
+      await sdb.from("slot_cases").update({
         design_html_path: up.url,
         design_html_name: f.name,
         design_html_sent: true,
@@ -625,18 +626,18 @@ function DesignerRevisionSection({ c, actorName, doctorName }: {
     setBusy(true);
     try {
       const conv = await ensureConv(c, "designer", "technician", doctorName);
-      if (conv) await supabase.from("chat_messages").insert({
+      if (conv) await sdb.from("chat_messages").insert({
         conversation_id: conv, sender: "designer", sender_name: actorName,
         content: `🔁 تعديل تصميم نهائي (نصي) — الحالة ${c.case_code} (${c.patient_name})\n${body}`,
         message_type: "text",
       });
       const dconv = await ensureConv(c, "designer", "doctor", doctorName);
-      if (dconv) await supabase.from("chat_messages").insert({
+      if (dconv) await sdb.from("chat_messages").insert({
         conversation_id: dconv, sender: "designer", sender_name: actorName,
         content: `✏️ تم إنجاز التعديل المطلوب وإرساله للفني (نصياً) — الحالة ${c.case_code}`,
         message_type: "text",
       });
-      await supabase.from("slot_cases").update({
+      await sdb.from("slot_cases").update({
         revision_design_file_name: "تعديل نصي",
         revision_design_done: true,
       }).eq("id", c.id);
@@ -759,12 +760,12 @@ function TechnicianControls({ c, actorName, doctorName, target }: {
     if (!designReady || confirmed) return;
     let cancelled = false;
     (async () => {
-      const { error } = await supabase.from("slot_cases")
+      const { error } = await sdb.from("slot_cases")
         .update({ design_received_by_tech: true, design_read_at: new Date().toISOString() })
         .eq("id", c.id);
       if (cancelled || error) return;
       const designerConv = await ensureConv(c, "technician", "designer", doctorName);
-      if (designerConv) await supabase.from("chat_messages").insert({
+      if (designerConv) await sdb.from("chat_messages").insert({
         conversation_id: designerConv, sender: "technician", sender_name: actorName,
         content: `✅ فتح الفني ملف التصميم — الحالة ${c.case_code} (${c.patient_name}).`,
         message_type: "text",
@@ -781,7 +782,7 @@ function TechnicianControls({ c, actorName, doctorName, target }: {
     if (!fabDone) {
       if (target && !dataSent) { await sendDataToSecretary(); return; }
       setBusy(true);
-      const { error } = await supabase.from("slot_cases")
+      const { error } = await sdb.from("slot_cases")
         .update({ fabrication_done: true }).eq("id", c.id);
       setBusy(false);
       if (error) toast.error(error.message);
@@ -789,7 +790,7 @@ function TechnicianControls({ c, actorName, doctorName, target }: {
       return;
     }
     setBusy(true);
-    const { error } = await supabase.from("slot_cases")
+    const { error } = await sdb.from("slot_cases")
       .update({ fabrication_done: false }).eq("id", c.id);
     setBusy(false);
     if (error) toast.error(error.message);
@@ -820,19 +821,19 @@ function TechnicianControls({ c, actorName, doctorName, target }: {
     ].filter(Boolean).join("\n");
     // Notify secretary
     const convId = await ensureConv(c, "technician", target, doctorName);
-    if (convId) await supabase.from("chat_messages").insert({
+    if (convId) await sdb.from("chat_messages").insert({
       conversation_id: convId, sender: "technician", sender_name: actorName,
       content: lines, message_type: "text",
     });
     // Also notify doctor (replaces "تم إرسال المؤقت" confirmation)
     const docConv = await ensureConv(c, "technician", "doctor", doctorName);
-    if (docConv) await supabase.from("chat_messages").insert({
+    if (docConv) await sdb.from("chat_messages").insert({
       conversation_id: docConv, sender: "technician", sender_name: actorName,
       content: `🦷 تم نحت المؤقت — الحالة ${c.case_code} (${c.patient_name}) جاهزة للمراجعة.`,
       message_type: "text",
     });
     // Auto-flip the stage to "doctor_review" by setting both flags.
-    const { error } = await supabase.from("slot_cases")
+    const { error } = await sdb.from("slot_cases")
       .update({
         tech_data_sent_to_secretary: true,
         fabrication_done: true,
@@ -900,17 +901,17 @@ function TechnicianPermanentSection({ c, actorName, doctorName }: {
     if (!revisionReady || revisionApproved) return;
     let cancelled = false;
     (async () => {
-      const { error } = await supabase.from("slot_cases")
+      const { error } = await sdb.from("slot_cases")
         .update({ revision_approved_by_tech: true }).eq("id", c.id);
       if (cancelled || error) return;
       const conv = await ensureConv(c, "technician", "designer", doctorName);
-      if (conv) await supabase.from("chat_messages").insert({
+      if (conv) await sdb.from("chat_messages").insert({
         conversation_id: conv, sender: "technician", sender_name: actorName,
         content: `✅ استلم الفني ملف التعديل — الحالة ${c.case_code} (${c.patient_name}). يبدأ نحت الدائم.`,
         message_type: "text",
       });
       const dconv = await ensureConv(c, "technician", "doctor", doctorName);
-      if (dconv) await supabase.from("chat_messages").insert({
+      if (dconv) await sdb.from("chat_messages").insert({
         conversation_id: dconv, sender: "technician", sender_name: actorName,
         content: `✅ تم استلام التعديل — الحالة ${c.case_code} في مرحلة الاعتماد النهائي.`,
         message_type: "text",
@@ -932,7 +933,7 @@ function TechnicianPermanentSection({ c, actorName, doctorName }: {
       patch.permanent_shipped_to_secretary = true;
       patch.perm_sent_at = new Date().toISOString();
     }
-    const { error } = await supabase.from("slot_cases").update(patch).eq("id", c.id);
+    const { error } = await sdb.from("slot_cases").update(patch).eq("id", c.id);
     if (error) { setBusy(false); toast.error(error.message); return; }
     if (next) {
       const msg = `🦷 تم نحت الأسنان الدائمة — الحالة ${c.case_code} (${c.patient_name}).\nالطبيب: ${doctorName}.\nالأسنان قيد الترحيل.`;
@@ -943,7 +944,7 @@ function TechnicianPermanentSection({ c, actorName, doctorName }: {
       if (secRole) roles.push(secRole);
       for (const role of roles) {
         const conv = await ensureConv(c, "technician", role, doctorName);
-        if (conv) await supabase.from("chat_messages").insert({
+        if (conv) await sdb.from("chat_messages").insert({
           conversation_id: conv, sender: "technician", sender_name: actorName,
           content: msg, message_type: "text",
         });
@@ -999,17 +1000,17 @@ function SecretaryControls({ c, actorName, actor, doctorName }: {
 
   async function markReceived() {
     setBusy(true);
-    const { error } = await supabase.from("slot_cases")
+    const { error } = await sdb.from("slot_cases")
       .update({ secretary_received: true }).eq("id", c.id);
     if (!error) {
       const convId = await ensureConv(c, actor, "technician", doctorName);
-      if (convId) await supabase.from("chat_messages").insert({
+      if (convId) await sdb.from("chat_messages").insert({
         conversation_id: convId, sender: actor, sender_name: actorName,
         content: `✅ استلمت السكرتارية بيانات الحالة ${c.case_code} (${c.patient_name}).`,
         message_type: "text",
       });
       const dconv = await ensureConv(c, actor, "doctor", doctorName);
-      if (dconv) await supabase.from("chat_messages").insert({
+      if (dconv) await sdb.from("chat_messages").insert({
         conversation_id: dconv, sender: actor, sender_name: actorName,
         content: `🦷 تم استلام الأسنان المؤقتة (للتجربة) — الحالة ${c.case_code} (${c.patient_name}). جاهزة للإرسال إليكم.`,
         message_type: "text",
@@ -1024,7 +1025,7 @@ function SecretaryControls({ c, actorName, actor, doctorName }: {
     const patch: any = kind === "temp"
       ? { received_temporary: !tempOk }
       : { received_permanent: !permOk };
-    const { error } = await supabase.from("slot_cases").update(patch).eq("id", c.id);
+    const { error } = await sdb.from("slot_cases").update(patch).eq("id", c.id);
     setBusy(false);
     if (error) toast.error(error.message);
   }
@@ -1032,17 +1033,17 @@ function SecretaryControls({ c, actorName, actor, doctorName }: {
   async function confirmPermReceipt() {
     if (!window.confirm("تأكيد استلام الأسنان الدائمة من الفني؟")) return;
     setBusy(true);
-    const { error } = await supabase.from("slot_cases")
+    const { error } = await sdb.from("slot_cases")
       .update({ permanent_received_by_secretary: true, received_permanent: true }).eq("id", c.id);
     if (!error) {
       const tconv = await ensureConv(c, actor, "technician", doctorName);
-      if (tconv) await supabase.from("chat_messages").insert({
+      if (tconv) await sdb.from("chat_messages").insert({
         conversation_id: tconv, sender: actor, sender_name: actorName,
         content: `✅ تم استلام الأسنان الدائمة — الحالة ${c.case_code} (${c.patient_name}).`,
         message_type: "text",
       });
       const dconv = await ensureConv(c, actor, "doctor", doctorName);
-      if (dconv) await supabase.from("chat_messages").insert({
+      if (dconv) await sdb.from("chat_messages").insert({
         conversation_id: dconv, sender: actor, sender_name: actorName,
         content: `🦷 الأسنان الدائمة جاهزة للإرسال إليكم — الحالة ${c.case_code} (${c.patient_name}).`,
         message_type: "text",
@@ -1055,11 +1056,11 @@ function SecretaryControls({ c, actorName, actor, doctorName }: {
   async function deliverPermanent() {
     if (!window.confirm("تأكيد إرسال الأسنان الدائمة للطبيب؟")) return;
     setBusy(true);
-    const { error } = await supabase.from("slot_cases")
+    const { error } = await sdb.from("slot_cases")
       .update({ permanent_delivered_to_doctor: true }).eq("id", c.id);
     if (!error) {
       const dconv = await ensureConv(c, actor, "doctor", doctorName);
-      if (dconv) await supabase.from("chat_messages").insert({
+      if (dconv) await sdb.from("chat_messages").insert({
         conversation_id: dconv, sender: actor, sender_name: actorName,
         content: `🚚 تم إرسال الأسنان الدائمة — الحالة ${c.case_code} (${c.patient_name}).`,
         message_type: "text",
@@ -1154,7 +1155,7 @@ function SecretaryControls({ c, actorName, actor, doctorName }: {
 async function appendAudit(c: WorkflowCase, entry: { actor: string; action: string; notes?: string }) {
   const prev = Array.isArray(c.audit_log) ? c.audit_log : [];
   const next = [...prev, { at: new Date().toISOString(), ...entry }];
-  await supabase.from("slot_cases").update({ audit_log: next as any }).eq("id", c.id);
+  await sdb.from("slot_cases").update({ audit_log: next as any }).eq("id", c.id);
 }
 
 function DoctorControls({ c, actorName, doctorName }: {
@@ -1177,7 +1178,7 @@ function DoctorControls({ c, actorName, doctorName }: {
     const next = reviewShade.trim();
     if (!next) { toast.error("اختر لون السن أولاً"); return; }
     setBusy(true);
-    const { error } = await supabase.from("slot_cases")
+    const { error } = await sdb.from("slot_cases")
       .update({ shade: next, shade_confirmed_doctor: true }).eq("id", c.id);
     setBusy(false);
     if (error) toast.error(error.message);
@@ -1205,7 +1206,7 @@ function DoctorControls({ c, actorName, doctorName }: {
       const now = new Date().toISOString();
       const patch: any = { perm_read_at: now };
       if (!c.perm_delivered_at) patch.perm_delivered_at = now;
-      await supabase.from("slot_cases").update(patch).eq("id", c.id);
+      await sdb.from("slot_cases").update(patch).eq("id", c.id);
       if (cancelled) return;
     })();
     return () => { cancelled = true; };
@@ -1214,7 +1215,7 @@ function DoctorControls({ c, actorName, doctorName }: {
 
   async function approve() {
     setBusy(true);
-    const { error } = await supabase.from("slot_cases")
+    const { error } = await sdb.from("slot_cases")
       .update({
         doctor_decision: "approved",
         temporary_delivered: true,
@@ -1232,14 +1233,14 @@ function DoctorControls({ c, actorName, doctorName }: {
       ].filter(Boolean).join(" — ");
       // 1) Designer: approval + archive prompt
       const dConv = await ensureConv(c, "doctor", "designer", doctorName);
-      if (dConv) await supabase.from("chat_messages").insert({
+      if (dConv) await sdb.from("chat_messages").insert({
         conversation_id: dConv, sender: "doctor", sender_name: actorName,
         content: `✅ تم اعتماد التصميم للحالة ${details}. بإمكانك أرشفتها.`,
         message_type: "text",
       });
       // 2) Technician: carve the permanent as-is
       const tConv = await ensureConv(c, "doctor", "technician", doctorName);
-      if (tConv) await supabase.from("chat_messages").insert({
+      if (tConv) await sdb.from("chat_messages").insert({
         conversation_id: tConv, sender: "doctor", sender_name: actorName,
         content: `لا تعديل، قم بنحت الدائم وفق التصميم الحالي — ${details}.`,
         message_type: "text",
@@ -1258,7 +1259,7 @@ function DoctorControls({ c, actorName, doctorName }: {
     setBusy(true);
     const trimmed = notes.trim();
     const shadeChanged = (c.shade ?? "").trim().toUpperCase() !== nextShade.toUpperCase();
-    const { error } = await supabase.from("slot_cases")
+    const { error } = await sdb.from("slot_cases")
       .update({
         doctor_decision: "revision",
         revision_notes: trimmed,
@@ -1310,13 +1311,13 @@ function DoctorControls({ c, actorName, doctorName }: {
       for (const role of ["designer", "technician"] as RoleKey[]) {
         const conv = await ensureConv(c, "doctor", role, doctorName);
         if (!conv) continue;
-        await supabase.from("chat_messages").insert({
+        await sdb.from("chat_messages").insert({
           conversation_id: conv, sender: "doctor", sender_name: actorName,
           content: role === "designer" ? designerBody : techBody,
           message_type: "text",
         });
         for (const u of uploaded) {
-          await supabase.from("chat_messages").insert({
+          await sdb.from("chat_messages").insert({
             conversation_id: conv, sender: "doctor", sender_name: actorName,
             content: `📎 مرفق طلب التعديل: ${u.name}`,
             message_type: "file",
@@ -1683,7 +1684,7 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
       const up = await uploadAttachment(file, c, "doctor-notes");
       if (!up) { toast.error("تعذر رفع ملف ZIP"); return; }
       const mime = file.type || "application/zip";
-      await supabase.from("slot_cases").update({
+      await sdb.from("slot_cases").update({
         extra_zip_path: up.url,
         extra_zip_name: file.name,
         extra_zip_mime: mime,
@@ -1691,7 +1692,7 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
       }).eq("id", c.id);
       const convId = await ensureCaseConvAll(c);
       if (convId) {
-        await supabase.from("chat_messages").insert({
+        await sdb.from("chat_messages").insert({
           conversation_id: convId, sender: "doctor", sender_name: actorName,
           content: `🗜️ ملف ZIP إضافي من الطبيب — الحالة ${c.case_code}`,
           message_type: "file",
@@ -1755,7 +1756,7 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
       const file = new File([blob], `voice-${Date.now()}.webm`, { type: blob.type || "audio/webm" });
       const up = await uploadAttachment(file, c, "doctor-notes");
       if (!up) { toast.error("تعذر رفع التسجيل"); return; }
-      await supabase.from("chat_messages").insert({
+      await sdb.from("chat_messages").insert({
         conversation_id: convId, sender: "doctor", sender_name: actorName,
         content: `🎤 تسجيل صوتي من الطبيب — الحالة ${c.case_code}`,
         message_type: "audio",
@@ -1770,11 +1771,11 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
 
   /** Append an image to the case data (so it stays part of the case). */
   async function persistImageToCase(url: string, name: string) {
-    const { data: row } = await supabase.from("slot_cases")
+    const { data: row } = await sdb.from("slot_cases")
       .select("notes_images").eq("id", c.id).maybeSingle();
     const prev = Array.isArray((row as any)?.notes_images)
       ? ((row as any).notes_images as { url: string; name: string }[]) : [];
-    await supabase.from("slot_cases")
+    await sdb.from("slot_cases")
       .update({ notes_images: [...prev, { url, name }] as any }).eq("id", c.id);
   }
 
@@ -1782,7 +1783,7 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
    *  version, in place, so the designer/technician always see the newest edit.
    *  Existing team comments stay attached by re-pointing them at the new URL. */
   async function replaceImageInCase(oldUrl: string, url: string, name: string) {
-    const { data: row } = await supabase.from("slot_cases")
+    const { data: row } = await sdb.from("slot_cases")
       .select("notes_images,notes_image_comments").eq("id", c.id).maybeSingle();
     const prev = Array.isArray((row as any)?.notes_images)
       ? ((row as any).notes_images as { url: string; name: string }[]) : [];
@@ -1793,7 +1794,7 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
     const prevCmts = Array.isArray((row as any)?.notes_image_comments)
       ? ((row as any).notes_image_comments as { image_url: string }[]) : [];
     const nextCmts = prevCmts.map(k => (k.image_url === oldUrl ? { ...k, image_url: url } : k));
-    await supabase.from("slot_cases")
+    await sdb.from("slot_cases")
       .update({ notes_images: nextImages as any, notes_image_comments: nextCmts as any })
       .eq("id", c.id);
   }
@@ -1807,7 +1808,7 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
       const file = new File([blob], name, { type: "image/png" });
       const up = await uploadAttachment(file, c, "doctor-notes");
       if (!up) { toast.error("تعذر رفع الصورة"); return; }
-      await supabase.from("chat_messages").insert({
+      await sdb.from("chat_messages").insert({
         conversation_id: convId, sender: "doctor", sender_name: actorName,
         content: `🖼️ تحديث صورة من الطبيب (آخر تعديل) — الحالة ${c.case_code}`,
         message_type: "file",
@@ -1840,7 +1841,7 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
       const convId = await ensureCaseConvAll(c);
       if (!convId) { toast.error("تعذر فتح محادثة الحالة"); return; }
       if (notes.trim().length >= 1) {
-        await supabase.from("chat_messages").insert({
+        await sdb.from("chat_messages").insert({
           conversation_id: convId, sender: "doctor", sender_name: actorName,
           content: `📝 ملاحظة الطبيب — الحالة ${c.case_code}\n${notes.trim()}`,
           message_type: "text",
@@ -1854,7 +1855,7 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
         const isImage = f.type.startsWith("image/");
         if (isImage) newImages.push({ url: up.url, name: f.name });
         allUploaded.push({ url: up.url, name: f.name });
-        await supabase.from("chat_messages").insert({
+        await sdb.from("chat_messages").insert({
           conversation_id: convId, sender: "doctor", sender_name: actorName,
           content: `${isImage ? "🖼️ صورة" : "📎 ملف"} من الطبيب — الحالة ${c.case_code}`,
           message_type: "file",
@@ -1867,11 +1868,11 @@ function DoctorNotesComposer({ c, actorName, doctorName }: {
       // Persist uploaded images onto the case so they appear in the designer's
       // case info (under the 3D scan) and remain part of the case data.
       if (newImages.length) {
-        const { data: row } = await supabase.from("slot_cases")
+        const { data: row } = await sdb.from("slot_cases")
           .select("notes_images").eq("id", c.id).maybeSingle();
         const prev = Array.isArray((row as any)?.notes_images)
           ? ((row as any).notes_images as { url: string; name: string }[]) : [];
-        await supabase.from("slot_cases")
+        await sdb.from("slot_cases")
           .update({ notes_images: [...prev, ...newImages] as any }).eq("id", c.id);
       }
       if (allUploaded.length) {

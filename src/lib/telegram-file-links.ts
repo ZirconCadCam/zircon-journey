@@ -2,7 +2,7 @@
  * Links between stored case files and the Telegram group message that holds
  * the same file. Used after archived case files are auto-deleted from storage.
  */
-import { supabase } from "@/integrations/supabase/client";
+import { sdb } from "@/lib/secure-db";
 
 /** Normalise a storage URL or raw path to the object path used as lookup key. */
 export function objectKey(urlOrPath: string | null | undefined): string | null {
@@ -31,7 +31,7 @@ export function telegramMessageLink(chatId: string, messageId: number): string {
 export async function findTelegramLink(urlOrPath: string | null | undefined): Promise<string | null> {
   const key = objectKey(urlOrPath);
   if (!key) return null;
-  const { data } = await (supabase as any)
+  const { data } = await (sdb as any)
     .from("telegram_file_links").select("link")
     .eq("object_path", key).order("created_at", { ascending: false }).limit(1);
   return (data?.[0]?.link as string | undefined) ?? null;

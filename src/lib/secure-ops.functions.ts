@@ -11,9 +11,15 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 /** Buckets that are private and may only be reached through these functions. */
-const PRIVATE_BUCKETS = ["chat-attachments", "case-files"] as const;
+const PRIVATE_BUCKETS = ["chat-attachments", "case-files", "doctor-files"] as const;
 const bucketSchema = z.enum(PRIVATE_BUCKETS);
 const pathSchema = z.string().min(1).max(600);
+
+/** Every storage operation requires a signed-in staff member or doctor. */
+async function requireAnyStaff() {
+  const { requireStaff } = await import("./staff-ticket.server");
+  await requireStaff();
+}
 
 async function admin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -33,6 +39,7 @@ export const signStoredUrl = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data }) => {
+    await requireAnyStaff();
     const db = await admin();
     const { data: signed, error } = await db.storage
       .from(data.bucket)
@@ -47,12 +54,13 @@ export const signStoredUrl = createServerFn({ method: "POST" })
  * staff screens run anonymously), so the server mints an upload token instead.
  */
 export const createPrivateUploadUrl = createServerFn({ method: "POST" })
-  .inputValidator((d) => z.object({ bucket: bucketSchema, path: pathSchema }).parse(d))
+  .inputValidator((d) => z.object({ bucket: bucketSchema, path: pathSchema, upsert: z.boolean().optional() }).parse(d))
   .handler(async ({ data }) => {
+    await requireAnyStaff();
     const db = await admin();
     const { data: signed, error } = await db.storage
       .from(data.bucket)
-      .createSignedUploadUrl(data.path);
+      .createSignedUploadUrl(data.path, data.upsert ? { upsert: true } : undefined);
     if (error || !signed) return { token: null as string | null, error: error?.message ?? "no token" };
     return { token: signed.token as string, error: null as string | null };
   });
@@ -62,6 +70,7 @@ export const removeStoredObjects = createServerFn({ method: "POST" })
     z.object({ bucket: bucketSchema, paths: z.array(pathSchema).min(1).max(50) }).parse(d),
   )
   .handler(async ({ data }) => {
+    await requireAnyStaff();
     const db = await admin();
     const { error } = await db.storage.from(data.bucket).remove(data.paths);
     return { ok: !error, error: error?.message ?? null };

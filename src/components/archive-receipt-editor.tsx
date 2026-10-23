@@ -4,7 +4,8 @@ import { toast } from "sonner";
 import { Loader2, X, Camera, Send, Archive, ImageIcon, Clock, Check, AlertTriangle } from "lucide-react";
 import { ROLE_LABEL, type RoleKey } from "@/lib/chat";
 import { ImageLightbox } from "@/components/image-lightbox";
-import { signPrivateUrl } from "@/lib/secure-storage";
+import { signPrivateUrl, uploadStorage } from "@/lib/secure-storage";
+import { sdb } from "@/lib/secure-db";
 
 export interface ArchiveReceiptCase {
   id: string;
@@ -23,14 +24,14 @@ export interface ArchiveReceiptCase {
 
 /** Find (or create) a two-party conversation for this doctor slot. */
 async function ensureConv(slot: number, target: RoleKey, doctorName: string): Promise<string | null> {
-  const { data: existing } = await supabase.from("chat_conversations")
+  const { data: existing } = await sdb.from("chat_conversations")
     .select("id,participants").eq("doctor_slot", slot);
   const conv = (existing ?? []).find((x: any) =>
     Array.isArray(x.participants) && x.participants.length === 2
     && x.participants.includes("doctor") && x.participants.includes(target)
   ) as { id: string } | undefined;
   if (conv) return conv.id;
-  const { data: created } = await supabase.from("chat_conversations")
+  const { data: created } = await sdb.from("chat_conversations")
     .insert({
       doctor_slot: slot,
       participants: ["doctor", target],
@@ -77,12 +78,11 @@ export function ArchiveReceiptEditor({ c, actorName, doctorName, onClose, onSent
     try {
       const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
       const path = `${c.doctor_slot}/archive-receipts/${c.case_code}-${Date.now()}-${safe}`;
-      const { error: upErr } = await supabase.storage.from("chat-attachments")
-        .upload(path, file, { contentType: file.type, upsert: false });
+      const { error: upErr } = await uploadStorage("chat-attachments", path, file, { contentType: file.type, upsert: false });
       if (upErr) throw upErr;
 
       const now = new Date().toISOString();
-      const { error } = await supabase.from("slot_cases").update({
+      const { error } = await sdb.from("slot_cases").update({
         permanent_installed_by_doctor: true,
         permanent_delivered_to_doctor: true,
         perm_ship_read_at: now,
@@ -102,7 +102,7 @@ export function ArchiveReceiptEditor({ c, actorName, doctorName, onClose, onSent
 
       const conv = await ensureConv(c.doctor_slot, "admin", doctorName);
       if (conv) {
-        await supabase.from("chat_messages").insert({
+        await sdb.from("chat_messages").insert({
           conversation_id: conv, sender: "doctor", sender_name: actorName,
           content: `🗂️ طلب أرشفة الحالة ${c.case_code} — المريض: ${c.patient_name}\n🦷 تم تركيب الأسنان الدائمة.\n🧾 مرفق: صورة سند حساب المريض${note.trim() ? `\n📝 ${note.trim()}` : ""}\nبانتظار موافقة الإدارة على الأرشفة.`,
           message_type: "image",

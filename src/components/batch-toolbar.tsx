@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { CheckSquare, Square, X, Lock, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { verifyAdminPassword } from "@/lib/staff-auth.functions";
 
 /**
  * Reusable multi-select state for list pages.
@@ -67,10 +68,11 @@ export function BatchToolbar({
   async function confirmWithPassword() {
     if (!pending || checking) return;
     setChecking(true);
-    const { data, error } = await supabase.rpc("get_staff_password", { p_role: "admin" });
+    let ok = false;
+    try { ok = (await verifyAdminPassword({ data: { password: pw } })).ok; }
+    catch { setChecking(false); toast.error("تعذر التحقق من كلمة المرور"); return; }
     setChecking(false);
-    if (error || !data) { toast.error("تعذر التحقق من كلمة المرور"); return; }
-    if (pw !== data) { toast.error("كلمة المرور غير صحيحة"); return; }
+    if (!ok) { toast.error("كلمة المرور غير صحيحة"); return; }
     const action = pending;
     setPending(null);
     setPw("");

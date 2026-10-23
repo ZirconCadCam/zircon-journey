@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { RoleKey } from "@/lib/chat";
+import { sdb } from "@/lib/secure-db";
 
 export type CaseStage =
   | "new" | "designer" | "design_done"
@@ -147,7 +148,7 @@ export async function notifyRoleAboutCase(opts: {
   const participants: RoleKey[] = ["doctor", targetRole];
   const title = `حالة ${caseCode} — ${doctorName}`;
 
-  const { data: existing } = await supabase.from("chat_conversations")
+  const { data: existing } = await sdb.from("chat_conversations")
     .select("id,participants")
     .eq("doctor_slot", doctorSlot);
   let conv = (existing ?? []).find((c: any) =>
@@ -158,7 +159,7 @@ export async function notifyRoleAboutCase(opts: {
   ) as { id: string } | undefined;
 
   if (!conv) {
-    const { data: created, error } = await supabase.from("chat_conversations")
+    const { data: created, error } = await sdb.from("chat_conversations")
       .insert({ doctor_slot: doctorSlot, participants, title, created_by: "doctor" })
       .select("id").single();
     if (error || !created) return;
@@ -168,7 +169,7 @@ export async function notifyRoleAboutCase(opts: {
   const content = body
     ?? `📋 ${stageLabel}\nرمز الحالة: ${caseCode}\nالمريض: ${patientName}\nمن: ${doctorName}`;
 
-  await supabase.from("chat_messages").insert({
+  await sdb.from("chat_messages").insert({
     conversation_id: conv.id,
     sender: "doctor",
     sender_name: doctorName,

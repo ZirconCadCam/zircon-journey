@@ -5,6 +5,7 @@ import { ShadeBadge } from "@/components/shade-badge";
 import { SHADE_COLORS, shadeColor } from "@/lib/shades";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { sdb } from "@/lib/secure-db";
 
 /**
  * `ShadePicker`: a controlled tool to edit/choose a tooth shade. Renders the
@@ -242,7 +243,7 @@ export function CaseShadeConfirm({
         : which === "designer"
           ? { shade_confirmed_designer: true }
           : { shade_confirmed_technician: true };
-    const { error } = await supabase.from("slot_cases").update(patch).eq("id", caseId);
+    const { error } = await sdb.from("slot_cases").update(patch).eq("id", caseId);
     setSaving(false);
     if (error) toast.error(error.message);
     else toast.success("تم تأكيد اللون");

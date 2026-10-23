@@ -21,13 +21,17 @@ import { NotificationSettings } from "@/components/notification-settings";
 import { DoctorAvatar } from "@/components/doctor-avatar";
 
 
-import { ROLE_LABEL, STAFF_PASSWORDS, type RoleKey } from "@/lib/chat";
+import { ROLE_LABEL, type RoleKey } from "@/lib/chat";
+import { signInWithPassword } from "@/lib/staff-auth.functions";
+import { saveTicket, hasTicket, clearTicket, markSignedIn } from "@/lib/staff-tickets";
 import { saveStaffSession, hasValidStaffSession, clearStaffSession } from "@/lib/staff-session";
 import { getStage, deriveStageKey } from "@/lib/case-stages";
 import { Sparkles, ArrowRight, Lock, Stethoscope, MessageSquare, ClipboardList, Settings, Archive, FileArchive, FileText, Search, Bell, BellRing, Camera, RefreshCw, Timer, MonitorSmartphone, Eye, EyeOff, Calculator, FileSpreadsheet, PackageCheck, Activity } from "lucide-react";
 import { DesignerFollowupPanel } from "@/components/designer-followup-panel";
 import { useNewRevisionRounds } from "@/lib/revision-round-alerts";
 import { toast } from "sonner";
+import { sdb } from "@/lib/secure-db";
+import { rt } from "@/lib/realtime-shim";
 
 export const Route = createFileRoute("/staff/$role")({
   component: StaffPortal,
@@ -40,7 +44,7 @@ const VALID: RoleKey[] = ["designer", "technician", "admin"]; // secretary pages
 const SINGLE_DEVICE_ROLES: RoleKey[] = [];
 
 // Roles that enter their portal directly without a password gate.
-const NO_PASSWORD_ROLES: RoleKey[] = ["designer"];
+const NO_PASSWORD_ROLES: RoleKey[] = []; // every portal needs its password (server-verified)
 
 /** Stable per-browser device identifier (persisted across refresh/login). */
 function getDeviceId(): string {
@@ -61,16 +65,18 @@ function StaffPortal() {
     if (typeof window === "undefined") return false;
     // Designer (and any no-password role) enters directly on every device.
     if (NO_PASSWORD_ROLES.includes(role)) return true;
-    if (localStorage.getItem("zircon_admin_all") === "1") return true;
+    if (localStorage.getItem("zircon_admin_all") === "1" && hasTicket("admin")) return true;
     // A previously established, non-expired session keeps the role signed in.
-    if (hasValidStaffSession(role)) return true;
+    if (hasValidStaffSession(role) && hasTicket(role)) return true;
     return false;
   });
 
   useEffect(() => {
     if (!VALID.includes(role)) return;
     if (typeof window === "undefined") return;
-    if (localStorage.getItem("zircon_admin_all") === "1") { setAuthed(true); return; }
+    if (localStorage.getItem("zircon_admin_all") === "1" && hasTicket("admin")) { setAuthed(true); return; }
+    // Without a server ticket (old sign-ins) the password must be entered again.
+    if (!hasTicket(role)) return;
     // Designer enters directly and gets a durable session refreshed on each open.
     if (NO_PASSWORD_ROLES.includes(role)) {
       saveStaffSession(role);
@@ -131,13 +137,13 @@ function StaffPortal() {
         toast("تم تسجيل الدخول من جهاز آخر. تم تسجيل خروجك من هذا الجهاز.");
       }
     };
-    const ch = supabase.channel(`staff-session-${role}`)
+    const ch = rt.channel(`staff-session-${role}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "staff_sessions" }, verify)
       .subscribe();
     // No polling: re-verify only when the tab becomes visible again.
     const onVis = () => { if (document.visibilityState === "visible") void verify(); };
     document.addEventListener("visibilitychange", onVis);
-    return () => { cancelled = true; supabase.removeChannel(ch); document.removeEventListener("visibilitychange", onVis); };
+    return () => { cancelled = true; rt.removeChannel(ch); document.removeEventListener("visibilitychange", onVis); };
   }, [authed, role]);
 
   if (!VALID.includes(role)) {
@@ -165,6 +171,7 @@ function StaffPortal() {
   return <Inner role={role} onLogout={async () => {
     localStorage.removeItem(`zircon_staff_${role}`);
     clearStaffSession(role);
+    clearTicket(role);
     if (SINGLE_DEVICE_ROLES.includes(role)) {
       await supabase.rpc("clear_staff_session", { p_role: role, p_device: getDeviceId() });
     }
@@ -208,12 +215,12 @@ function Gate({ role, onOk }: { role: RoleKey; onOk: () => void }) {
     e.preventDefault();
     setChecking(true);
     setErr("");
-    const fallback = STAFF_PASSWORDS[role as Exclude<RoleKey, "doctor">];
-    const { data, error } = await supabase.rpc("get_staff_password", { p_role: role });
-    const expected = !error && data ? data : fallback;
-    setChecking(false);
-    if (pw === expected) onOk();
-    else setErr("كلمة المرور غير صحيحة");
+    try {
+      const res = await signInWithPassword({ data: { password: pw, role: role as "admin" | "designer" | "technician" } });
+      if (res.ok) { saveTicket(res.role, null, res.ticket); markSignedIn(); onOk(); }
+      else setErr(res.error);
+    } catch { setErr("تعذر التحقق، حاول مجددًا"); }
+    finally { setChecking(false); }
   }
   return (
     <Shell>
@@ -264,11 +271,11 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
     if (doctors.length === 0 || role === "admin") return;
     let active = true;
     const refresh = async () => {
-      const { data: convs } = await supabase.from("chat_conversations").select("id,doctor_slot,participants");
+      const { data: convs } = await sdb.from("chat_conversations").select("id,doctor_slot,participants");
       const mine = ((convs ?? []) as any[]).filter(c => c.participants.includes(role));
       if (mine.length === 0) { if (active) setUnread({}); return; }
       const ids = mine.map(c => c.id);
-      const { data: msgs } = await supabase.from("chat_messages").select("conversation_id,sender,read_by")
+      const { data: msgs } = await sdb.from("chat_messages").select("conversation_id,sender,read_by")
         .in("conversation_id", ids).neq("sender", role);
       const map: Record<number, number> = {};
       for (const m of (msgs ?? []) as any[]) {
@@ -279,7 +286,7 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
       if (active) setUnread(map);
     };
     refresh();
-    const ch = supabase.channel(`staff-${role}-notif`)
+    const ch = rt.channel(`staff-${role}-notif`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, (p: any) => {
         if (p.new.sender !== role) {
           toast(`رسالة جديدة في إحدى المحادثات`);
@@ -297,7 +304,7 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
         } catch { /* noop */ }
       })
       .subscribe();
-    return () => { active = false; supabase.removeChannel(ch); };
+    return () => { active = false; rt.removeChannel(ch); };
   }, [doctors.length, role]);
 
   return (

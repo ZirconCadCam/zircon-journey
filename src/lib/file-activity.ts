@@ -3,6 +3,7 @@
  * keeps a small history of who moved which file and when.
  */
 import { supabase } from "@/integrations/supabase/client";
+import { sdb } from "@/lib/secure-db";
 
 export type FileAction = "upload" | "download";
 export type FileActStatus = "done" | "failed" | "canceled";
@@ -31,7 +32,7 @@ export async function logFileActivity(input: {
 }): Promise<void> {
   if (!input.caseId) return;
   try {
-    await supabase.from("file_activity").insert({
+    await sdb.from("file_activity").insert({
       case_id: input.caseId,
       action: input.action,
       file_name: input.fileName || "ملف",
@@ -48,7 +49,7 @@ export async function logFileActivity(input: {
 /** Fetch the most recent file operations for a case. */
 export async function fetchFileActivity(caseId: string, limit = 30): Promise<FileActivityRow[]> {
   if (!caseId) return [];
-  const { data } = await supabase
+  const { data } = await sdb
     .from("file_activity")
     .select("*")
     .eq("case_id", caseId)

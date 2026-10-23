@@ -15,6 +15,7 @@ import { DoctorAvatar } from "@/components/doctor-avatar";
 import { getSignedUrl } from "@/lib/chat";
 import { fileManagerSupported, openCachedFile } from "@/lib/file-manager";
 import type { CaseFileLocation, CaseRole } from "@/lib/case-folders";
+import { sdb } from "@/lib/secure-db";
 
 type Actor =
   | "doctor" | "designer" | "technician"
@@ -53,7 +54,7 @@ export function CaseSearch({ actor, restrictSlot }: { actor: Actor; restrictSlot
     (async () => {
       const [{ data: docs }, { data: cs }] = await Promise.all([
         supabase.from("doctor_profiles").select("slot,name,branch,active").order("slot"),
-        supabase.from("slot_cases").select("*").order("created_at", { ascending: false }),
+        sdb.from("slot_cases").select("*").order("created_at", { ascending: false }),
       ]);
       setDoctors(((docs ?? []) as Doctor[]).filter(d => d.active));
       setCases((cs ?? []) as CaseRow[]);
@@ -107,7 +108,7 @@ export function CaseSearch({ actor, restrictSlot }: { actor: Actor; restrictSlot
   async function togglePin(c: CaseRow) {
     const next = !c.pinned;
     setCases(prev => prev.map(x => x.id === c.id ? { ...x, pinned: next } : x));
-    const { error } = await supabase.from("slot_cases").update({ pinned: next }).eq("id", c.id);
+    const { error } = await sdb.from("slot_cases").update({ pinned: next }).eq("id", c.id);
     if (error) {
       setCases(prev => prev.map(x => x.id === c.id ? { ...x, pinned: c.pinned } : x));
       toast.error("تعذر تحديث التثبيت");
@@ -120,7 +121,7 @@ export function CaseSearch({ actor, restrictSlot }: { actor: Actor; restrictSlot
   async function deleteCase(c: CaseRow) {
     if (!confirm(`حذف الحالة ${c.case_code} نهائياً؟ لا يمكن التراجع.`)) return;
     setBusy(c.id);
-    const { error } = await supabase.from("slot_cases").delete().eq("id", c.id);
+    const { error } = await sdb.from("slot_cases").delete().eq("id", c.id);
     setBusy(null);
     if (error) { toast.error("تعذر الحذف"); return; }
     setCases(prev => prev.filter(x => x.id !== c.id));

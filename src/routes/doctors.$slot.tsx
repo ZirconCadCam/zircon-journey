@@ -29,6 +29,11 @@ import { CaseSearch } from "@/components/case-search";
 import { RoleNotifications } from "@/components/role-notifications";
 import { NotificationSettings } from "@/components/notification-settings";
 import { DoctorAvatar } from "@/components/doctor-avatar";
+import { sdb } from "@/lib/secure-db";
+import { signInWithPassword } from "@/lib/staff-auth.functions";
+import { saveTicket, hasTicket, markSignedIn } from "@/lib/staff-tickets";
+import { uploadStorage } from "@/lib/secure-storage";
+import { rt } from "@/lib/realtime-shim";
 
 /** Compute WhatsApp-style tick state for each visible stage from case flags + timing. */
 function stageTickState(stageKey: string, c: any): TickState {
@@ -123,12 +128,13 @@ function DoctorPortal() {
 
   // Admin-controlled flag: when off, doctors enter their page without a password.
   useEffect(() => {
-    getAppFlag(DOCTOR_PASSWORD_REQUIRED).then(setPwRequired);
+    // Doctor password is always required now (server-verified ticket).
+    setPwRequired(true);
   }, []);
 
   useEffect(() => {
     if (authLoading) return;
-    if (typeof window !== "undefined" && localStorage.getItem("zircon_admin_all") === "1") {
+    if (typeof window !== "undefined" && localStorage.getItem("zircon_admin_all") === "1" && hasTicket("admin")) {
       setActor("admin");
       setActorName("الإدارة");
       setAuthed(true);
@@ -140,7 +146,7 @@ function DoctorPortal() {
       setAuthed(true);
       return;
     }
-    if (typeof window !== "undefined" && localStorage.getItem(SESSION_KEY(slot)) === "1") {
+    if (typeof window !== "undefined" && localStorage.getItem(SESSION_KEY(slot)) === "1" && hasTicket("doctor", Number(slot))) {
       setActor("doctor");
       setAuthed(true);
     }
@@ -205,10 +211,9 @@ function PasswordGate({ doctor, onOk }: { doctor: Doctor; onOk: () => void }) {
   const [err, setErr] = useState("");
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    const { data } = await supabase.rpc("verify_doctor_login", { p_password: pw });
-    const row = Array.isArray(data) ? data[0] : null;
-    if (row && row.slot === doctor.slot) onOk();
-    else setErr("كلمة المرور غير صحيحة");
+    const res = await signInWithPassword({ data: { password: pw, slot: doctor.slot } });
+    if (res.ok) { saveTicket("doctor", doctor.slot, res.ticket); markSignedIn(); onOk(); }
+    else setErr(res.error);
   }
   return (
     <ShellHeader>
@@ -329,11 +334,11 @@ function ChatNotificationsListener({ doctorSlot, me, onUnread }: { doctorSlot: n
     }
     let convIds: string[] = [];
     const refresh = async () => {
-      const { data } = await supabase.from("chat_conversations").select("id,participants")
+      const { data } = await sdb.from("chat_conversations").select("id,participants")
         .eq("doctor_slot", doctorSlot);
       convIds = ((data ?? []) as any[]).filter(c => c.participants.includes(me)).map(c => c.id);
       if (convIds.length === 0) { onUnread(0); return; }
-      const { count } = await supabase.from("chat_messages")
+      const { count } = await sdb.from("chat_messages")
         .select("id", { count: "exact", head: true })
         .in("conversation_id", convIds)
         .neq("sender", me)
@@ -341,7 +346,7 @@ function ChatNotificationsListener({ doctorSlot, me, onUnread }: { doctorSlot: n
       onUnread(count ?? 0);
     };
     refresh();
-    const ch = supabase.channel(`chat-notif-${doctorSlot}-${me}`)
+    const ch = rt.channel(`chat-notif-${doctorSlot}-${me}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, (payload: any) => {
         const m = payload.new;
         if (convIds.includes(m.conversation_id) && m.sender !== me) {
@@ -355,7 +360,7 @@ function ChatNotificationsListener({ doctorSlot, me, onUnread }: { doctorSlot: n
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "chat_conversations", filter: `doctor_slot=eq.${doctorSlot}` }, refresh)
       .subscribe();
-    return () => { supabase.removeChannel(ch); ctx?.close().catch(()=>{}); };
+    return () => { rt.removeChannel(ch); ctx?.close().catch(()=>{}); };
   }, [doctorSlot, me, onUnread]);
   return null;
 }
@@ -378,17 +383,17 @@ function FilesPanel({ doctor, actor }: { doctor: Doctor; actor: string }) {
   const fileInput = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
-    const { data } = await supabase.from("doctor_files").select("*")
+    const { data } = await sdb.from("doctor_files").select("*")
       .eq("doctor_slot", doctor.slot).is("trashed_at", null).order("created_at", { ascending: false });
     setFiles((data as DocFile[]) ?? []);
   }, [doctor.slot]);
 
   useEffect(() => {
     load();
-    const ch = supabase.channel(`doctor-files-${doctor.slot}`)
+    const ch = rt.channel(`doctor-files-${doctor.slot}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "doctor_files", filter: `doctor_slot=eq.${doctor.slot}` }, load)
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => { rt.removeChannel(ch); };
   }, [doctor.slot, load]);
 
   async function upload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -396,10 +401,10 @@ function FilesPanel({ doctor, actor }: { doctor: Doctor; actor: string }) {
     if (!f) return;
     setUploading(true);
     const path = `${doctor.slot}/${Date.now()}-${f.name}`;
-    const { error: upErr } = await supabase.storage.from("doctor-files").upload(path, f, { upsert: false });
+    const { error: upErr } = await uploadStorage("doctor-files", path, f, { upsert: false });
     if (upErr) { toast.error(upErr.message); setUploading(false); return; }
     const { data: pub } = supabase.storage.from("doctor-files").getPublicUrl(path);
-    const { error } = await supabase.from("doctor_files").insert({
+    const { error } = await sdb.from("doctor_files").insert({
       doctor_slot: doctor.slot, file_name: f.name, file_path: path,
       public_url: pub.publicUrl, size_bytes: f.size, uploaded_by: actor,
     });
@@ -418,7 +423,7 @@ function FilesPanel({ doctor, actor }: { doctor: Doctor; actor: string }) {
   }
 
   async function archive(f: DocFile, val: boolean) {
-    const { error } = await supabase.from("doctor_files").update({ archived: val }).eq("id", f.id);
+    const { error } = await sdb.from("doctor_files").update({ archived: val }).eq("id", f.id);
     if (error) toast.error(error.message); else toast.success(val ? "تمت الأرشفة" : "تم الإسترجاع");
   }
   async function remove(f: DocFile) {
@@ -443,20 +448,20 @@ function FilesPanel({ doctor, actor }: { doctor: Doctor; actor: string }) {
    */
   async function sendToRole(f: DocFile, target: RoleKey) {
     const participants: RoleKey[] = ["doctor", target];
-    const { data: existing } = await supabase.from("chat_conversations")
+    const { data: existing } = await sdb.from("chat_conversations")
       .select("id,participants").eq("doctor_slot", doctor.slot);
     let conv = (existing ?? []).find((c: any) =>
       Array.isArray(c.participants) && c.participants.length === 2
       && c.participants.includes("doctor") && c.participants.includes(target)
     ) as { id: string } | undefined;
     if (!conv) {
-      const { data: created, error } = await supabase.from("chat_conversations")
+      const { data: created, error } = await sdb.from("chat_conversations")
         .insert({ doctor_slot: doctor.slot, participants, title: `ملف من ${doctor.name}`, created_by: "doctor" })
         .select("id").single();
       if (error || !created) { toast.error(error?.message ?? "تعذر إنشاء المحادثة"); return; }
       conv = created;
     }
-    const { error: mErr } = await supabase.from("chat_messages").insert({
+    const { error: mErr } = await sdb.from("chat_messages").insert({
       conversation_id: conv.id, sender: "doctor", sender_name: doctor.name,
       content: `📎 ${f.file_name}\n${f.public_url ?? ""}`,
       message_type: "text",
@@ -662,7 +667,7 @@ function CasesPanel({ doctor, me, myName }: { doctor: Doctor; me: RoleKey; myNam
   const [stageFilter, setStageFilter] = useState<CaseStage | "all">("all");
 
   const load = useCallback(async () => {
-    const { data } = await supabase.from("slot_cases").select("*")
+    const { data } = await sdb.from("slot_cases").select("*")
       .eq("doctor_slot", doctor.slot)
       .is("trashed_at", null)
       .order("pinned", { ascending: false })
@@ -673,7 +678,7 @@ function CasesPanel({ doctor, me, myName }: { doctor: Doctor; me: RoleKey; myNam
 
   useEffect(() => {
     load();
-    const ch = supabase.channel(`slot-cases-${doctor.slot}`)
+    const ch = rt.channel(`slot-cases-${doctor.slot}`)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "slot_cases", filter: `doctor_slot=eq.${doctor.slot}` }, (payload: any) => {
         const oldRow = payload.old ?? {};
         const newRow = payload.new ?? {};
@@ -687,11 +692,11 @@ function CasesPanel({ doctor, me, myName }: { doctor: Doctor; me: RoleKey; myNam
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "slot_cases", filter: `doctor_slot=eq.${doctor.slot}` }, load)
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "slot_cases", filter: `doctor_slot=eq.${doctor.slot}` }, load)
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => { rt.removeChannel(ch); };
   }, [doctor.slot, load]);
 
   async function togglePin(c: SlotCase) {
-    const { error } = await supabase.from("slot_cases")
+    const { error } = await sdb.from("slot_cases")
       .update({ pinned: !c.pinned, updated_at: new Date().toISOString() }).eq("id", c.id);
     if (error) toast.error(error.message);
     else toast.success(!c.pinned ? "تم تثبيت الحالة" : "تم إلغاء التثبيت");
@@ -948,7 +953,7 @@ function EditCaseModal({ c, onClose, onSaved }: { c: SlotCase; onClose: () => vo
       toast.error("رقم السن غير صالح (نظام FDI)"); return;
     }
     setSaving(true);
-    const { error } = await supabase.from("slot_cases").update({
+    const { error } = await sdb.from("slot_cases").update({
       patient_name: form.patient_name.trim(),
       patient_phone: form.patient_phone.trim() || null,
       patient_age: form.patient_age ? Number(form.patient_age) : null,

@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { ToothQuadrantPicker } from "@/components/tooth-quadrant-picker";
 import type { ResumableHandle } from "@/lib/resumable-upload";
+import { sdb } from "@/lib/secure-db";
+import { uploadStorage } from "@/lib/secure-storage";
 
 const patientSchema = z.object({
   patient_name: z.string().trim()
@@ -152,7 +154,7 @@ function NewSlotCase() {
         const ext = (f.name.match(/\.([a-zA-Z0-9]+)$/)?.[1] || "jpg").toLowerCase();
         const rand = Math.random().toString(36).slice(2, 8);
         const path = `${slot}/note-images/${Date.now()}-${rand}.${ext}`;
-        const { error } = await supabase.storage.from("doctor-files").upload(path, f, {
+        const { error } = await uploadStorage("doctor-files", path, f, {
           contentType: f.type || "image/jpeg", upsert: false,
         });
         if (error) throw error;
@@ -282,7 +284,7 @@ function NewSlotCase() {
         scan_mime = scan.type || null;
 
         // Mirror the scan into the doctor's files list as well
-        await supabase.from("doctor_files").insert({
+        await sdb.from("doctor_files").insert({
           doctor_slot: Number(slot),
           file_name: scan.name, file_path: path,
           public_url: pub.publicUrl, size_bytes: scan.size,
@@ -297,7 +299,7 @@ function NewSlotCase() {
       for (let i = 0; i < idemSrc.length; i++) idemHash = (idemHash * 31 + idemSrc.charCodeAt(i)) | 0;
       const idempotency_key = `case:${slot}:${(idemHash >>> 0).toString(36)}`;
 
-      const { data: inserted, error } = await supabase.from("slot_cases").insert({
+      const { data: inserted, error } = await sdb.from("slot_cases").insert({
         doctor_slot: Number(slot),
         patient_name: form.patient_name.trim(),
         patient_phone: form.patient_phone.trim() || null,

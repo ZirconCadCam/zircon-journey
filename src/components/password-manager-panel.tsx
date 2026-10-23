@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { KeyRound, Eye, EyeOff, Save, RefreshCw, Loader2, Stethoscope, UserCog, Copy, Check, ShieldOff, ShieldCheck } from "lucide-react";
 import { ROLE_LABEL, type RoleKey } from "@/lib/chat";
 import { DOCTOR_PASSWORD_REQUIRED, getAppFlag, setAppFlag } from "@/lib/app-flags";
+import { listPasswords, setStaffPassword, setDoctorPassword } from "@/lib/staff-auth.functions";
 
 // Page-manager roles whose passwords the admin can manage here.
 const STAFF_ROLE_KEYS: Exclude<RoleKey, "doctor">[] = [
@@ -33,10 +34,10 @@ export function PasswordManagerPanel() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [{ data: s }, { data: d }] = await Promise.all([
-      supabase.rpc("list_staff_secrets"),
-      supabase.rpc("list_doctor_secrets"),
-    ]);
+    let s: { role: string; password: string }[] = [];
+    let d: DoctorSecret[] = [];
+    try { const r = await listPasswords(); s = r.staff; d = r.doctors; }
+    catch { toast.error("تعذر تحميل كلمات المرور — سجّل دخول الإدارة"); }
     const sMap = new Map((s ?? []).map((r: any) => [r.role, r.password]));
     setStaff(
       STAFF_ROLE_KEYS.map((role) => ({ role, password: sMap.get(role) ?? null })),
@@ -86,11 +87,8 @@ export function PasswordManagerPanel() {
               title={ROLE_LABEL[s.role as RoleKey]}
               value={s.password}
               onSave={async (pw) => {
-                const { error } = await supabase.rpc("set_staff_secret", {
-                  p_role: s.role,
-                  p_password: pw,
-                });
-                if (error) { toast.error(error.message); return false; }
+                const r = await setStaffPassword({ data: { role: s.role as "admin" | "designer" | "technician", password: pw } }).catch(() => ({ ok: false, error: "غير مصرح" }));
+                if (!r.ok) { toast.error(r.error ?? "تعذر الحفظ"); return false; }
                 toast.success(`تم تحديث كلمة مرور ${ROLE_LABEL[s.role as RoleKey]}`);
                 load();
                 return true;
@@ -118,11 +116,8 @@ export function PasswordManagerPanel() {
                 subtitle={`خانة #${d.slot}${d.active ? "" : " • معطّلة"}`}
                 value={d.password}
                 onSave={async (pw) => {
-                  const { error } = await supabase.rpc("set_doctor_secret", {
-                    p_slot: d.slot,
-                    p_password: pw,
-                  });
-                  if (error) { toast.error(error.message); return false; }
+                  const r = await setDoctorPassword({ data: { slot: d.slot, password: pw } }).catch(() => ({ ok: false, error: "غير مصرح" }));
+                  if (!r.ok) { toast.error(r.error ?? "تعذر الحفظ"); return false; }
                   toast.success(`تم تحديث كلمة مرور ${d.name}`);
                   load();
                   return true;

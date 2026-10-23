@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { deriveStageKey, getStage } from "@/lib/case-stages";
 import type { RoleKey } from "@/lib/chat";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { sdb } from "@/lib/secure-db";
 
 const STALL_HOURS = 12;
 
@@ -34,7 +35,7 @@ export function useStalledCases() {
     let alive = true;
     async function load() {
       const [{ data: cases }, { data: docs }] = await Promise.all([
-        supabase.from("slot_cases").select("*").eq("archived", false).eq("final_archived", false),
+        sdb.from("slot_cases").select("*").eq("archived", false).eq("final_archived", false),
         supabase.from("doctor_profiles").select("slot,name"),
       ]);
       if (!alive) return;

@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { DoctorAvatar } from "@/components/doctor-avatar";
 import { printHtmlDocument } from "@/lib/print-report";
+import { sdb } from "@/lib/secure-db";
 
 /** Cases that have been sitting in the doctor's page for longer than this
  *  many days become eligible for administrative completion. */
@@ -160,7 +161,7 @@ export function AdminOverdueCompletion() {
   async function load() {
     const cutoff = new Date(Date.now() - OVERDUE_DAYS * 86_400_000).toISOString();
     const [{ data: cases }, { data: docs }] = await Promise.all([
-      supabase.from("slot_cases")
+      sdb.from("slot_cases")
         .select("id,case_code,patient_name,tooth_number,teeth_count,shade,doctor_slot,created_at,doctor_decision,permanent_fabrication_done,permanent_installed_by_doctor,final_archived")
         .lt("created_at", cutoff)
         .or("final_archived.is.null,final_archived.eq.false")
@@ -211,7 +212,7 @@ export function AdminOverdueCompletion() {
     const key = `${r.id}:${step}`;
     if (busy) return;
     setBusy(key);
-    const { error } = await supabase.from("slot_cases")
+    const { error } = await sdb.from("slot_cases")
       .update(patchFor(step) as any).eq("id", r.id);
     setBusy(null);
     if (error) { toast.error(error.message); return; }

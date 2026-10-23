@@ -43,6 +43,13 @@
       "when": 1792769000793,
       "tag": "0005_lock_doctor_messages",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792770634949,
+      "tag": "0006_lock_staff_tables_server_gateway",
+      "breakpoints": true
     }
   ]
 }

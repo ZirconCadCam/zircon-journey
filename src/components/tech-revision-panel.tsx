@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import {
   Eye, RefreshCw, Loader2, Save, ClipboardEdit, FileArchive, ExternalLink, Download,
 } from "lucide-react";
+import { sdb } from "@/lib/secure-db";
 
 interface TechRevisionPanelProps {
   caseId: string;
@@ -66,7 +67,7 @@ export function TechRevisionPanel({
 
   async function saveNotes() {
     setSaving(true);
-    const { error } = await supabase.from("slot_cases")
+    const { error } = await sdb.from("slot_cases")
       .update({ tech_exec_notes: notes.trim() || null } as never).eq("id", caseId);
     setSaving(false);
     if (error) { toast.error("تعذر حفظ الملاحظات"); return; }

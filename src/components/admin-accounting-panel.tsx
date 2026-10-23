@@ -17,6 +17,7 @@ import {
   setAccountingReview,
   listAccountingReviews,
 } from "@/lib/secure-ops.functions";
+import { sdb } from "@/lib/secure-db";
 
 
 /* ------------------------------ helpers ------------------------------ */
@@ -123,7 +124,7 @@ export function AdminAccountingPanel() {
   async function load() {
     setLoading(true);
     const [cases, docs] = await Promise.all([
-      supabase.from("slot_cases").select(SELECT).order("created_at", { ascending: true }),
+      sdb.from("slot_cases").select(SELECT).order("created_at", { ascending: true }),
       supabase.from("doctor_profiles").select("slot,name,branch,active").order("slot"),
     ]);
     setRows(((cases.data ?? []) as unknown as Row[]));
@@ -297,7 +298,7 @@ function DoctorPointsTable({
     if (val !== null && isNaN(val)) return;
     // Skip if unchanged
     if ((r.remaining_amount ?? null) === val) return;
-    const { error } = await supabase.from("slot_cases")
+    const { error } = await sdb.from("slot_cases")
       .update({ remaining_amount: val } as any).eq("id", r.id);
     if (!error) onChanged();
   }
@@ -961,7 +962,7 @@ function RowActions({ row, onChanged }: { row: Row; onChanged: () => void }) {
     const amt = amount.trim() === "" ? null : Number(amount);
     if (amt !== null && isNaN(amt)) { toast.error("المبلغ غير صحيح"); return; }
     setBusy(true);
-    const { error } = await supabase.from("slot_cases").update({
+    const { error } = await sdb.from("slot_cases").update({
       patient_name: name.trim(),
       patient_phone: phone.trim() || null,
       teeth_count: t === null ? null : String(t),
@@ -977,7 +978,7 @@ function RowActions({ row, onChanged }: { row: Row; onChanged: () => void }) {
   async function remove() {
     if (!confirm(`حذف صف «${row.patient_name}» من الحسابات نهائياً؟`)) return;
     setBusy(true);
-    const { error } = await supabase.from("slot_cases").delete().eq("id", row.id);
+    const { error } = await sdb.from("slot_cases").delete().eq("id", row.id);
     setBusy(false);
     if (error) { toast.error(error.message); return; }
     toast.success("تم حذف الصف");
