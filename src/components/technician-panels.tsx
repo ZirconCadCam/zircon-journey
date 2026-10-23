@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { DoctorAvatar } from "@/components/doctor-avatar";
+import { useCaseBatch } from "@/components/case-batch-bar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -273,6 +274,7 @@ function ReportTable({
 }) {
   const totalTeeth = rows.reduce((s, c) => s + teethCount(c), 0);
   const totalPatients = rows.length;
+  const batch = useCaseBatch(rows.map(c => c.id));
   return (
     <div className="rounded-2xl bg-card border border-border overflow-hidden shadow-luxury">
       <div className="p-4 border-b border-border font-bold text-sm flex items-center gap-2 flex-wrap">
@@ -285,6 +287,7 @@ function ReportTable({
         >
           <FileDown className="size-3.5" /> تصدير PDF
         </button>
+        {batch.bar && <div className="w-full">{batch.bar}</div>}
       </div>
       <Table>
         <TableHeader>
@@ -307,7 +310,7 @@ function ReportTable({
             </TableRow>
           ) : rows.map(c => (
             <TableRow key={c.id}>
-              <TableCell className="font-bold">{c.patient_name}</TableCell>
+              <TableCell className="font-bold"><span className="inline-flex items-center gap-1">{batch.check(c.id)}{c.patient_name}</span></TableCell>
               <TableCell className="flex items-center gap-1.5">
                 <DoctorAvatar name={doctorMap.get(c.doctor_slot)?.name} className="size-6" />
                 {doctorMap.get(c.doctor_slot)?.name ?? `Slot ${c.doctor_slot}`}

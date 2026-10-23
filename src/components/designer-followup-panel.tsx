@@ -9,6 +9,7 @@ import { getRoundsSeenAt, markRoundsSeen } from "@/lib/revision-round-alerts";
 import { InAppFileViewer } from "@/components/in-app-file-viewer";
 import { getSignedUrl } from "@/lib/chat";
 import { toast } from "sonner";
+import { useCaseBatch } from "@/components/case-batch-bar";
 
 function fmt(ts?: string | null) {
   if (!ts) return "—";
