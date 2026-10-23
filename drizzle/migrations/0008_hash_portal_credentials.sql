@@ -1,0 +1,14 @@
+ALTER TABLE public.staff_secrets ADD COLUMN IF NOT EXISTS password_hash text;
+ALTER TABLE public.doctor_secrets ADD COLUMN IF NOT EXISTS password_hash text;
+UPDATE public.staff_secrets SET password_hash = extensions.crypt(password, extensions.gen_salt('bf', 10)) WHERE password_hash IS NULL AND password <> '';
+UPDATE public.doctor_secrets SET password_hash = extensions.crypt(password, extensions.gen_salt('bf', 10)) WHERE password_hash IS NULL AND password <> '';
+CREATE OR REPLACE FUNCTION public.hash_portal_password() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions AS $$ BEGIN IF NEW.password <> '' THEN NEW.password_hash := extensions.crypt(NEW.password, extensions.gen_salt('bf', 10)); NEW.password := ''; NEW.updated_at := now(); END IF; RETURN NEW; END; $$;
+CREATE TRIGGER hash_staff_password BEFORE INSERT OR UPDATE ON public.staff_secrets FOR EACH ROW EXECUTE FUNCTION public.hash_portal_password();
+CREATE TRIGGER hash_doctor_password BEFORE INSERT OR UPDATE ON public.doctor_secrets FOR EACH ROW EXECUTE FUNCTION public.hash_portal_password();
+UPDATE public.staff_secrets SET password = '' WHERE password_hash IS NOT NULL;
+UPDATE public.doctor_secrets SET password = '' WHERE password_hash IS NOT NULL;
+COMMENT ON COLUMN public.staff_secrets.password IS 'DEPRECATED: write-only compatibility input; trigger hashes and clears it, reads use password_hash internally';
+COMMENT ON COLUMN public.doctor_secrets.password IS 'DEPRECATED: write-only compatibility input; trigger hashes and clears it, reads use password_hash internally';
+CREATE OR REPLACE FUNCTION public.verify_portal_password(p_password text, p_role text DEFAULT NULL, p_slot integer DEFAULT NULL) RETURNS TABLE(role text, slot integer, name text) LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions AS $$ BEGIN IF octet_length(p_password) > 72 THEN RETURN; END IF; IF p_slot IS NULL THEN RETURN QUERY SELECT s.role, NULL::integer, NULL::text FROM public.staff_secrets s WHERE s.role IN ('admin','designer','technician') AND (p_role IS NULL OR s.role=p_role) AND s.password_hash = extensions.crypt(p_password,s.password_hash) ORDER BY CASE s.role WHEN 'admin' THEN 1 WHEN 'designer' THEN 2 ELSE 3 END LIMIT 1; IF FOUND OR p_role IS NOT NULL THEN RETURN; END IF; END IF; RETURN QUERY SELECT 'doctor'::text,d.slot,d.name FROM public.doctor_secrets s JOIN public.doctor_profiles d ON d.slot=s.slot WHERE d.active AND (p_slot IS NULL OR s.slot=p_slot) AND s.password_hash = extensions.crypt(p_password,s.password_hash) ORDER BY d.slot LIMIT 1; END; $$;
+REVOKE EXECUTE ON FUNCTION public.hash_portal_password(), public.verify_portal_password(text,text,integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.verify_portal_password(text,text,integer) TO service_role;

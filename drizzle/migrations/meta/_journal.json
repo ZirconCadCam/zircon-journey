@@ -57,6 +57,13 @@
       "when": 1792778894330,
       "tag": "0007_protect_avatar_and_device_rpcs",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792778956693,
+      "tag": "0008_hash_portal_credentials",
+      "breakpoints": true
     }
   ]
 }
