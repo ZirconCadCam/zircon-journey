@@ -36,6 +36,13 @@
       "when": 1792768941402,
       "tag": "0004_tighten_storage_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792769000793,
+      "tag": "0005_lock_doctor_messages",
+      "breakpoints": true
     }
   ]
 }
