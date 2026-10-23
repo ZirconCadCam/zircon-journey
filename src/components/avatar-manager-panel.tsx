@@ -25,7 +25,7 @@ async function uploadAvatarFile(file: File, subjectSafe: string): Promise<string
   const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
   const path = `avatars/${subjectSafe}-${Date.now()}.${ext}`;
   const { error } = await supabase.storage.from(AVATAR_BUCKET).upload(path, file, {
-    upsert: true,
+    upsert: false,
     contentType: file.type || "image/jpeg",
   });
   if (error) {
