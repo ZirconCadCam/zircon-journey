@@ -27,6 +27,7 @@ interface Row {
   archive_receipt_name: string | null;
   archive_receipt_sent_at: string | null;
   archive_request_note: string | null;
+  remaining_amount: number | null;
   archive_approval: string | null;
   archive_reviewed_at: string | null;
   archive_reviewed_by: string | null;
@@ -95,7 +96,7 @@ export function AdminArchiveApprovals() {
   async function load() {
     const [{ data: cases }, { data: docs }] = await Promise.all([
       sdb.from("slot_cases")
-        .select("id,case_code,patient_name,patient_phone,tooth_number,teeth_count,shade,doctor_slot,final_archived,archive_receipt_path,archive_receipt_name,archive_receipt_sent_at,archive_request_note,archive_approval,archive_reviewed_at,archive_reviewed_by,archive_reject_reason")
+        .select("id,case_code,patient_name,patient_phone,tooth_number,teeth_count,shade,doctor_slot,final_archived,archive_receipt_path,archive_receipt_name,archive_receipt_sent_at,remaining_amount,archive_request_note,archive_approval,archive_reviewed_at,archive_reviewed_by,archive_reject_reason")
         .not("archive_receipt_sent_at", "is", null)
         .order("archive_receipt_sent_at", { ascending: false }),
       supabase.from("doctor_profiles").select("slot,name,branch").order("slot"),
@@ -187,7 +188,7 @@ export function AdminArchiveApprovals() {
         <div className="grow">
           <div className="text-xs opacity-80">اعتماد الأرشفة النهائية</div>
           <div className="text-xl font-extrabold">إشعارات الأرشفة</div>
-          <div className="text-xs opacity-80 mt-1">اطّلع على صورة سند حساب المريض ثم وافق أو ارفض أرشفة الحالة</div>
+          <div className="text-xs opacity-80 mt-1">راجع المبلغ المتبقي وسند الحساب إن أُرفق ثم وافق أو ارفض أرشفة الحالة</div>
         </div>
         <button onClick={sendTelegramTest} disabled={testing}
           className="shrink-0 inline-flex items-center gap-2 rounded-xl gradient-gold text-gold-foreground px-3 py-2 text-xs font-bold shadow-gold disabled:opacity-60">
@@ -337,7 +338,7 @@ function ApprovalCard({ r, doctor, onDone, selected, onSelect }: { r: Row; docto
     if (error) { setBusy(false); toast.error(error.message); return; }
     await sdb.from("chat_conversations").update({ archived: true })
       .eq("doctor_slot", r.doctor_slot).like("title", `[${r.case_code}]%`);
-    await notifyDoctor(`✅ وافقت الإدارة على أرشفة الحالة ${r.case_code} (${r.patient_name}) بعد الاطلاع على سند حساب المريض. الحالة مؤرشفة نهائياً.`);
+    await notifyDoctor(`✅ وافقت الإدارة على أرشفة الحالة ${r.case_code} (${r.patient_name}) بعد مراجعة طلب الأرشفة. الحالة مؤرشفة نهائياً.`);
     toast.success("تمت الموافقة وأُرشفت الحالة نهائياً");
     setBusy(false);
     onDone();
@@ -384,7 +385,7 @@ function ApprovalCard({ r, doctor, onDone, selected, onSelect }: { r: Row; docto
       archived: false,
     } as any).eq("id", r.id);
     if (error) { setBusy(false); toast.error(error.message); return; }
-    await notifyDoctor(`⛔ لم توافق الإدارة على أرشفة الحالة ${r.case_code} (${r.patient_name}).\nالسبب: ${reason.trim()}\nيرجى إعادة إرسال سند حساب المريض بعد المعالجة.`);
+    await notifyDoctor(`⛔ لم توافق الإدارة على أرشفة الحالة ${r.case_code} (${r.patient_name}).\nالسبب: ${reason.trim()}\nيرجى إعادة إرسال طلب الأرشفة بعد المعالجة.`);
     toast.success("تم تسجيل عدم الموافقة وإشعار الطبيب");
     setBusy(false);
     setRejecting(false);
@@ -442,6 +443,7 @@ function ApprovalCard({ r, doctor, onDone, selected, onSelect }: { r: Row; docto
         <Receipt className="size-3.5 text-gold" /> سند حساب المريض
         {r.archive_receipt_sent_at && <span className="font-mono">• {new Date(r.archive_receipt_sent_at).toLocaleString("ar")}</span>}
       </div>
+      <div className="text-xs font-bold">المبلغ المتبقي على المريض: {r.remaining_amount ?? "—"}</div>
       {r.archive_request_note && (
         <div className="rounded-lg bg-muted/40 p-2 text-[11px] whitespace-pre-wrap">📝 {r.archive_request_note}</div>
       )}
