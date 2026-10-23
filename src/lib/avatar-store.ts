@@ -29,7 +29,7 @@ function emit() {
 }
 
 export async function loadAvatarOverrides() {
-  const { data } = await sdb
+  const { data } = await supabase
     .from("avatar_overrides")
     .select("subject,image_url,label");
   cache = new Map((data ?? []).map((r: any) => [r.subject as string, r.image_url as string]));

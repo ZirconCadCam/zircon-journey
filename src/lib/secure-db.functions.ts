@@ -56,7 +56,8 @@ const querySchema = z.object({
 });
 export type SecureQuery = z.infer<typeof querySchema>;
 
-type Result = { data: unknown; error: { message: string; code?: string } | null; count: number | null };
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Result = { data: any; error: { message: string; code?: string } | null; count: number | null };
 
 export const secureDb = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => querySchema.parse(d))
