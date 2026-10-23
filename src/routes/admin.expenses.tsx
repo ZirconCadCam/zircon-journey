@@ -1,3 +1,4 @@
+import { hasTicket } from "@/lib/staff-tickets";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { RotateCw, ArrowRight, Download, FileText, Loader2, Receipt, Trash2, Upload, Eye } from "lucide-react";
@@ -48,7 +49,7 @@ function ExpensesPage() {
 
   const load = async () => { setLoading(true); setRows(await listExpenses()); setLoading(false); };
   useEffect(() => {
-    if (!hasValidStaffSession("admin")) { nav({ to: "/staff/$role", params: { role: "admin" } }); return; }
+    if (!hasValidStaffSession("admin") && !hasTicket("admin")) { nav({ to: "/staff/$role", params: { role: "admin" } }); return; }
     load();
   }, [nav]);
 

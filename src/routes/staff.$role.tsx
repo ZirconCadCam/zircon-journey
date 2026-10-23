@@ -57,6 +57,7 @@ function StaffPortal() {
     setAuthed(false);
     if (!VALID.includes(role)) return;
     void validateStaffSession({ data: { role: role as "admin" | "designer" | "technician" } }).then(({ ok }) => {
+      if (ok) { saveStaffSession(role); localStorage.setItem(`zircon_staff_${role}`, "1"); }
       if (!cancelled) setAuthed(ok);
     }).catch(() => { if (!cancelled) setAuthed(false); });
     return () => { cancelled = true; };

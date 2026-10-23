@@ -1,3 +1,4 @@
+import { hasTicket } from "@/lib/staff-tickets";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ArrowRight, LayoutGrid, Stethoscope, PenTool, Wrench, ExternalLink } from "lucide-react";
@@ -26,7 +27,7 @@ function PagesHub() {
   const [doctors, setDoctors] = useState<Doc[]>([]);
 
   useEffect(() => {
-    if (!hasValidStaffSession("admin")) { nav({ to: "/staff/$role", params: { role: "admin" } }); return; }
+    if (!hasValidStaffSession("admin") && !hasTicket("admin")) { nav({ to: "/staff/$role", params: { role: "admin" } }); return; }
     setReady(true);
     supabase.from("doctor_profiles").select("slot,name,branch,active").order("slot")
       .then(({ data }) => setDoctors(((data ?? []) as Doc[]).filter((d) => d.active)));
