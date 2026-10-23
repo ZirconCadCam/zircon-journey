@@ -93,13 +93,15 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
-      <AppGate><Outlet /></AppGate>
+      <AppGate>
+      <Outlet />
       <Toaster position="top-center" richColors />
       <InstallPrompt />
       <NativeBootstrap />
       <StoragePermissionPrompt />
       <TransferOverlay />
       <BackgroundKeepAlive />
+      </AppGate>
     </QueryClientProvider>
   );
 }
