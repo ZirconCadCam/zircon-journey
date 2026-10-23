@@ -451,6 +451,12 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
               </Link>
             )}
             {role === "admin" && (
+              <Link to="/admin/pages"
+                className="px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition hover:bg-muted/40">
+                <ClipboardList className="size-4" /> صفحات التطبيق
+              </Link>
+            )}
+            {role === "admin" && (
               <Link to="/admin/telegram"
                 className="px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition hover:bg-muted/40">
                 <Send className="size-4" /> المتعذر إرسالها للتلجرام
