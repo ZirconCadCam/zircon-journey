@@ -500,6 +500,18 @@ export const batchUpdateCases = createServerFn({ method: "POST" })
     return { ok: !error, error: error?.message ?? null };
   });
 
+/** Archive cases in bulk. */
+export const batchArchiveCases = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ ids: idList }).parse(d))
+  .handler(async ({ data }) => {
+    const db = await admin();
+    const { error } = await db
+      .from("slot_cases")
+      .update({ final_archived: true, status: "archived" } as never)
+      .in("id", data.ids);
+    return { ok: !error, error: error?.message ?? null };
+  });
+
 /** Queue selected cases to the Telegram outbox (caption only). */
 export const batchCasesToTelegram = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ ids: idList }).parse(d))

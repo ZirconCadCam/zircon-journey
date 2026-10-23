@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { FileText, Download, Calendar as CalendarIcon, Clock, Wrench, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import { useCaseBatch } from "@/components/case-batch-bar";
 import { getStage, deriveStageKey } from "@/lib/case-stages";
 import { teethOf as teethOfRow } from "@/lib/report-build";
 import jsPDF from "jspdf";
@@ -82,6 +83,7 @@ export function DoctorReportsPanel({ doctor }: { doctor: { slot: number; name: s
   }, [rows, active, from, to]);
 
   const teethOf = (r: Row): number => teethOfRow(r);
+  const batch = useCaseBatch(filtered.map(r => r.id), load);
 
   const totalTeeth = useMemo(() => filtered.reduce((s, r) => s + teethOf(r), 0), [filtered]);
 
@@ -204,6 +206,7 @@ export function DoctorReportsPanel({ doctor }: { doctor: { slot: number; name: s
           </div>
         </div>
 
+        {batch.bar && <div className="p-3 border-b border-border">{batch.bar}</div>}
         {loading ? (
           <div className="p-12 text-center text-muted-foreground text-sm">جارِ التحميل...</div>
         ) : filtered.length === 0 ? (
@@ -229,7 +232,7 @@ export function DoctorReportsPanel({ doctor }: { doctor: { slot: number; name: s
                   const stage = getStage(deriveStageKey(r as any));
                   return (
                     <tr key={r.id} className="border-t border-border hover:bg-muted/30">
-                      <td className="px-4 py-2.5 text-muted-foreground">{i + 1}</td>
+                      <td className="px-4 py-2.5 text-muted-foreground"><span className="inline-flex items-center gap-1">{batch.check(r.id)}{i + 1}</span></td>
                       <td className="px-4 py-2.5 font-bold">{r.patient_name}</td>
                       <td className="px-4 py-2.5 font-mono text-xs">{r.case_code}</td>
                       <td className="px-4 py-2.5 font-bold">{teethOf(r) || "—"}</td>

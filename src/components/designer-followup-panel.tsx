@@ -9,6 +9,7 @@ import { getRoundsSeenAt, markRoundsSeen } from "@/lib/revision-round-alerts";
 import { InAppFileViewer } from "@/components/in-app-file-viewer";
 import { getSignedUrl } from "@/lib/chat";
 import { toast } from "sonner";
+import { useCaseBatch } from "@/components/case-batch-bar";
 
 function fmt(ts?: string | null) {
   if (!ts) return "—";
@@ -63,6 +64,7 @@ export function DesignerFollowupPanel({ doctorSlot, scope }: { doctorSlot?: numb
       list: [...list].sort((a, b) => b.round - a.round),
     }));
   }, [rows, q]);
+  const batch = useCaseBatch(groups.map(g => g.caseId), load);
 
   async function openFile(path: string, name: string, mime?: string) {
     const url = /^https?:\/\//i.test(path) ? path : (await getSignedUrl(path, 3600));
@@ -107,6 +109,8 @@ export function DesignerFollowupPanel({ doctorSlot, scope }: { doctorSlot?: numb
         </button>
       </div>
 
+      {batch.bar}
+
       {loading ? (
         <div className="py-16 text-center text-sm text-muted-foreground">
           <Loader2 className="size-5 mx-auto mb-2 animate-spin text-gold" /> جارٍ تحميل جولات التعديل…
@@ -122,6 +126,7 @@ export function DesignerFollowupPanel({ doctorSlot, scope }: { doctorSlot?: numb
             return (
               <div key={caseId} className="rounded-2xl border border-border bg-card shadow-luxury overflow-hidden">
                 <div className="p-4 border-b border-border flex items-center gap-3 flex-wrap">
+                  {batch.check(caseId)}
                   <div className="flex-1 min-w-[180px]">
                     <div className="font-extrabold text-sm">
                       {head.case_code || "—"} — {head.patient_name || "—"}
