@@ -10,6 +10,7 @@ import { z } from "zod";
 
 type PortalRole = "admin" | "designer" | "technician";
 const PORTAL_ROLES: PortalRole[] = ["admin", "designer", "technician"];
+const passwordInput = z.string().trim().min(1).max(200).refine(value => new TextEncoder().encode(value).length <= 72, "كلمة المرور طويلة جداً");
 
 async function admin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -20,7 +21,7 @@ async function admin() {
 export const signInWithPassword = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z.object({
-      password: z.string().min(1).max(200),
+      password: passwordInput,
       /** Restrict to one portal role (staff page gate). */
       role: z.enum(["admin", "designer", "technician"]).optional(),
       /** Restrict to one doctor (doctor page gate). */
@@ -43,7 +44,7 @@ export const signInWithPassword = createServerFn({ method: "POST" })
 
 /** Check the admin password without issuing a ticket (confirmation dialogs). */
 export const verifyAdminPassword = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) => z.object({ password: z.string().min(1).max(200) }).parse(d))
+  .inputValidator((d: unknown) => z.object({ password: passwordInput }).parse(d))
   .handler(async ({ data }) => {
     const db = await admin();
     const { data: matches } = await db.rpc("verify_portal_password", { p_password: data.password.trim(), p_role: "admin" });
@@ -71,7 +72,7 @@ export const listPasswords = createServerFn({ method: "POST" }).handler(async ()
 });
 
 export const setStaffPassword = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) => z.object({ role: z.enum(["admin", "designer", "technician"]), password: z.string().trim().min(4).max(200) }).parse(d))
+  .inputValidator((d: unknown) => z.object({ role: z.enum(["admin", "designer", "technician"]), password: passwordInput.refine(value => value.length >= 4) }).parse(d))
   .handler(async ({ data }) => {
     await requireAdmin();
     const db = await admin();
@@ -80,7 +81,7 @@ export const setStaffPassword = createServerFn({ method: "POST" })
   });
 
 export const setDoctorPassword = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) => z.object({ slot: z.number().int().positive(), password: z.string().trim().min(4).max(200) }).parse(d))
+  .inputValidator((d: unknown) => z.object({ slot: z.number().int().positive(), password: passwordInput.refine(value => value.length >= 4) }).parse(d))
   .handler(async ({ data }) => {
     await requireAdmin();
     const db = await admin();
@@ -97,4 +98,13 @@ export const saveDoctorProfile = createServerFn({ method: "POST" })
     const db = await admin();
     const { error } = await db.from("doctor_profiles").upsert({ slot: data.slot, name: data.name, branch: data.branch, active: data.active, updated_at: new Date().toISOString() }, { onConflict: "slot" });
     return { ok: !error, error: error?.message ?? null };
+  });
+
+/** Local flags never establish authority; validate the signed role on the server. */
+export const validateStaffSession = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => z.object({ role: z.enum(["admin", "designer", "technician"]) }).parse(input))
+  .handler(async ({ data }) => {
+    const { requireStaff } = await import("./staff-ticket.server");
+    try { await requireStaff(["admin", data.role]); return { ok: true }; }
+    catch { return { ok: false }; }
   });

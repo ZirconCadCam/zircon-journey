@@ -3,6 +3,13 @@ import { Sparkles, Stethoscope, Layers, Wrench, Users, Shield } from "lucide-rea
 import { StalledAlertsBadge, useStalledCases } from "@/components/stalled-alerts";
 
 export const Route = createFileRoute("/")({
+  head: () => ({ meta: [
+    { title: "مركز زركون CAD CAM — رحلة سن الزركون" },
+    { name: "description", content: "إدارة حالات مركز زركون CAD CAM ومتابعة عمل الأطباء والمصمم والفني." },
+    { property: "og:title", content: "مركز زركون CAD CAM — رحلة سن الزركون" },
+    { property: "og:description", content: "صفحات العمل المخصصة لفريق مركز زركون." },
+    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+  ] }),
   component: Landing,
 });
 
