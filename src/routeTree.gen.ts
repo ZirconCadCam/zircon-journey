@@ -15,6 +15,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AdminExpensesRouteImport } from './routes/admin.expenses'
+import { Route as AdminPagesRouteImport } from './routes/admin.pages'
 import { Route as AdminTelegramRouteImport } from './routes/admin.telegram'
 import { Route as AdminUsageRouteImport } from './routes/admin.usage'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
@@ -62,6 +63,11 @@ const Char91DotwellKnownChar93OauthProtectedResourceRoute =
 const AdminExpensesRoute = AdminExpensesRouteImport.update({
   id: '/admin/expenses',
   path: '/admin/expenses',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminPagesRoute = AdminPagesRouteImport.update({
+  id: '/admin/pages',
+  path: '/admin/pages',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminTelegramRoute = AdminTelegramRouteImport.update({
@@ -159,6 +165,7 @@ export interface FileRoutesByFullPath {
   '/mcp': typeof McpRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin/expenses': typeof AdminExpensesRoute
+  '/admin/pages': typeof AdminPagesRoute
   '/admin/telegram': typeof AdminTelegramRoute
   '/admin/usage': typeof AdminUsageRoute
   '/admin/users': typeof AdminUsersRoute
@@ -184,6 +191,7 @@ export interface FileRoutesByTo {
   '/mcp': typeof McpRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin/expenses': typeof AdminExpensesRoute
+  '/admin/pages': typeof AdminPagesRoute
   '/admin/telegram': typeof AdminTelegramRoute
   '/admin/usage': typeof AdminUsageRoute
   '/admin/users': typeof AdminUsersRoute
@@ -210,6 +218,7 @@ export interface FileRoutesById {
   '/mcp': typeof McpRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin/expenses': typeof AdminExpensesRoute
+  '/admin/pages': typeof AdminPagesRoute
   '/admin/telegram': typeof AdminTelegramRoute
   '/admin/usage': typeof AdminUsageRoute
   '/admin/users': typeof AdminUsersRoute
@@ -237,6 +246,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/.well-known/oauth-protected-resource'
     | '/admin/expenses'
+    | '/admin/pages'
     | '/admin/telegram'
     | '/admin/usage'
     | '/admin/users'
@@ -262,6 +272,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/.well-known/oauth-protected-resource'
     | '/admin/expenses'
+    | '/admin/pages'
     | '/admin/telegram'
     | '/admin/usage'
     | '/admin/users'
@@ -287,6 +298,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/.well-known/oauth-protected-resource'
     | '/admin/expenses'
+    | '/admin/pages'
     | '/admin/telegram'
     | '/admin/usage'
     | '/admin/users'
@@ -313,6 +325,7 @@ export interface RootRouteChildren {
   McpRoute: typeof McpRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   AdminExpensesRoute: typeof AdminExpensesRoute
+  AdminPagesRoute: typeof AdminPagesRoute
   AdminTelegramRoute: typeof AdminTelegramRoute
   AdminUsageRoute: typeof AdminUsageRoute
   AdminUsersRoute: typeof AdminUsersRoute
@@ -374,6 +387,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/expenses'
       fullPath: '/admin/expenses'
       preLoaderRoute: typeof AdminExpensesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/pages': {
+      id: '/admin/pages'
+      path: '/admin/pages'
+      fullPath: '/admin/pages'
+      preLoaderRoute: typeof AdminPagesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/telegram': {
@@ -506,6 +526,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   AdminExpensesRoute: AdminExpensesRoute,
+  AdminPagesRoute: AdminPagesRoute,
   AdminTelegramRoute: AdminTelegramRoute,
   AdminUsageRoute: AdminUsageRoute,
   AdminUsersRoute: AdminUsersRoute,
