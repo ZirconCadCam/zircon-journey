@@ -112,30 +112,6 @@ export const sendCaseToTelegram = createServerFn({ method: "POST" })
           lastError = e?.message ?? "خطأ أثناء التنزيل";
         }
 
-        // --- Fallback path: let Telegram fetch the URL directly ---
-        if (!uploaded && false) {
-          try {
-            const res = await fetch(`${API}/sendDocument`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                chat_id: chatId,
-                document: doc.url,
-                caption: doc.filename,
-              }),
-            });
-            const j: any = await res.json().catch(() => ({}));
-            if (res.ok && j?.ok) {
-              uploaded = true;
-              lastError = null;
-            } else {
-              lastError = j?.description ?? lastError ?? `HTTP ${res.status}`;
-            }
-          } catch (e: any) {
-            lastError = e?.message ?? lastError ?? "خطأ";
-          }
-        }
-
         sent.push({ filename: doc.filename, ok: uploaded, error: uploaded ? null : lastError });
       } catch (e: any) {
         sent.push({ filename: doc.filename, ok: false, error: e?.message ?? "خطأ" });
