@@ -30,6 +30,8 @@ import { RoleNotifications } from "@/components/role-notifications";
 import { NotificationSettings } from "@/components/notification-settings";
 import { DoctorAvatar } from "@/components/doctor-avatar";
 import { sdb } from "@/lib/secure-db";
+import { signInWithPassword } from "@/lib/staff-auth.functions";
+import { saveTicket, hasTicket, markSignedIn } from "@/lib/staff-tickets";
 
 /** Compute WhatsApp-style tick state for each visible stage from case flags + timing. */
 function stageTickState(stageKey: string, c: any): TickState {
@@ -124,12 +126,13 @@ function DoctorPortal() {
 
   // Admin-controlled flag: when off, doctors enter their page without a password.
   useEffect(() => {
-    getAppFlag(DOCTOR_PASSWORD_REQUIRED).then(setPwRequired);
+    // Doctor password is always required now (server-verified ticket).
+    setPwRequired(true);
   }, []);
 
   useEffect(() => {
     if (authLoading) return;
-    if (typeof window !== "undefined" && localStorage.getItem("zircon_admin_all") === "1") {
+    if (typeof window !== "undefined" && localStorage.getItem("zircon_admin_all") === "1" && hasTicket("admin")) {
       setActor("admin");
       setActorName("الإدارة");
       setAuthed(true);
@@ -141,7 +144,7 @@ function DoctorPortal() {
       setAuthed(true);
       return;
     }
-    if (typeof window !== "undefined" && localStorage.getItem(SESSION_KEY(slot)) === "1") {
+    if (typeof window !== "undefined" && localStorage.getItem(SESSION_KEY(slot)) === "1" && hasTicket("doctor", Number(slot))) {
       setActor("doctor");
       setAuthed(true);
     }
@@ -206,10 +209,9 @@ function PasswordGate({ doctor, onOk }: { doctor: Doctor; onOk: () => void }) {
   const [err, setErr] = useState("");
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    const { data } = await supabase.rpc("verify_doctor_login", { p_password: pw });
-    const row = Array.isArray(data) ? data[0] : null;
-    if (row && row.slot === doctor.slot) onOk();
-    else setErr("كلمة المرور غير صحيحة");
+    const res = await signInWithPassword({ data: { password: pw, slot: doctor.slot } });
+    if (res.ok) { saveTicket("doctor", doctor.slot, res.ticket); markSignedIn(); onOk(); }
+    else setErr(res.error);
   }
   return (
     <ShellHeader>
