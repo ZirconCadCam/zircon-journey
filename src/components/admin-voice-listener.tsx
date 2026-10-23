@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { speak } from "@/lib/voice-notify";
 import { deriveStageKey, getStage } from "@/lib/case-stages";
 import { sdb } from "@/lib/secure-db";
+import { rt } from "@/lib/realtime-shim";
 
 /**
  * Admin-only background listener. On every change to `slot_cases` it derives
@@ -51,7 +52,7 @@ export function AdminVoiceListener() {
 
     void refresh(true);
 
-    const ch = supabase
+    const ch = rt
       .channel("admin-voice-listener")
       .on(
         "postgres_changes",
@@ -62,7 +63,7 @@ export function AdminVoiceListener() {
 
     return () => {
       cancelled = true;
-      supabase.removeChannel(ch);
+      rt.removeChannel(ch);
     };
   }, []);
 

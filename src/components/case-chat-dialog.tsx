@@ -11,6 +11,7 @@ import { incomingAlert, stopRing } from "@/lib/notify";
 import { toast } from "sonner";
 import { findTelegramLink } from "@/lib/telegram-file-links";
 import { sdb } from "@/lib/secure-db";
+import { rt } from "@/lib/realtime-shim";
 
 /**
  * Per-case chat trigger. Opens a modal hosting the standard ChatModule
@@ -59,7 +60,7 @@ export function CaseChatButton(props: {
       if (!cancelled) setUnread(count ?? 0);
     };
     refresh();
-    const ch = supabase.channel(`case-chat-${doctorSlot}-${caseCode}-${me}`)
+    const ch = rt.channel(`case-chat-${doctorSlot}-${caseCode}-${me}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, (payload: any) => {
         const m = payload.new;
         if (!m || m.sender === me) return;
@@ -87,7 +88,7 @@ export function CaseChatButton(props: {
       .on("postgres_changes", { event: "*", schema: "public", table: "chat_messages" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "chat_conversations", filter: `doctor_slot=eq.${doctorSlot}` }, refresh)
       .subscribe();
-    return () => { cancelled = true; supabase.removeChannel(ch); };
+    return () => { cancelled = true; rt.removeChannel(ch); };
   }, [doctorSlot, caseCode, caseLabel, me]);
 
   function openChat() {

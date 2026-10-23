@@ -11,6 +11,7 @@ import { DoctorAvatar } from "@/components/doctor-avatar";
 import { ImageLightbox } from "@/components/image-lightbox";
 import { signPrivateUrl, removePrivateObjects } from "@/lib/secure-storage";
 import { sdb } from "@/lib/secure-db";
+import { rt } from "@/lib/realtime-shim";
 
 interface Row {
   id: string;
@@ -108,10 +109,10 @@ export function AdminArchiveApprovals() {
 
   useEffect(() => {
     load();
-    const ch = supabase.channel("admin-archive-approvals")
+    const ch = rt.channel("admin-archive-approvals")
       .on("postgres_changes", { event: "*", schema: "public", table: "slot_cases" }, load)
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => { rt.removeChannel(ch); };
   }, []);
 
   const months = useMemo(() => {

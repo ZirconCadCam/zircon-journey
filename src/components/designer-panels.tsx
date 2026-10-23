@@ -14,6 +14,7 @@ import { getSignedUrl } from "@/lib/chat";
 import { fileManagerSupported } from "@/lib/file-manager";
 import { printHtmlDocument } from "@/lib/print-report";
 import { sdb } from "@/lib/secure-db";
+import { rt } from "@/lib/realtime-shim";
 
 interface Doctor { slot: number; name: string; branch: string | null }
 interface Case {
@@ -82,10 +83,10 @@ function useDesignerData() {
       setLoading(false);
     };
     load();
-    const ch = supabase.channel("designer-panels-stream")
+    const ch = rt.channel("designer-panels-stream")
       .on("postgres_changes", { event: "*", schema: "public", table: "slot_cases" }, load)
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => { rt.removeChannel(ch); };
   }, []);
 
   const doctorMap = useMemo(() => {

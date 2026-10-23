@@ -31,6 +31,7 @@ import { DesignerFollowupPanel } from "@/components/designer-followup-panel";
 import { useNewRevisionRounds } from "@/lib/revision-round-alerts";
 import { toast } from "sonner";
 import { sdb } from "@/lib/secure-db";
+import { rt } from "@/lib/realtime-shim";
 
 export const Route = createFileRoute("/staff/$role")({
   component: StaffPortal,
@@ -136,13 +137,13 @@ function StaffPortal() {
         toast("تم تسجيل الدخول من جهاز آخر. تم تسجيل خروجك من هذا الجهاز.");
       }
     };
-    const ch = supabase.channel(`staff-session-${role}`)
+    const ch = rt.channel(`staff-session-${role}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "staff_sessions" }, verify)
       .subscribe();
     // No polling: re-verify only when the tab becomes visible again.
     const onVis = () => { if (document.visibilityState === "visible") void verify(); };
     document.addEventListener("visibilitychange", onVis);
-    return () => { cancelled = true; supabase.removeChannel(ch); document.removeEventListener("visibilitychange", onVis); };
+    return () => { cancelled = true; rt.removeChannel(ch); document.removeEventListener("visibilitychange", onVis); };
   }, [authed, role]);
 
   if (!VALID.includes(role)) {
@@ -285,7 +286,7 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
       if (active) setUnread(map);
     };
     refresh();
-    const ch = supabase.channel(`staff-${role}-notif`)
+    const ch = rt.channel(`staff-${role}-notif`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, (p: any) => {
         if (p.new.sender !== role) {
           toast(`رسالة جديدة في إحدى المحادثات`);
@@ -303,7 +304,7 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
         } catch { /* noop */ }
       })
       .subscribe();
-    return () => { active = false; supabase.removeChannel(ch); };
+    return () => { active = false; rt.removeChannel(ch); };
   }, [doctors.length, role]);
 
   return (

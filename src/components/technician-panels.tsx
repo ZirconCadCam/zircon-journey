@@ -19,6 +19,7 @@ import { transferDownload } from "@/lib/transfer-manager";
 import type { CaseFileLocation } from "@/lib/case-folders";
 import { printHtmlDocument } from "@/lib/print-report";
 import { sdb } from "@/lib/secure-db";
+import { rt } from "@/lib/realtime-shim";
 
 interface Doctor { slot: number; name: string; branch: string | null }
 interface Case {
@@ -93,10 +94,10 @@ function useTechnicianData() {
       setLoading(false);
     };
     load();
-    const ch = supabase.channel("technician-panels-stream")
+    const ch = rt.channel("technician-panels-stream")
       .on("postgres_changes", { event: "*", schema: "public", table: "slot_cases" }, load)
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => { rt.removeChannel(ch); };
   }, []);
 
   const doctorMap = useMemo(() => {

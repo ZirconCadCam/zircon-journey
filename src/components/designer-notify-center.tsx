@@ -6,6 +6,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { Z } from "@/lib/z-index";
 import { sdb } from "@/lib/secure-db";
+import { rt } from "@/lib/realtime-shim";
 
 /**
  * Designer notification center.
@@ -113,11 +114,11 @@ export function DesignerNotifyCenter({
 
   useEffect(() => {
     void refreshChat();
-    const ch = supabase.channel("designer-notify-center")
+    const ch = rt.channel("designer-notify-center")
       .on("postgres_changes", { event: "*", schema: "public", table: "chat_messages" }, () => void refreshChat())
       .on("postgres_changes", { event: "*", schema: "public", table: "chat_conversations" }, () => void refreshChat())
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => { rt.removeChannel(ch); };
   }, [refreshChat]);
 
   /* ------------------------------ groups ------------------------------ */

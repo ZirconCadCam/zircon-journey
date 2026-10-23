@@ -33,6 +33,7 @@ import { sdb } from "@/lib/secure-db";
 import { signInWithPassword } from "@/lib/staff-auth.functions";
 import { saveTicket, hasTicket, markSignedIn } from "@/lib/staff-tickets";
 import { uploadStorage } from "@/lib/secure-storage";
+import { rt } from "@/lib/realtime-shim";
 
 /** Compute WhatsApp-style tick state for each visible stage from case flags + timing. */
 function stageTickState(stageKey: string, c: any): TickState {
@@ -345,7 +346,7 @@ function ChatNotificationsListener({ doctorSlot, me, onUnread }: { doctorSlot: n
       onUnread(count ?? 0);
     };
     refresh();
-    const ch = supabase.channel(`chat-notif-${doctorSlot}-${me}`)
+    const ch = rt.channel(`chat-notif-${doctorSlot}-${me}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages" }, (payload: any) => {
         const m = payload.new;
         if (convIds.includes(m.conversation_id) && m.sender !== me) {
@@ -359,7 +360,7 @@ function ChatNotificationsListener({ doctorSlot, me, onUnread }: { doctorSlot: n
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "chat_conversations", filter: `doctor_slot=eq.${doctorSlot}` }, refresh)
       .subscribe();
-    return () => { supabase.removeChannel(ch); ctx?.close().catch(()=>{}); };
+    return () => { rt.removeChannel(ch); ctx?.close().catch(()=>{}); };
   }, [doctorSlot, me, onUnread]);
   return null;
 }
@@ -389,10 +390,10 @@ function FilesPanel({ doctor, actor }: { doctor: Doctor; actor: string }) {
 
   useEffect(() => {
     load();
-    const ch = supabase.channel(`doctor-files-${doctor.slot}`)
+    const ch = rt.channel(`doctor-files-${doctor.slot}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "doctor_files", filter: `doctor_slot=eq.${doctor.slot}` }, load)
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => { rt.removeChannel(ch); };
   }, [doctor.slot, load]);
 
   async function upload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -677,7 +678,7 @@ function CasesPanel({ doctor, me, myName }: { doctor: Doctor; me: RoleKey; myNam
 
   useEffect(() => {
     load();
-    const ch = supabase.channel(`slot-cases-${doctor.slot}`)
+    const ch = rt.channel(`slot-cases-${doctor.slot}`)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "slot_cases", filter: `doctor_slot=eq.${doctor.slot}` }, (payload: any) => {
         const oldRow = payload.old ?? {};
         const newRow = payload.new ?? {};
@@ -691,7 +692,7 @@ function CasesPanel({ doctor, me, myName }: { doctor: Doctor; me: RoleKey; myNam
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "slot_cases", filter: `doctor_slot=eq.${doctor.slot}` }, load)
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "slot_cases", filter: `doctor_slot=eq.${doctor.slot}` }, load)
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => { rt.removeChannel(ch); };
   }, [doctor.slot, load]);
 
   async function togglePin(c: SlotCase) {

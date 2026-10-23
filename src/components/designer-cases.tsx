@@ -52,6 +52,7 @@ import { loadZipDownloads, markZipDownloaded, clearZipDownloaded } from "@/lib/z
 import { CaseShadeConfirm } from "@/components/shade-confirm";
 import { sdb } from "@/lib/secure-db";
 import { uploadStorage } from "@/lib/secure-storage";
+import { rt } from "@/lib/realtime-shim";
 
 interface Doctor { slot: number; name: string; branch: string | null; active: boolean }
 interface Case {
@@ -184,7 +185,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     })();
 
     // Live updates via realtime.
-    const ch = supabase.channel("designer-cases-stream")
+    const ch = rt.channel("designer-cases-stream")
       .on("postgres_changes", { event: "*", schema: "public", table: "slot_cases" }, () => { refreshCases(); })
       .subscribe();
 
@@ -197,7 +198,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     document.addEventListener("visibilitychange", onFocus);
 
     return () => {
-      supabase.removeChannel(ch);
+      rt.removeChannel(ch);
       void interval;
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onFocus);

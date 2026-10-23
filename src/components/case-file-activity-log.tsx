@@ -6,6 +6,7 @@ import { useEffect, useState, useCallback } from "react";
 import { ArrowDownToLine, ArrowUpFromLine, RefreshCw, History, CheckCircle2, XCircle, Ban } from "lucide-react";
 import { fetchFileActivity, type FileActivityRow } from "@/lib/file-activity";
 import { supabase } from "@/integrations/supabase/client";
+import { rt } from "@/lib/realtime-shim";
 
 function timeAgo(iso: string): string {
   const d = new Date(iso).getTime();
@@ -38,11 +39,11 @@ export function CaseFileActivityLog({ caseId }: { caseId: string }) {
 
   useEffect(() => {
     load();
-    const ch = supabase
+    const ch = rt
       .channel(`file-activity-${caseId}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "file_activity", filter: `case_id=eq.${caseId}` }, load)
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => { rt.removeChannel(ch); };
   }, [caseId, load]);
 
   return (

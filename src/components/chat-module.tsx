@@ -21,6 +21,7 @@ import { getDoctorAvatar } from "@/lib/doctor-avatars";
 import { getOverrideUrl, roleSubject, useAvatarVersion } from "@/lib/avatar-store";
 import { removePrivateObjects } from "@/lib/secure-storage";
 import { sdb } from "@/lib/secure-db";
+import { rt } from "@/lib/realtime-shim";
 
 
 
@@ -74,10 +75,10 @@ export function ChatModule({ doctorSlot, doctorName, me, myName, caseCode, caseL
 
   useEffect(() => {
     load();
-    const ch = supabase.channel(`chat-conv-${doctorSlot}${titlePrefix ? "-" + titlePrefix : ""}`)
+    const ch = rt.channel(`chat-conv-${doctorSlot}${titlePrefix ? "-" + titlePrefix : ""}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "chat_conversations", filter: `doctor_slot=eq.${doctorSlot}` }, load)
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => { rt.removeChannel(ch); };
   }, [doctorSlot, load, titlePrefix]);
 
   const visible = useMemo(() => conversations.filter(c =>
@@ -329,7 +330,7 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
 
   useEffect(() => {
     initialLoad();
-    const ch = supabase.channel(`chat-msgs-${conv.id}`)
+    const ch = rt.channel(`chat-msgs-${conv.id}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages", filter: `conversation_id=eq.${conv.id}` }, (payload: any) => {
         const m = payload.new as ChatMessage;
         setMsgs(prev => {
@@ -356,7 +357,7 @@ function ConversationView({ conv, me, myName, doctorName, onBack, onChange }: {
         setMsgs(prev => prev.map(x => x.id === m.id ? { ...x, ...m, _local: undefined, _progress: undefined } : x));
       })
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => { rt.removeChannel(ch); };
   }, [conv.id, me, initialLoad]);
 
   // Auto-resume failed/paused uploads when network comes back

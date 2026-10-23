@@ -70,7 +70,7 @@ async function tick(p: Poller) {
       return;
     }
     const since = p.since;
-    let q: any = sdb.from(p.table as any).select("*").or(cols.map((c) => `${c}.gt.${since}`).join(",")).limit(200);
+    let q: any = sdb.from(p.table as any).select("*").or(cols.map((c) => `${c}.gt."${since}"`).join(",")).limit(200);
     if (p.filter) q = q.eq(p.filter[0], p.filter[1]);
     const { data, error } = await q;
     if (error || !data?.length) return;
