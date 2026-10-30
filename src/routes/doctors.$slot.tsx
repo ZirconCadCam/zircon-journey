@@ -541,11 +541,9 @@ function FileRow({ f, doctorBranch, doctorName, sel, onArchive, onRemove, onCopy
     return () => document.removeEventListener("mousedown", onDoc);
   }, [sendOpen]);
 
-  const secretaryRole: RoleKey = doctorBranch === "ibb" ? "secretary_ibb" : "secretary_sanaa";
   const targets: { role: RoleKey; label: string; Icon: any; color: string }[] = [
     { role: "designer", label: "المصمم", Icon: Palette, color: "bg-gold/90 text-gold-foreground" },
     { role: "admin", label: "الإدارة", Icon: Shield, color: "bg-rose-700 text-white" },
-    { role: secretaryRole, label: doctorBranch === "ibb" ? "سكرتارية إب" : "سكرتارية صنعاء", Icon: Building2, color: "bg-emerald-600 text-white" },
   ];
 
   const branchLabel = doctorBranch === "ibb" ? "فرع إب" : doctorBranch === "hadda" ? "فرع حدة" : doctorBranch === "sanaa" ? "فرع صنعاء" : null;

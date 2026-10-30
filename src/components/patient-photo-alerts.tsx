@@ -28,9 +28,8 @@ async function branchSecretary(slot: number): Promise<RoleKey | null> {
   const { data } = await supabase.from("doctor_profiles")
     .select("branch").eq("slot", slot).maybeSingle();
   const branch = (data as { branch?: string | null } | null)?.branch;
-  if (branch === "sanaa") return "secretary_sanaa";
-  if (branch === "ibb") return "secretary_ibb";
-  return null;
+  void branch; // secretary roles were removed — photos go to the administration
+  return "admin";
 }
 
 /** Find (or create) the doctor↔secretary conversation for this doctor slot. */
