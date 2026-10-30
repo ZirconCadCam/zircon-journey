@@ -28,9 +28,8 @@ async function branchSecretary(slot: number): Promise<RoleKey | null> {
   const { data } = await supabase.from("doctor_profiles")
     .select("branch").eq("slot", slot).maybeSingle();
   const branch = (data as { branch?: string | null } | null)?.branch;
-  if (branch === "sanaa") return "secretary_sanaa";
-  if (branch === "ibb") return "secretary_ibb";
-  return null;
+  void branch; // secretary roles were removed — photos go to the administration
+  return "admin";
 }
 
 /** Find (or create) the doctor↔secretary conversation for this doctor slot. */
@@ -108,7 +107,7 @@ function PhotoAlertCard({ c, phase, actorName, doctorName }: {
       if (upErr) throw upErr;
 
       const conv = await ensureSecretaryConv(c.doctor_slot, secretary, doctorName);
-      if (!conv) throw new Error("تعذر إنشاء محادثة السكرتارية");
+      if (!conv) throw new Error("تعذر إنشاء محادثة الإدارة");
 
       const head = phase === "before"
         ? "📷 صورة حالة الأسنان قبل التجميل"
@@ -169,12 +168,12 @@ function PhotoAlertCard({ c, phase, actorName, doctorName }: {
           <BellRing className="size-4" />
           <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-destructive animate-ping" />
         </span>
-        <span>تنبيه: مطلوب إرسال {LABEL[phase]} إلى سكرتارية المركز</span>
+        <span>تنبيه: مطلوب إرسال {LABEL[phase]} إلى إدارة المركز</span>
       </div>
       <div className="text-[11px] opacity-80">
         {phase === "before"
-          ? "التقط أو اختر صورة توضح حالة أسنان المريض قبل بدء العلاج، وسترسل مباشرة إلى سكرتارية فرعك."
-          : "الحالة أُرشفت نهائياً — أرسل صورة النتيجة النهائية للمريض بعد التجميل إلى سكرتارية فرعك."}
+          ? "التقط أو اختر صورة توضح حالة أسنان المريض قبل بدء العلاج، وسترسل مباشرة إلى إدارة المركز."
+          : "الحالة أُرشفت نهائياً — أرسل صورة النتيجة النهائية للمريض بعد التجميل إلى إدارة المركز."}
       </div>
       <input ref={inputRef} type="file" accept="image/*" capture="environment" className="hidden"
         onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void send(f); }} />
@@ -214,7 +213,7 @@ function SentBadge({ c, phase }: { c: PhotoAlertCase; phase: Phase }) {
       )}
       <div className="text-[11px] font-bold text-emerald-800 flex items-center gap-1">
         <Check className="size-3.5" />
-        تم إرسال {LABEL[phase]} للسكرتارية
+        تم إرسال {LABEL[phase]} للإدارة
         {at && <span className="font-mono opacity-70">{new Date(at).toLocaleDateString("ar-EG")}</span>}
       </div>
       {open && url && (

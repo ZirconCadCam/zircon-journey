@@ -1660,7 +1660,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                     let target: RoleKey | undefined = undefined;
                     if (actor === "designer") target = "technician";
                     else if (actor === "technician")
-                      target = technicianTarget ?? (doctor?.branch === "ibb" ? "secretary_ibb" : "secretary_sanaa");
+                      target = technicianTarget ?? "doctor";
                     return (
                       <CaseWorkflowControls
                         c={c}

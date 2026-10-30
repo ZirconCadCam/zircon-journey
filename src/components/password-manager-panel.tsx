@@ -10,8 +10,6 @@ import { listPasswords, setStaffPassword, setDoctorPassword } from "@/lib/staff-
 const STAFF_ROLE_KEYS: Exclude<RoleKey, "doctor">[] = [
   "designer",
   "technician",
-  "secretary_sanaa",
-  "secretary_ibb",
   "admin",
 ];
 

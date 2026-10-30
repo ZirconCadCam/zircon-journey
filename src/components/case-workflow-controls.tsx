@@ -192,8 +192,7 @@ async function branchSecretaryRole(slot: number): Promise<RoleKey | null> {
   const { data } = await supabase.from("doctor_profiles")
     .select("branch").eq("slot", slot).maybeSingle();
   const branch = (data as { branch?: string | null } | null)?.branch;
-  if (branch === "sanaa") return "secretary_sanaa";
-  if (branch === "ibb") return "secretary_ibb";
+  void branch; // secretary roles were removed — the technician reaches the doctor directly
   return null;
 }
 
@@ -798,7 +797,7 @@ function TechnicianControls({ c, actorName, doctorName, target }: {
   }
 
   async function sendDataToSecretary() {
-    if (!target) { toast.error("لا يوجد فرع سكرتارية محدد"); return; }
+    if (!target) { toast.error("لا توجد جهة إرسال محددة"); return; }
     // No shade gate here: the doctor confirms the shade later, at the
     // "قيد المراجعة" stage. Requiring the technician's shade confirmation
     // first created a deadlock (technician confirm is locked until the
@@ -820,7 +819,7 @@ function TechnicianControls({ c, actorName, doctorName, target }: {
       c.notes ? `ملاحظات: ${c.notes}` : null,
     ].filter(Boolean).join("\n");
     // Notify secretary
-    const convId = await ensureConv(c, "technician", target, doctorName);
+    const convId = target === "doctor" ? null : await ensureConv(c, "technician", target, doctorName);
     if (convId) await sdb.from("chat_messages").insert({
       conversation_id: convId, sender: "technician", sender_name: actorName,
       content: lines, message_type: "text",
@@ -949,7 +948,7 @@ function TechnicianPermanentSection({ c, actorName, doctorName }: {
           content: msg, message_type: "text",
         });
       }
-      toast.success("✅ تم تسجيل نحت الدائم وإشعار الطبيب والسكرتارية");
+      toast.success("✅ تم تسجيل نحت الدائم وإشعار الطبيب");
     } else {
       toast.success("تم إلغاء العلامة");
     }
