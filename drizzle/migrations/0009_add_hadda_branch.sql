@@ -1,0 +1,1 @@
+ALTER TYPE public.branch ADD VALUE IF NOT EXISTS 'hadda';
