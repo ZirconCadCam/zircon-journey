@@ -409,7 +409,7 @@ function ArchiveDoctorCard({
         {activeDoctors.map((d) => (
           <option key={d.slot} value={d.slot}>
             #{d.slot} — {d.name}
-            {d.branch === "sanaa" ? " (صنعاء)" : d.branch === "ibb" ? " (إب)" : ""}
+            {d.branch === "sanaa" ? " (صنعاء)" : d.branch === "ibb" ? " (إب)" : d.branch === "hadda" ? " (حدة)" : ""}
           </option>
         ))}
       </select>
