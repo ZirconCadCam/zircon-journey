@@ -48,7 +48,7 @@ function Landing() {
           إدارة <span className="text-gold">رحلة سن الزركون</span> من الفحص حتى التسليم
         </h1>
         <p className="mt-6 text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-          منصة موحّدة لمركز Zircon CAD CAM تربط الطبيب بالمصمم بفنّي المختبر بالسكرتارية،
+          منصة موحّدة لمركز Zircon CAD CAM تربط الطبيب بالمصمم وفنّي المختبر،
           مع تتبع لحظي ومراسلات داخلية وملفات ثلاثية الأبعاد.
         </p>
         <div className="mt-10 flex flex-wrap items-center justify-center gap-4">

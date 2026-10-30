@@ -42,7 +42,7 @@ function DashboardPage() {
         <div className="rounded-2xl bg-card border border-border p-8 text-center max-w-lg mx-auto shadow-luxury">
           <div className="text-lg font-bold mb-2">حسابك بانتظار تفعيل الدور</div>
           <p className="text-sm text-muted-foreground">
-            يرجى التواصل مع إدارة المركز لتعيين دورك (طبيب / مصمم / فني / سكرتارية).
+            يرجى التواصل مع إدارة المركز لتعيين دورك (طبيب / مصمم / فني).
           </p>
           <p className="text-xs text-muted-foreground mt-4 font-mono" dir="ltr">
             UID: {session.user.id}
