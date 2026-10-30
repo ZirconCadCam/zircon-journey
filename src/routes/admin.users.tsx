@@ -80,7 +80,7 @@ function UserRow({ u, onAssign }: any) {
         <select value={b} onChange={e=>setB(e.target.value as Branch | "")} className="rounded-lg border border-input bg-background px-2 py-1 text-xs">
           <option value="">— لا يوجد —</option>
           <option value="sanaa">{BRANCH_LABELS.sanaa}</option>
-          <option value="ibb">{BRANCH_LABELS.ibb}</option>
+          <option value="ibb">{BRANCH_LABELS.ibb}</option><option value="hadda">{BRANCH_LABELS.hadda}</option>
         </select>
         <button onClick={() => onAssign(u.id, r, b || null)} className="rounded-lg gradient-brown px-3 py-1 text-xs font-bold">حفظ</button>
       </td>

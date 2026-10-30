@@ -121,7 +121,7 @@ function CaseDetail() {
                 <div className="text-2xl font-extrabold">{c.patient_name}</div>
                 <div className="text-sm text-muted-foreground mt-1">
                   {c.tooth_number && <>السن {c.tooth_number} • </>}
-                  اللون {c.shade ?? "—"} • {BRANCH_LABELS[c.branch as "sanaa"|"ibb"]}
+                  اللون {c.shade ?? "—"} • {BRANCH_LABELS[c.branch as "sanaa"|"ibb"|"hadda"]}
                 </div>
               </div>
               <span className="text-sm font-bold rounded-full bg-secondary px-4 py-1.5">

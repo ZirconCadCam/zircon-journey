@@ -186,7 +186,7 @@ export function buildDoctorPointsHtml(opts: {
 </section>`;
   };
 
-  const branch = opts.branch === "ibb" ? "فرع إب" : opts.branch === "sanaa" ? "فرع صنعاء" : "";
+  const branch = opts.branch === "ibb" ? "فرع إب" : opts.branch === "hadda" ? "فرع حدة" : opts.branch === "sanaa" ? "فرع صنعاء" : "";
   const inner = `
 <div class="cards">
   <div class="card"><div class="l">مجموع النقاط</div><div class="v">${totalPoints}</div></div>

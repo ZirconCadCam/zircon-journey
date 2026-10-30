@@ -587,7 +587,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     setBusyId(c.id);
     try {
       const doctor = doctorMap.get(c.doctor_slot);
-      const branchAr = doctor?.branch === "sanaa" ? "صنعاء" : doctor?.branch === "ibb" ? "إب" : "—";
+      const branchAr = doctor?.branch === "sanaa" ? "صنعاء" : doctor?.branch === "ibb" ? "إب" : doctor?.branch === "hadda" ? "حدة" : "—";
       const dateStr = new Date(c.created_at).toISOString().slice(0, 10);
       const safe = (s: string) => s.replace(/[\\/:*?"<>|]+/g, "_").trim();
       const filename = `${safe(c.patient_name)} - ${branchAr} - ${safe(doctor?.name ?? `Slot ${c.doctor_slot}`)} - ${dateStr}.pdf`;
@@ -706,7 +706,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
           ${row("رمز الحالة", c.case_code)}
           ${row("الطبيب المعالج", doctor?.name ?? `Slot ${c.doctor_slot}`)}
-          ${row("الفرع", doctor?.branch === "sanaa" ? "صنعاء" : doctor?.branch === "ibb" ? "إب" : "—")}
+          ${row("الفرع", doctor?.branch === "sanaa" ? "صنعاء" : doctor?.branch === "ibb" ? "إب" : doctor?.branch === "hadda" ? "حدة" : "—")}
           ${row("الحالة", getStage(deriveStageKey(c)).label)}
           ${row("تاريخ الإنشاء", new Date(c.created_at).toLocaleString("ar-EG"))}
         </table>
@@ -1026,7 +1026,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
     prog(5, "تجهيز بيانات الحالة…");
     try {
       const doctor = doctorMap.get(c.doctor_slot);
-      const branchAr = doctor?.branch === "sanaa" ? "صنعاء" : doctor?.branch === "ibb" ? "إب" : "—";
+      const branchAr = doctor?.branch === "sanaa" ? "صنعاء" : doctor?.branch === "ibb" ? "إب" : doctor?.branch === "hadda" ? "حدة" : "—";
       const caption = [
         `🦷 تفاصيل الحالة ${c.case_code}`,
         `المريض: ${c.patient_name}`,
@@ -1239,7 +1239,7 @@ export function DesignerCases({ actor = "designer", technicianTarget, actorName 
                       {d.name}
                       {unseen > 0 && <BellRing className="size-3 text-gold shrink-0" />}
                     </div>
-                    <div className="text-[10px] text-muted-foreground">{d.branch === "sanaa" ? "صنعاء" : d.branch === "ibb" ? "إب" : ""}</div>
+                    <div className="text-[10px] text-muted-foreground">{d.branch === "sanaa" ? "صنعاء" : d.branch === "ibb" ? "إب" : d.branch === "hadda" ? "حدة" : ""}</div>
                   </div>
                   {count > 0 && <span className="text-[10px] rounded-full bg-muted px-2 py-0.5 font-bold">{count}</span>}
                 </button>

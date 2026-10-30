@@ -231,7 +231,7 @@ function FileCacheCard() {
 
 function AddDoctorCard({ doctors, onDone }: { doctors: Doctor[]; onDone: () => void }) {
   const [name, setName] = useState("");
-  const [branch, setBranch] = useState<"sanaa" | "ibb" | "">("");
+  const [branch, setBranch] = useState<"sanaa" | "ibb" | "hadda" | "">("");
   const [password, setPassword] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -300,6 +300,7 @@ function AddDoctorCard({ doctors, onDone }: { doctors: Doctor[]; onDone: () => v
             <option value="">— لا يوجد —</option>
             <option value="sanaa">فرع صنعاء</option>
             <option value="ibb">فرع إب</option>
+            <option value="hadda">فرع حدة</option>
           </select>
         </div>
         <div>
@@ -599,7 +600,7 @@ function Toggle({
 function EditDoctorCard({ doctors, onDone }: { doctors: Doctor[]; onDone: () => void }) {
   const [slot, setSlot] = useState<number | "">("");
   const [name, setName] = useState("");
-  const [branch, setBranch] = useState<"" | "sanaa" | "ibb">("");
+  const [branch, setBranch] = useState<"" | "sanaa" | "ibb" | "hadda">("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -607,7 +608,7 @@ function EditDoctorCard({ doctors, onDone }: { doctors: Doctor[]; onDone: () => 
     const d = doctors.find((x) => x.slot === Number(v));
     setSlot(d ? d.slot : "");
     setName(d?.name ?? "");
-    setBranch((d?.branch as "sanaa" | "ibb") ?? "");
+    setBranch((d?.branch as "sanaa" | "ibb" | "hadda") ?? "");
     setPassword("");
   }
 
@@ -654,6 +655,7 @@ function EditDoctorCard({ doctors, onDone }: { doctors: Doctor[]; onDone: () => 
             <option value="">— بدون فرع —</option>
             <option value="sanaa">فرع صنعاء</option>
             <option value="ibb">فرع إب</option>
+            <option value="hadda">فرع حدة</option>
           </select>
           <input value={password} onChange={(e) => setPassword(e.target.value)} placeholder="كلمة مرور جديدة (اختياري)" className={input} />
           <div className="md:col-span-3 flex gap-2 justify-end">

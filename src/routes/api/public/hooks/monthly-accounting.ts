@@ -232,7 +232,7 @@ export const Route = createFileRoute("/api/public/hooks/monthly-accounting")({
               `💰 <b>كشف الحسابات الشهري — نقاط الطبيب</b>\n` +
               `🗓️ الشهر: <b>${label}</b>\n` +
               `👨‍⚕️ الطبيب: <b>${d.name}</b>\n` +
-              (d.branch ? `🏥 الفرع: ${d.branch === "ibb" ? "فرع إب" : "فرع صنعاء"}\n` : "") +
+              (d.branch ? `🏥 الفرع: ${d.branch === "ibb" ? "فرع إب" : d.branch === "hadda" ? "فرع حدة" : "فرع صنعاء"}\n` : "") +
               `\n📦 الحالات المؤرشفة: <b>${list.length}</b>\n` +
               `⭐ مجموع النقاط: <b>${points}</b>\n` +
               `➖ النقاط المسحوبة: <b>${withdrawn}</b>\n` +

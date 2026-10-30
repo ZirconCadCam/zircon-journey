@@ -30,7 +30,7 @@ export function CaseCard({ c }: { c: CaseRow }) {
       <div className="mt-4 flex flex-wrap gap-3 text-xs text-muted-foreground">
         {c.tooth_number && <span>السن: <b className="text-foreground">{c.tooth_number}</b></span>}
         {c.shade && <span>اللون: <b className="text-foreground">{c.shade}</b></span>}
-        <span>{BRANCH_LABELS[c.branch as "sanaa" | "ibb"] ?? c.branch}</span>
+        <span>{BRANCH_LABELS[c.branch as "sanaa" | "ibb" | "hadda"] ?? c.branch}</span>
         <span className="flex items-center gap-1"><Calendar className="size-3" />{new Date(c.created_at).toLocaleDateString("ar")}</span>
       </div>
       <div className="mt-4">
