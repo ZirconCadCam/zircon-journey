@@ -3,7 +3,7 @@ import { DoctorAvatar } from "@/components/doctor-avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { addDoctor, updateDoctor, deleteDoctor } from "@/lib/secure-ops.functions";
-import { Pencil, Settings, UserPlus, Archive, Stethoscope, RefreshCw, Save, HardDrive, Trash2, Loader2, FolderOpen } from "lucide-react";
+import { Pencil, Settings, UserPlus, Archive, Stethoscope, RefreshCw, Save, HardDrive, Trash2, Loader2, FolderOpen, ArrowLeftRight } from "lucide-react";
 import {
   getCacheStats,
   clearCenterCache,
@@ -74,6 +74,7 @@ export function AdminSettingsPanel() {
       </div>
 
       <EditDoctorCard doctors={doctors} onDone={load} />
+      <TransferDoctorCard doctors={doctors} onDone={load} />
 
       <PasswordManagerPanel />
 
@@ -669,6 +670,58 @@ function EditDoctorCard({ doctors, onDone }: { doctors: Doctor[]; onDone: () => 
           <p className="md:col-span-3 text-[11px] text-muted-foreground">الحذف النهائي متاح فقط للطبيب الذي ليست لديه حالات؛ غير ذلك استخدم الأرشفة.</p>
         </div>
       )}
+    </div>
+  );
+}
+
+/* -------------------- نقل طبيب بين الفروع -------------------- */
+const BRANCH_NAMES: Record<string, string> = { sanaa: "فرع صنعاء", ibb: "فرع إب", hadda: "فرع حدة" };
+
+function TransferDoctorCard({ doctors, onDone }: { doctors: Doctor[]; onDone: () => void }) {
+  const [slot, setSlot] = useState<number | "">("");
+  const [target, setTarget] = useState<"" | "sanaa" | "ibb" | "hadda">("");
+  const [busy, setBusy] = useState(false);
+  const doctor = doctors.find((d) => d.slot === slot);
+  const current = doctor?.branch ? BRANCH_NAMES[doctor.branch] ?? doctor.branch : "بدون فرع";
+
+  async function transfer() {
+    if (!doctor || !target) return toast.error("اختر الطبيب والفرع الجديد");
+    if (doctor.branch === target) return toast.error("الطبيب موجود في هذا الفرع بالفعل");
+    if (!confirm(`نقل «${doctor.name}» من ${current} إلى ${BRANCH_NAMES[target]}؟`)) return;
+    setBusy(true);
+    const r = await updateDoctor({ data: { slot: doctor.slot, name: doctor.name, branch: target } })
+      .catch((e) => ({ ok: false, error: String(e?.message ?? e) }));
+    setBusy(false);
+    if (!r.ok) return toast.error(r.error || "تعذّر النقل");
+    toast.success(`تم نقل «${doctor.name}» إلى ${BRANCH_NAMES[target]}`);
+    setSlot(""); setTarget("");
+    onDone();
+  }
+
+  const input = "w-full rounded-xl border border-input bg-background px-3 py-2 text-sm";
+  return (
+    <div className="rounded-3xl bg-card border border-border p-5 shadow-luxury space-y-3">
+      <div className="flex items-center gap-2 font-extrabold">
+        <ArrowLeftRight className="size-5 text-primary" /> نقل طبيب إلى فرع آخر
+      </div>
+      <div className="grid md:grid-cols-3 gap-3">
+        <select value={slot} onChange={(e) => { setSlot(e.target.value ? Number(e.target.value) : ""); setTarget(""); }} className={input}>
+          <option value="">— اختر الطبيب —</option>
+          {doctors.map((d) => (
+            <option key={d.slot} value={d.slot}>{d.name}{d.branch ? ` (${BRANCH_NAMES[d.branch] ?? d.branch})` : ""}</option>
+          ))}
+        </select>
+        <select value={target} onChange={(e) => setTarget(e.target.value as typeof target)} className={input} disabled={!doctor}>
+          <option value="">— الفرع الجديد —</option>
+          {Object.entries(BRANCH_NAMES).filter(([k]) => k !== doctor?.branch).map(([k, v]) => (
+            <option key={k} value={k}>{v}</option>
+          ))}
+        </select>
+        <button disabled={busy || !doctor || !target} onClick={transfer} className="inline-flex items-center justify-center gap-1 rounded-xl gradient-brown text-primary-foreground px-4 py-2 text-sm font-bold disabled:opacity-50">
+          {busy ? <Loader2 className="size-4 animate-spin" /> : <ArrowLeftRight className="size-4" />} نقل الطبيب
+        </button>
+      </div>
+      {doctor && <p className="text-[11px] text-muted-foreground">الفرع الحالي: {current}. تبقى حالات الطبيب وحساباته كما هي وتظهر تحت فرعه الجديد.</p>}
     </div>
   );
 }
