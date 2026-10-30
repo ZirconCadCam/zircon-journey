@@ -36,7 +36,7 @@ export const Route = createFileRoute("/doctors/")({
 interface Doctor {
   slot: number;
   name: string;
-  branch: "sanaa" | "ibb" | null;
+  branch: "sanaa" | "ibb" | "hadda" | null;
   active: boolean;
 }
 
@@ -45,7 +45,7 @@ function DoctorsGrid() {
   const isAdmin = useIsSlotAdmin();
   const stalled = useStalledCases();
   const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [filter, setFilter] = useState<"all" | "sanaa" | "ibb">("all");
+  const [filter, setFilter] = useState<"all" | "sanaa" | "ibb" | "hadda">("all");
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState<Doctor | null>(null);
   const [adding, setAdding] = useState(false);
@@ -93,7 +93,7 @@ function DoctorsGrid() {
         {/* Filters */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-8">
           <div className="flex items-center gap-2">
-            {(["all","sanaa","ibb"] as const).map(b => (
+            {(["all","sanaa","ibb","hadda"] as const).map(b => (
               <button key={b} onClick={() => setFilter(b)}
                 className={`text-xs font-bold rounded-full px-4 py-2 border transition ${filter===b?"gradient-gold border-gold shadow-gold":"bg-card border-border hover:border-gold"}`}>
                 {b === "all" ? "الكل" : BRANCH_LABELS[b]}
@@ -227,6 +227,7 @@ function EditDialog({ d, onClose, onSaved }: { d: Doctor; onClose: () => void; o
               <option value="">— لا يوجد —</option>
               <option value="sanaa">فرع صنعاء</option>
               <option value="ibb">فرع إب</option>
+              <option value="hadda">فرع حدة</option>
             </select>
           </div>
           <div>
@@ -259,7 +260,7 @@ function AddDialog({ nextSlot, onClose, onSaved }: { nextSlot: number; onClose: 
     if (trimmed.length < 2) { toast.error("الرجاء إدخال اسم الطبيب"); return; }
     if (!password.trim()) { toast.error("الرجاء إدخال كلمة مرور"); return; }
     setSaving(true);
-    const res = await addDoctor({ data: { name: trimmed, branch: (branch || null) as "sanaa" | "ibb" | null, password: password.trim() } }).catch((e) => ({ slot: null, error: String(e?.message ?? e) }));
+    const res = await addDoctor({ data: { name: trimmed, branch: (branch || null) as "sanaa" | "ibb" | "hadda" | null, password: password.trim() } }).catch((e) => ({ slot: null, error: String(e?.message ?? e) }));
     setSaving(false);
     if (res.error || !res.slot) toast.error(res.error ?? "تعذّرت الإضافة");
     else { toast.success(`تمت إضافة الطبيب في الخانة #${res.slot}`); onSaved(); }
@@ -281,6 +282,7 @@ function AddDialog({ nextSlot, onClose, onSaved }: { nextSlot: number; onClose: 
               <option value="">— لا يوجد —</option>
               <option value="sanaa">فرع صنعاء</option>
               <option value="ibb">فرع إب</option>
+              <option value="hadda">فرع حدة</option>
             </select>
           </div>
           <div>

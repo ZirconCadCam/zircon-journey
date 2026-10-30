@@ -64,6 +64,13 @@
       "when": 1792778956693,
       "tag": "0008_hash_portal_credentials",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793381364203,
+      "tag": "0009_add_hadda_branch",
+      "breakpoints": true
     }
   ]
 }

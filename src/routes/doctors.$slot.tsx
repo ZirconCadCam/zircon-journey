@@ -283,7 +283,7 @@ function Portal({ doctor, actor, actorName, onLogout }: { doctor: Doctor; actor:
               <div className="text-xs opacity-80">صفحة الطبيب</div>
               <div className="text-2xl font-extrabold">{doctor.name}</div>
               <div className="text-xs opacity-80 mt-1">
-                {doctor.branch === "sanaa" ? "فرع صنعاء" : doctor.branch === "ibb" ? "فرع إب" : ""}
+                {doctor.branch === "sanaa" ? "فرع صنعاء" : doctor.branch === "ibb" ? "فرع إب" : doctor.branch === "hadda" ? "فرع حدة" : ""}
                 {" • "}
                 <span className="rounded-full bg-white/15 px-2 py-0.5 ms-1">
                   دخول كـ {CHAT_LABEL[chatRole]}{actorName && actor !== "doctor" ? ` (${actorName})` : ""}
@@ -548,7 +548,7 @@ function FileRow({ f, doctorBranch, doctorName, sel, onArchive, onRemove, onCopy
     { role: secretaryRole, label: doctorBranch === "ibb" ? "سكرتارية إب" : "سكرتارية صنعاء", Icon: Building2, color: "bg-emerald-600 text-white" },
   ];
 
-  const branchLabel = doctorBranch === "ibb" ? "فرع إب" : doctorBranch === "sanaa" ? "فرع صنعاء" : null;
+  const branchLabel = doctorBranch === "ibb" ? "فرع إب" : doctorBranch === "hadda" ? "فرع حدة" : doctorBranch === "sanaa" ? "فرع صنعاء" : null;
   const sizeLabel = f.size_bytes
     ? f.size_bytes > 1024 * 1024
       ? `${(f.size_bytes / 1024 / 1024).toFixed(1)} MB`

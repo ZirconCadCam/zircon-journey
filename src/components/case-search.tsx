@@ -45,7 +45,7 @@ export function CaseSearch({ actor, restrictSlot }: { actor: Actor; restrictSlot
   const [cases, setCases] = useState<CaseRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
-  const [branch, setBranch] = useState<"all" | "sanaa" | "ibb">("all");
+  const [branch, setBranch] = useState<"all" | "sanaa" | "ibb" | "hadda">("all");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
@@ -181,6 +181,7 @@ export function CaseSearch({ actor, restrictSlot }: { actor: Actor; restrictSlot
               <option value="all">كل الفروع</option>
               <option value="sanaa">صنعاء</option>
               <option value="ibb">إب</option>
+              <option value="hadda">حدة</option>
             </select>
           </label>
           <label className="block">

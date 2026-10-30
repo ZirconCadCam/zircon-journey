@@ -472,7 +472,7 @@ function Inner({ role, onLogout }: { role: RoleKey; onLogout: () => void }) {
                           <DoctorAvatar name={d.name} className="size-10" rounded="xl" />
                           <div className="min-w-0 flex-1">
                             <div className="font-bold text-sm truncate">{d.name}</div>
-                            <div className="text-[11px] text-muted-foreground">{d.branch === "sanaa" ? "فرع صنعاء" : d.branch === "ibb" ? "فرع إب" : ""}</div>
+                            <div className="text-[11px] text-muted-foreground">{d.branch === "sanaa" ? "فرع صنعاء" : d.branch === "ibb" ? "فرع إب" : d.branch === "hadda" ? "فرع حدة" : ""}</div>
                           </div>
                           {u > 0 && <span className="rounded-full gradient-gold text-[10px] font-bold px-1.5 min-w-[20px] h-[20px] grid place-items-center shadow-gold text-gold-foreground">{u}</span>}
                         </button>

@@ -71,7 +71,7 @@ export function buildMonthlyReportHtml(opts: {
     String(s ?? "").replace(/[&<>"]/g, (c) =>
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] as string,
     );
-  const branch = opts.branch === "ibb" ? "فرع إب" : opts.branch === "sanaa" ? "فرع صنعاء" : "";
+  const branch = opts.branch === "ibb" ? "فرع إب" : opts.branch === "hadda" ? "فرع حدة" : opts.branch === "sanaa" ? "فرع صنعاء" : "";
 
   const tables = opts.groups
     .map(({ key, rows }) => {

@@ -105,7 +105,7 @@ function pendingStepLabel(r: Row): string {
 /** يبني كشف HTML للطباعة/PDF لحالات طبيب واحد غير المكتملة. */
 function buildOverdueReportHtml(doctorName: string, branch: string | null, rows: Row[]): string {
   const title = `${doctorName} متأخر في التبويب ${rows.length}`;
-  const branchLabel = branch === "sanaa" ? "فرع صنعاء" : branch === "ibb" ? "فرع إب" : "";
+  const branchLabel = branch === "sanaa" ? "فرع صنعاء" : branch === "ibb" ? "فرع إب" : branch === "hadda" ? "فرع حدة" : "";
   const today = new Date().toLocaleDateString("ar-EG");
   const body = rows.map((r, i) => `
     <tr>
@@ -302,7 +302,7 @@ export function AdminOverdueCompletion() {
                     <div className="font-bold text-sm truncate">{r.patient_name}</div>
                     <div className="text-[11px] text-muted-foreground">
                       <span className="font-mono">{r.case_code}</span> • {doctor?.name ?? `Slot #${r.doctor_slot}`}
-                      {doctor?.branch === "sanaa" ? " • فرع صنعاء" : doctor?.branch === "ibb" ? " • فرع إب" : ""}
+                      {doctor?.branch === "sanaa" ? " • فرع صنعاء" : doctor?.branch === "ibb" ? " • فرع إب" : doctor?.branch === "hadda" ? " • فرع حدة" : ""}
                     </div>
                     <div className="text-[11px] text-muted-foreground mt-0.5">
                       {r.tooth_number ? `السن: ${r.tooth_number} • ` : ""}

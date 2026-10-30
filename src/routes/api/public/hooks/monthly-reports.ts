@@ -155,7 +155,7 @@ export const Route = createFileRoute("/api/public/hooks/monthly-reports")({
           const caption =
             `📋 <b>الكشف الشهري</b> — ${monthLabel}\n` +
             `👨‍⚕️ الطبيب: <b>${doctorName}</b>\n` +
-            (profile?.branch ? `🏥 الفرع: ${profile.branch === "ibb" ? "فرع إب" : "فرع صنعاء"}\n` : "") +
+            (profile?.branch ? `🏥 الفرع: ${profile.branch === "ibb" ? "فرع إب" : profile.branch === "hadda" ? "فرع حدة" : "فرع صنعاء"}\n` : "") +
             `\n${lines}\n\n` +
             `📦 إجمالي الحالات: <b>${list.length}</b>\n` +
             `🦷 مجموع الأسنان: <b>${teeth}</b> سِنّ`;

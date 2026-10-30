@@ -409,7 +409,7 @@ function ApprovalCard({ r, doctor, onDone, selected, onSelect }: { r: Row; docto
           <div className="font-bold text-sm truncate">{r.patient_name}</div>
           <div className="text-[11px] text-muted-foreground">
             <span className="font-mono">{r.case_code}</span> • {doctor?.name ?? `Slot #${r.doctor_slot}`}
-            {doctor?.branch === "sanaa" ? " • فرع صنعاء" : doctor?.branch === "ibb" ? " • فرع إب" : ""}
+            {doctor?.branch === "sanaa" ? " • فرع صنعاء" : doctor?.branch === "ibb" ? " • فرع إب" : doctor?.branch === "hadda" ? " • فرع حدة" : ""}
           </div>
           <div className="text-[11px] text-muted-foreground mt-0.5">
             {r.tooth_number ? `السن: ${r.tooth_number} • ` : ""}

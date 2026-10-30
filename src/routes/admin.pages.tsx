@@ -74,7 +74,7 @@ function PagesHub() {
               <Stethoscope className="size-6 text-gold" />
               <div className="flex-1">
                 <div className="font-bold">{d.name}</div>
-                <div className="text-[11px] text-muted-foreground">{d.branch === "ibb" ? "فرع إب" : d.branch === "sanaa" ? "فرع صنعاء" : ""}</div>
+                <div className="text-[11px] text-muted-foreground">{d.branch === "ibb" ? "فرع إب" : d.branch === "hadda" ? "فرع حدة" : d.branch === "sanaa" ? "فرع صنعاء" : ""}</div>
               </div>
               <ExternalLink className="size-4 opacity-60" />
             </Link>

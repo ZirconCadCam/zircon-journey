@@ -453,7 +453,7 @@ function NewSlotCase() {
           <div className="text-xs opacity-80">إنشاء حالة جديدة لـ</div>
           <div className="text-2xl font-extrabold mt-1">{doctor.name}</div>
           <div className="text-xs opacity-80 mt-1">
-            {doctor.branch === "sanaa" ? "فرع صنعاء" : doctor.branch === "ibb" ? "فرع إب" : ""}
+            {doctor.branch === "sanaa" ? "فرع صنعاء" : doctor.branch === "ibb" ? "فرع إب" : doctor.branch === "hadda" ? "فرع حدة" : ""}
           </div>
         </div>
 

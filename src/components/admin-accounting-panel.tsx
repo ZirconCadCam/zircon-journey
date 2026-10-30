@@ -450,7 +450,7 @@ function DesignerAccounting({ rows, doctors, onChanged }: { rows: Row[]; doctors
 
   // Filters: patient name, branch, doctor, sort.
   const [q, setQ] = useState("");
-  const [branch, setBranch] = useState<"all" | "sanaa" | "ibb">("all");
+  const [branch, setBranch] = useState<"all" | "sanaa" | "ibb" | "hadda">("all");
   const [doctorSlot, setDoctorSlot] = useState<number | "all">("all");
   const [sortBy, setSortBy] = useState<SortBy>("default");
   const [repeat, setRepeat] = useState<RepeatFilter>("all");
@@ -621,7 +621,7 @@ function TechnicianAccounting({ rows, doctors, onChanged }: { rows: Row[]; docto
 
   // Filters: patient name, branch, doctor, sort.
   const [q, setQ] = useState("");
-  const [branch, setBranch] = useState<"all" | "sanaa" | "ibb">("all");
+  const [branch, setBranch] = useState<"all" | "sanaa" | "ibb" | "hadda">("all");
   const [doctorSlot, setDoctorSlot] = useState<number | "all">("all");
   const [sortBy, setSortBy] = useState<SortBy>("default");
   const [repeat, setRepeat] = useState<RepeatFilter>("all");
@@ -767,8 +767,8 @@ function AccountingFilterBar({
 }: {
   q: string;
   setQ: (v: string) => void;
-  branch: "all" | "sanaa" | "ibb";
-  setBranch: (v: "all" | "sanaa" | "ibb") => void;
+  branch: "all" | "sanaa" | "ibb" | "hadda";
+  setBranch: (v: "all" | "sanaa" | "ibb" | "hadda") => void;
   doctorSlot: number | "all";
   setDoctorSlot: (v: number | "all") => void;
   doctors: Doctor[];
@@ -802,6 +802,7 @@ function AccountingFilterBar({
           <option value="all">كل الفروع</option>
           <option value="sanaa">صنعاء</option>
           <option value="ibb">إب</option>
+          <option value="hadda">حدة</option>
         </select>
       </label>
       <label className="block">

@@ -67,7 +67,7 @@ function NewCase() {
           </Field>
           <Field label="الفرع">
             <select className="input" value={form.branch} onChange={e=>setForm({...form,branch:e.target.value as Branch})}>
-              {(["sanaa","ibb"] as Branch[]).map(b => <option key={b} value={b}>{BRANCH_LABELS[b]}</option>)}
+              {(["sanaa","ibb","hadda"] as Branch[]).map(b => <option key={b} value={b}>{BRANCH_LABELS[b]}</option>)}
             </select>
           </Field>
         </div>

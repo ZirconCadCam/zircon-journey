@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Session } from "@supabase/supabase-js";
 
 export type AppRole = "admin" | "doctor" | "designer" | "technician" | "secretary";
-export type Branch = "sanaa" | "ibb";
+export type Branch = "sanaa" | "ibb" | "hadda";
 
 export interface AuthState {
   session: Session | null;
@@ -58,6 +58,7 @@ export const ROLE_LABELS: Record<AppRole, string> = {
 export const BRANCH_LABELS: Record<Branch, string> = {
   sanaa: "فرع صنعاء",
   ibb: "فرع إب",
+  hadda: "فرع حدة",
 };
 export const STATUS_LABELS: Record<string, string> = {
   new: "جديدة",

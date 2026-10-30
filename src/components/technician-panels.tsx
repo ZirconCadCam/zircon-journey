@@ -44,7 +44,7 @@ interface Case {
 }
 
 function branchLabel(b: string | null | undefined) {
-  return b === "sanaa" ? "صنعاء" : b === "ibb" ? "إب" : "—";
+  return b === "sanaa" ? "صنعاء" : b === "ibb" ? "إب" : b === "hadda" ? "حدة" : "—";
 }
 
 function teethCount(c: Case): number {

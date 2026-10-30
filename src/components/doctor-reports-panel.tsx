@@ -197,7 +197,7 @@ export function DoctorReportsPanel({ doctor }: { doctor: { slot: number; name: s
               <h3 className="font-bold text-base">{activeMeta.label}</h3>
               <div className="text-[11px] text-muted-foreground mt-0.5">
                 الطبيب: {doctor.name}
-                {doctor.branch ? ` • ${doctor.branch === "ibb" ? "فرع إب" : "فرع صنعاء"}` : ""}
+                {doctor.branch ? ` • ${doctor.branch === "ibb" ? "فرع إب" : doctor.branch === "hadda" ? "فرع حدة" : "فرع صنعاء"}` : ""}
                 {(from || to) && ` • ${from || "البداية"} → ${to || "اليوم"}`}
               </div>
             </div>

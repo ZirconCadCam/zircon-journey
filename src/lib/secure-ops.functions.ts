@@ -346,7 +346,7 @@ export const addDoctor = createServerFn({ method: "POST" })
     z
       .object({
         name: z.string().trim().min(2).max(120),
-        branch: z.enum(["sanaa", "ibb"]).nullable(),
+        branch: z.enum(["sanaa", "ibb", "hadda"]).nullable(),
         password: z.string().trim().min(1).max(120),
       })
       .parse(d),
@@ -393,7 +393,7 @@ export const updateDoctor = createServerFn({ method: "POST" })
       .object({
         slot: z.number().int().min(1),
         name: z.string().trim().min(2).max(120),
-        branch: z.enum(["sanaa", "ibb"]).nullable(),
+        branch: z.enum(["sanaa", "ibb", "hadda"]).nullable(),
         password: z.string().trim().max(120).optional(),
       })
       .parse(d),
