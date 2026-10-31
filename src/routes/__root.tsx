@@ -12,7 +12,6 @@ import { InstallPrompt } from "@/components/install-prompt";
 import { TransferOverlay, BackgroundKeepAlive } from "@/lib/transfer-manager";
 import { NativeBootstrap } from "@/components/native-bootstrap";
 import { StoragePermissionPrompt } from "@/components/storage-permission-prompt";
-import { AppGate } from "@/components/app-gate";
 import appCss from "../styles.css?url";
 
 function NotFoundComponent() {
@@ -93,7 +92,6 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
-      <AppGate>
       <Outlet />
       <Toaster position="top-center" richColors />
       <InstallPrompt />
@@ -101,7 +99,6 @@ function RootComponent() {
       <StoragePermissionPrompt />
       <TransferOverlay />
       <BackgroundKeepAlive />
-      </AppGate>
     </QueryClientProvider>
   );
 }
