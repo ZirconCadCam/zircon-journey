@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DoctorAvatar } from "@/components/doctor-avatar";
 import { useCaseBatch } from "@/components/case-batch-bar";
 import { supabase } from "@/integrations/supabase/client";
@@ -82,23 +82,26 @@ function useTechnicianData() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
+  const loadVersion = useRef(0);
 
-  useEffect(() => {
-    const load = async () => {
+  const load = useCallback(async () => {
+      const version = ++loadVersion.current;
       const [{ data: docs }, { data: cs }] = await Promise.all([
         supabase.from("doctor_profiles").select("slot,name,branch,active").order("slot"),
         sdb.from("slot_cases").select("*").is("trashed_at", null).order("created_at", { ascending: false }),
       ]);
+      if (version !== loadVersion.current) return;
       setDoctors((docs ?? []) as Doctor[]);
       setCases((cs ?? []) as Case[]);
       setLoading(false);
-    };
+    }, []);
+  useEffect(() => {
     load();
     const ch = rt.channel("technician-panels-stream")
       .on("postgres_changes", { event: "*", schema: "public", table: "slot_cases" }, load)
       .subscribe();
     return () => { rt.removeChannel(ch); };
-  }, []);
+  }, [load]);
 
   const doctorMap = useMemo(() => {
     const m = new Map<number, Doctor>();
@@ -106,7 +109,7 @@ function useTechnicianData() {
     return m;
   }, [doctors]);
 
-  return { doctors, cases, doctorMap, loading };
+  return { doctors, cases, doctorMap, loading, reload: load };
 }
 
 function LoadingBox() {
@@ -171,7 +174,7 @@ function esc(s: string) {
 /* 1) Reports                                                          */
 /* ================================================================== */
 export function TechnicianReports() {
-  const { doctors, cases, doctorMap, loading } = useTechnicianData();
+  const { doctors, cases, doctorMap, loading, reload } = useTechnicianData();
   const [reportType, setReportType] = useState<"pending" | "completed">("pending");
   const [selectedSlot, setSelectedSlot] = useState<number | "">("");
   const [from, setFrom] = useState("");
@@ -255,6 +258,7 @@ export function TechnicianReports() {
         rows={doctorRows}
         doctorMap={doctorMap}
         rangeLabel={rangeLabel}
+        onDone={reload}
         emptyHint={selectedSlot === "" ? "اختر دكتوراً من قائمة التصفية لعرض حالاته" : "لا توجد حالات لهذا الدكتور ضمن النطاق"}
       />
 
@@ -264,19 +268,20 @@ export function TechnicianReports() {
         rows={dateFiltered}
         doctorMap={doctorMap}
         rangeLabel={rangeLabel}
+        onDone={reload}
       />
     </section>
   );
 }
 
 function ReportTable({
-  title, rows, doctorMap, rangeLabel, emptyHint,
+  title, rows, doctorMap, rangeLabel, emptyHint, onDone,
 }: {
-  title: string; rows: Case[]; doctorMap: Map<number, Doctor>; rangeLabel: string; emptyHint?: string;
+  title: string; rows: Case[]; doctorMap: Map<number, Doctor>; rangeLabel: string; emptyHint?: string; onDone: () => void;
 }) {
   const totalTeeth = rows.reduce((s, c) => s + teethCount(c), 0);
   const totalPatients = rows.length;
-  const batch = useCaseBatch(rows.map(c => c.id));
+  const batch = useCaseBatch(rows.map(c => c.id), onDone);
   return (
     <div className="rounded-2xl bg-card border border-border overflow-hidden shadow-luxury">
       <div className="p-4 border-b border-border font-bold text-sm flex items-center gap-2 flex-wrap">

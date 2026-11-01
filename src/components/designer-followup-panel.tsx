@@ -30,14 +30,17 @@ export function DesignerFollowupPanel({ doctorSlot, scope }: { doctorSlot?: numb
   const [viewer, setViewer] = useState<{ url: string; name: string; mime?: string } | null>(null);
   const [previews, setPreviews] = useState<Record<string, string>>({});
   const [previewBusy, setPreviewBusy] = useState<string | null>(null);
+  const loadVersion = useRef(0);
 
   async function load() {
+    const version = ++loadVersion.current;
     setLoading(true);
     try {
       const all = await listRevisionRounds();
+      if (version !== loadVersion.current) return;
       setRows(doctorSlot == null ? all : all.filter(r => r.doctor_slot === doctorSlot));
     }
-    finally { setLoading(false); }
+    finally { if (version === loadVersion.current) setLoading(false); }
   }
   useEffect(() => {
     load();

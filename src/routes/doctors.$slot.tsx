@@ -82,6 +82,13 @@ function stageTickState(stageKey: string, c: any): TickState {
 }
 
 export const Route = createFileRoute("/doctors/$slot")({
+  head: () => ({ meta: [
+    { title: "بوابة الطبيب — مركز زركون CAD CAM" },
+    { name: "description", content: "حالات الطبيب وكشوفات الزركون ومتابعة جولات التعديل في مركز زركون." },
+    { property: "og:title", content: "بوابة الطبيب — مركز زركون CAD CAM" },
+    { property: "og:description", content: "متابعة حالات الطبيب وتقارير مركز زركون." },
+    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+  ] }),
   component: DoctorPortal,
 });
 

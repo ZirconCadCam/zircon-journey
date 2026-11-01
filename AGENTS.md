@@ -11,3 +11,4 @@
 - Root renders routes without the legacy AppGate wrapper; individual staff portals retain server-verified signed-ticket access so public entry does not grant private access.
 
 - Permanent-install confirmation uses a dedicated staff-verified server action scoped to the doctor’s case; generic balance writes remain admin-only to prevent broader financial access.
+- Revision history must be read through active parent cases and the verified doctor's scope; permanent case deletion cleans referenced storage and dependent logs before deleting the parent, so trash never reappears and failed cleanup remains retryable.
