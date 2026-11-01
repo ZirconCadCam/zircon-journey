@@ -191,13 +191,11 @@ export const revisionRoundAttach = createServerFn({ method: "POST" })
   });
 
 export const revisionRoundList = createServerFn({ method: "GET" }).handler(async () => {
-    { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(); }
+  const { allowedSlots } = await import("./staff-ticket.server");
+  const { slots } = await allowedSlots();
   const db = await admin();
-  const { data } = await db
-    .from("case_revision_rounds")
-    .select("*")
-    .order("requested_at", { ascending: false });
-  return (data ?? []) as any[];
+  const { visibleRevisionRounds } = await import("./case-records.server");
+  return visibleRevisionRounds(db, slots);
 });
 
 /* --------------------------------------------------------------- accounting */
@@ -460,6 +458,15 @@ export const batchDeletePermanent = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     { const { requireStaff } = await import("./staff-ticket.server"); await requireStaff(["admin"]); }
     const db = await admin();
+    if (data.table === "slot_cases") {
+      const { deleteCaseRecords } = await import("./case-records.server");
+      try {
+        await deleteCaseRecords(db, data.ids, process.env["SUPABASE_URL"] ?? "");
+        return { ok: true, error: null as string | null };
+      } catch (error) {
+        return { ok: false, error: error instanceof Error ? error.message : "تعذر الحذف النهائي" };
+      }
+    }
     // Collect storage paths before deleting the rows.
     const pathCol = data.table === "doctor_files" ? "file_path" : data.table === "expenses" ? "file_path" : "scan_path";
     const bucket = data.table === "doctor_files" ? "doctor-files" : data.table === "expenses" ? "expense-receipts" : "case-files";

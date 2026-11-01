@@ -68,6 +68,7 @@ export function DoctorReportsPanel({ doctor }: { doctor: { slot: number; name: s
   const load = useCallback(async () => {
     const { data, error } = await sdb.from("slot_cases").select("*")
       .eq("doctor_slot", doctor.slot)
+      .is("trashed_at", null)
       .order("created_at", { ascending: false });
     if (error) toast.error(error.message);
     setRows((data as Row[]) ?? []);
