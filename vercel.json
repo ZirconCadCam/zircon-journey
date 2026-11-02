@@ -7,7 +7,7 @@
   "crons": [
     {
       "path": "/api/public/telegram/drain",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 0 * * *"
     }
   ]
 }
