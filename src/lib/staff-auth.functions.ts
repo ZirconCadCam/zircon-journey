@@ -12,6 +12,10 @@ type PortalRole = "admin" | "designer" | "technician";
 const PORTAL_ROLES: PortalRole[] = ["admin", "designer", "technician"];
 const passwordInput = z.string().trim().min(1).max(200).refine(value => new TextEncoder().encode(value).length <= 72, "كلمة المرور طويلة جداً");
 
+type SignInResult =
+  | { ok: false; error: string }
+  | { ok: true; role: "admin" | "designer" | "technician" | "doctor"; slot?: number; name?: string; ticket: string };
+
 async function admin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   return supabaseAdmin;
@@ -28,18 +32,8 @@ export const signInWithPassword = createServerFn({ method: "POST" })
       slot: z.number().int().positive().optional(),
     }).parse(d),
   )
-  .handler(async ({ data }) => {
-    const { signTicket } = await import("./staff-ticket.server");
-    const db = await admin();
-    const { data: matches, error } = await db.rpc("verify_portal_password", {
-      p_password: data.password.trim(), ...(data.role ? { p_role: data.role } : {}), ...(data.slot ? { p_slot: data.slot } : {}),
-    });
-    const match = matches?.[0];
-    if (error || !match) return { ok: false as const, error: "كلمة المرور غير صحيحة أو الصفحة غير مفعّلة" };
-    const role = match.role as "admin" | "designer" | "technician" | "doctor";
-    return { ok: true as const, role, slot: match.slot, name: match.name,
-      ticket: await signTicket({ role, slot: match.slot }) };
-
+  .handler(async (): Promise<SignInResult> => {
+    return { ok: false, error: "تسجيل الدخول بكلمة المرور معطّل حاليًا" };
   });
 
 /** Check the admin password without issuing a ticket (confirmation dialogs). */
