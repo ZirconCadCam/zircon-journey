@@ -1,7 +1,10 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect } from "react";
-import { hasTicket } from "@/lib/staff-tickets";
-import { Sparkles, Lock } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ROLE_LABEL, type RoleKey } from "@/lib/chat";
+import { signInWithPassword } from "@/lib/staff-auth.functions";
+import { saveTicket, markSignedIn, hasTicket } from "@/lib/staff-tickets";
+import { Sparkles, Lock, Eye, EyeOff } from "lucide-react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -22,6 +25,11 @@ export function clearAllPortalSessions() {
 
 function LoginPage() {
   const nav = useNavigate();
+  const [pw, setPw] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState("");
+
   // Remembered sign-in on this device (30 days): go straight to the user's own page.
   useEffect(() => {
     if (localStorage.getItem(ADMIN_ALL_KEY) === "1" && hasTicket("admin")) {
@@ -39,6 +47,42 @@ function LoginPage() {
       }
     }
   }, [nav]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setErr("");
+    const password = pw.trim();
+    if (!password) return;
+    setLoading(true);
+    try {
+      const res = await signInWithPassword({ data: { password } });
+      if (!res.ok) { setErr(res.error); return; }
+      clearAllPortalSessions();
+      saveTicket(res.role, res.slot, res.ticket);
+      markSignedIn();
+      if (res.role === "admin") {
+        localStorage.setItem(ADMIN_ALL_KEY, "1");
+        localStorage.setItem("zircon_staff_admin", "1");
+        toast.success(`مرحبًا — ${ROLE_LABEL.admin}`);
+        nav({ to: "/staff/$role", params: { role: "admin" } });
+        return;
+      }
+      if (res.role === "doctor" && res.slot) {
+        localStorage.setItem(`zircon_doctor_${res.slot}_authed`, "1");
+        toast.success(`مرحبًا ${res.name ?? ""}`);
+        nav({ to: "/doctors/$slot", params: { slot: String(res.slot) } });
+        return;
+      }
+      const role = res.role as Exclude<RoleKey, "doctor">;
+      localStorage.setItem(`zircon_staff_${role}`, "1");
+      toast.success(`مرحبًا — ${ROLE_LABEL[role]}`);
+      nav({ to: "/staff/$role", params: { role } });
+    } catch (error) {
+      setErr(error instanceof Error ? error.message : "حدث خطأ");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
@@ -76,18 +120,45 @@ function LoginPage() {
 
           <h1 className="mt-4 text-3xl font-bold">تسجيل الدخول</h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            تم تعطيل تسجيل الدخول باستخدام كلمات المرور حاليًا.
+            ادخل إلى لوحتك المخصصة بكلمة المرور الخاصة بك
           </p>
 
-          <div className="mt-8 rounded-2xl border border-border bg-muted/40 p-5 text-center">
-            <p className="text-sm font-semibold">الدخول غير متاح</p>
-            <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-              تواصل مع مسؤول النظام لتفعيل وسيلة دخول بديلة وآمنة.
-            </p>
-          </div>
+          <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+            <label className="block">
+              <div className="text-sm font-semibold mb-1.5">كلمة المرور</div>
+              <div className="relative">
+                <input
+                  type={showPw ? "text" : "password"}
+                  autoFocus
+                  value={pw}
+                  onChange={(e) => { setPw(e.target.value); setErr(""); }}
+                  required
+                  className="input text-center font-mono text-lg pl-11"
+                  placeholder="••••••••"
+                  dir="ltr"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPw((v) => !v)}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-muted-foreground hover:text-foreground"
+                  aria-label={showPw ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
+                  title={showPw ? "إخفاء" : "إظهار"}
+                >
+                  {showPw ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+                </button>
+              </div>
+            </label>
+
+            {err && <div className="text-xs text-destructive text-center">{err}</div>}
+
+            <button type="submit" disabled={loading}
+              className="w-full rounded-xl gradient-brown py-3 font-bold shadow-luxury disabled:opacity-60">
+              {loading ? "..." : "دخول"}
+            </button>
+          </form>
 
           <p className="mt-6 text-[11px] text-muted-foreground text-center leading-relaxed">
-            تم إيقاف التحقق من كلمات المرور من هذه الصفحة.
+            للأطباء: كلمة المرور هي zircon متبوعة برقم الطبيب.
           </p>
         </div>
       </div>
