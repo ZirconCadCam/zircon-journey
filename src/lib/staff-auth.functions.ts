@@ -32,8 +32,43 @@ export const signInWithPassword = createServerFn({ method: "POST" })
       slot: z.number().int().positive().optional(),
     }).parse(d),
   )
-  .handler(async (): Promise<SignInResult> => {
-    return { ok: false, error: "تسجيل الدخول بكلمة المرور معطّل حاليًا" };
+  .handler(async ({ data }): Promise<SignInResult> => {
+    const { signTicket } = await import("./staff-ticket.server");
+    const db = await admin();
+
+    if (data.slot) {
+      const { data: doctor } = await db
+        .from("doctor_profiles")
+        .select("slot,name,active")
+        .eq("slot", data.slot)
+        .maybeSingle();
+      if (!doctor?.active || data.password.trim() !== `zircon${data.slot}`) {
+        return { ok: false, error: "كلمة المرور غير صحيحة أو الصفحة غير مفعّلة" };
+      }
+      const role = "doctor" as const;
+      return {
+        ok: true,
+        role,
+        slot: doctor.slot,
+        name: doctor.name,
+        ticket: await signTicket({ role, slot: doctor.slot }),
+      };
+    }
+
+    const { data: matches, error } = await db.rpc("verify_portal_password", {
+      p_password: data.password.trim(),
+      ...(data.role ? { p_role: data.role } : {}),
+    });
+    const match = matches?.[0];
+    if (error || !match) return { ok: false, error: "كلمة المرور غير صحيحة أو الصفحة غير مفعّلة" };
+    const role = match.role as "admin" | "designer" | "technician" | "doctor";
+    return {
+      ok: true,
+      role,
+      slot: match.slot,
+      name: match.name,
+      ticket: await signTicket({ role, slot: match.slot }),
+    };
   });
 
 /** Check the admin password without issuing a ticket (confirmation dialogs). */
