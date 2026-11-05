@@ -12,3 +12,4 @@
 
 - Permanent-install confirmation uses a dedicated staff-verified server action scoped to the doctor’s case; generic balance writes remain admin-only to prevent broader financial access.
 - Revision history must be read through active parent cases and the verified doctor's scope; permanent case deletion cleans referenced storage and dependent logs before deleting the parent, so trash never reappears and failed cleanup remains retryable.
+- Password-free page entry (doctor/designer/technician only, never admin) is issued by the server as an "open" ticket via `portal-access.functions.ts`; such tickets die when the admin re-enables or changes that switch, so local flags never grant access.

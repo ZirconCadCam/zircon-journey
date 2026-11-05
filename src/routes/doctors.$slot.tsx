@@ -31,6 +31,7 @@ import { NotificationSettings } from "@/components/notification-settings";
 import { DoctorAvatar } from "@/components/doctor-avatar";
 import { sdb } from "@/lib/secure-db";
 import { signInWithPassword } from "@/lib/staff-auth.functions";
+import { openWithoutPassword } from "@/lib/portal-access.functions";
 import { saveTicket, hasTicket, markSignedIn } from "@/lib/staff-tickets";
 import { uploadStorage } from "@/lib/secure-storage";
 import { rt } from "@/lib/realtime-shim";
@@ -135,9 +136,23 @@ function DoctorPortal() {
 
   // Admin-controlled flag: when off, doctors enter their page without a password.
   useEffect(() => {
-    // Doctor password is always required now (server-verified ticket).
-    setPwRequired(true);
-  }, []);
+    let cancelled = false;
+    setPwRequired(null);
+    if (hasTicket("doctor", Number(slot))) { setPwRequired(true); return; }
+    openWithoutPassword({ data: { portal: "doctor", slot: Number(slot) } })
+      .then((r) => {
+        if (cancelled) return;
+        if (r.ok) {
+          saveTicket("doctor", Number(slot), r.ticket);
+          localStorage.setItem(SESSION_KEY(slot), "1");
+          setActor((a) => a ?? "doctor");
+          setAuthed(true);
+          setPwRequired(false);
+        } else setPwRequired(true);
+      })
+      .catch(() => { if (!cancelled) setPwRequired(true); });
+    return () => { cancelled = true; };
+  }, [slot]);
 
   useEffect(() => {
     if (authLoading) return;

@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { KeyRound, Eye, EyeOff, Save, RefreshCw, Loader2, Stethoscope, UserCog, Copy, Check, ShieldOff, ShieldCheck } from "lucide-react";
 import { ROLE_LABEL, type RoleKey } from "@/lib/chat";
-import { DOCTOR_PASSWORD_REQUIRED, getAppFlag, setAppFlag } from "@/lib/app-flags";
+import { PORTAL_KEYS, type PortalKey } from "@/lib/portal-access";
+import { getPortalPasswordSettings, setPortalPasswordRequired } from "@/lib/portal-access.functions";
 import { listPasswords, setStaffPassword, setDoctorPassword } from "@/lib/staff-auth.functions";
 
 // Page-manager roles whose passwords the admin can manage here.
@@ -132,67 +133,55 @@ export function PasswordManagerPanel() {
   );
 }
 
+const PORTAL_LABELS: Record<PortalKey, string> = { doctor: "صفحات الأطباء", designer: "صفحة المصمم", technician: "صفحة الفني" };
+
 function DoctorLoginToggle() {
-  const [required, setRequired] = useState(true);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [settings, setSettings] = useState<Record<PortalKey, boolean> | null>(null);
+  const [saving, setSaving] = useState<PortalKey | null>(null);
 
   useEffect(() => {
-    getAppFlag(DOCTOR_PASSWORD_REQUIRED).then((v) => {
-      setRequired(v);
-      setLoading(false);
-    });
+    getPortalPasswordSettings().then(setSettings).catch(() => setSettings({ doctor: true, designer: true, technician: true }));
   }, []);
 
-  async function toggle() {
-    const next = !required;
-    if (
-      !confirm(
-        next
-          ? "تفعيل طلب كلمة المرور لدخول صفحات الأطباء؟"
-          : "إيقاف طلب كلمة المرور؟ سيتمكن أي شخص من فتح صفحة الطبيب بدون كلمة مرور.",
-      )
-    )
-      return;
-    // Server-side permission check: only the administration may flip this flag.
-    // Signed-in admins pass automatically; otherwise the admin password is required.
-    const pw = prompt("لتأكيد الصلاحية، أدخل كلمة مرور الإدارة:") ?? "";
-    if (!pw.trim()) return;
-    setSaving(true);
-    const err = await setAppFlag(DOCTOR_PASSWORD_REQUIRED, next, pw.trim());
-    setSaving(false);
-    if (err) { toast.error(err); return; }
-    setRequired(next);
-    toast.success(next ? "تم تفعيل طلب كلمة المرور" : "تم إيقاف طلب كلمة المرور");
+  async function toggle(k: PortalKey) {
+    if (!settings) return;
+    const next = !settings[k];
+    if (!confirm(next ? `تفعيل طلب كلمة المرور لدخول ${PORTAL_LABELS[k]}؟` : `إيقاف كلمة المرور؟ سيتمكن أي شخص من فتح ${PORTAL_LABELS[k]} بدون كلمة مرور.`)) return;
+    setSaving(k);
+    try {
+      const r = await setPortalPasswordRequired({ data: { portal: k, required: next } });
+      if (!r.ok) throw new Error(r.error ?? "");
+      setSettings({ ...settings, [k]: next });
+      toast.success(next ? "تم تفعيل كلمة المرور" : "تم إيقاف كلمة المرور");
+    } catch { toast.error("تعذر الحفظ — سجّل دخول الإدارة"); }
+    finally { setSaving(null); }
   }
 
-
   return (
-    <div className="mb-4 rounded-xl border border-border bg-muted/20 p-3 flex items-start justify-between gap-3">
-      <div className="flex items-start gap-2.5 min-w-0">
-        <div className={`size-9 rounded-lg grid place-items-center shrink-0 ${required ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"}`}>
-          {required ? <ShieldCheck className="size-4.5" /> : <ShieldOff className="size-4.5" />}
-        </div>
-        <div className="min-w-0">
-          <div className="text-sm font-bold">تسجيل الدخول بكلمة المرور لصفحة الطبيب</div>
-          <div className="text-[11px] text-muted-foreground mt-0.5">
-            {loading
-              ? "جارٍ التحميل…"
-              : required
-                ? "مُفعّل: يُطلب من الطبيب إدخال كلمة المرور للدخول إلى صفحته."
-                : "موقوف: يدخل الطبيب إلى صفحته مباشرة بدون كلمة مرور."}
+    <div className="mb-4 space-y-2">
+      {PORTAL_KEYS.map((k) => {
+        const required = settings?.[k] ?? true;
+        return (
+          <div key={k} className="rounded-xl border border-border bg-muted/20 p-3 flex items-start justify-between gap-3">
+            <div className="flex items-start gap-2.5 min-w-0">
+              <div className={`size-9 rounded-lg grid place-items-center shrink-0 ${required ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"}`}>
+                {required ? <ShieldCheck className="size-4.5" /> : <ShieldOff className="size-4.5" />}
+              </div>
+              <div className="min-w-0">
+                <div className="text-sm font-bold">كلمة المرور لـ {PORTAL_LABELS[k]}</div>
+                <div className="text-[11px] text-muted-foreground mt-0.5">
+                  {!settings ? "جارٍ التحميل…" : required ? "مُفعّلة: تُطلب كلمة المرور للدخول." : "موقوفة: الدخول مباشرة بدون كلمة مرور."}
+                </div>
+              </div>
+            </div>
+            <button type="button" onClick={() => toggle(k)} disabled={!settings || saving !== null}
+              className={`relative w-11 h-6 rounded-full transition shrink-0 disabled:opacity-50 ${required ? "gradient-gold shadow-gold" : "bg-muted"}`}
+              aria-label={`تفعيل أو إيقاف كلمة المرور لـ ${PORTAL_LABELS[k]}`}>
+              <span className={`absolute top-0.5 size-5 rounded-full bg-background shadow transition ${required ? "right-0.5" : "right-[22px]"}`} />
+            </button>
           </div>
-        </div>
-      </div>
-      <button
-        type="button"
-        onClick={toggle}
-        disabled={loading || saving}
-        className={`relative w-11 h-6 rounded-full transition shrink-0 disabled:opacity-50 ${required ? "gradient-gold shadow-gold" : "bg-muted"}`}
-        aria-label="تفعيل أو إيقاف كلمة المرور"
-      >
-        <span className={`absolute top-0.5 size-5 rounded-full bg-background shadow transition ${required ? "right-0.5" : "right-[22px]"}`} />
-      </button>
+        );
+      })}
     </div>
   );
 }

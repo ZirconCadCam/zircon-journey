@@ -23,6 +23,7 @@ import { DoctorAvatar } from "@/components/doctor-avatar";
 
 import { ROLE_LABEL, type RoleKey } from "@/lib/chat";
 import { signInWithPassword, validateStaffSession } from "@/lib/staff-auth.functions";
+import { openWithoutPassword } from "@/lib/portal-access.functions";
 import { saveTicket, hasTicket, clearTicket, markSignedIn } from "@/lib/staff-tickets";
 import { saveStaffSession, hasValidStaffSession, clearStaffSession } from "@/lib/staff-session";
 import { getStage, deriveStageKey } from "@/lib/case-stages";
@@ -56,7 +57,11 @@ function StaffPortal() {
     let cancelled = false;
     setAuthed(false);
     if (!VALID.includes(role)) return;
-    void validateStaffSession({ data: { role: role as "admin" | "designer" | "technician" } }).then(({ ok }) => {
+    void validateStaffSession({ data: { role: role as "admin" | "designer" | "technician" } }).then(async ({ ok }) => {
+      if (!ok && (role === "designer" || role === "technician")) {
+        const open = await openWithoutPassword({ data: { portal: role } }).catch(() => null);
+        if (open?.ok) { saveTicket(role, null, open.ticket); ok = true; }
+      }
       if (ok) { saveStaffSession(role); localStorage.setItem(`zircon_staff_${role}`, "1"); }
       if (!cancelled) setAuthed(ok);
     }).catch(() => { if (!cancelled) setAuthed(false); });
