@@ -45,6 +45,14 @@ export const signInWithPassword = createServerFn({ method: "POST" })
       if (!doctor?.active || data.password.trim() !== `zircon${data.slot}`) {
         return { ok: false, error: "كلمة المرور غير صحيحة أو الصفحة غير مفعّلة" };
       }
+      // Keep the credential row in sync with the deterministic doctor password.
+      // Ticket validation uses this row to reject tickets issued before a credential change.
+      const { error: credentialError } = await db.from("doctor_secrets").upsert(
+        { slot: doctor.slot, password: `zircon${doctor.slot}`, updated_at: new Date().toISOString() },
+        { onConflict: "slot" },
+      );
+      if (credentialError) return { ok: false, error: "تعذر تجهيز جلسة الدخول، حاول مجددًا" };
+
       const role = "doctor" as const;
       return {
         ok: true,
