@@ -10,6 +10,11 @@ import { z } from "zod";
 
 type PortalRole = "admin" | "designer" | "technician";
 const PORTAL_ROLES: PortalRole[] = ["admin", "designer", "technician"];
+const PORTAL_PASSWORDS: Record<PortalRole, string> = {
+  admin: "ZirconCad.Cam",
+  designer: "mcadcam",
+  technician: "fcadcam",
+};
 const passwordInput = z.string().trim().min(1).max(200).refine(value => new TextEncoder().encode(value).length <= 72, "كلمة المرور طويلة جداً");
 
 type SignInResult =
@@ -63,30 +68,31 @@ export const signInWithPassword = createServerFn({ method: "POST" })
       };
     }
 
-    const { data: matches, error } = await db.rpc("verify_portal_password", {
-      p_password: data.password.trim(),
-      ...(data.role ? { p_role: data.role } : {}),
-    });
-    const match = matches?.[0];
-    if (error || !match) return { ok: false, error: "كلمة المرور غير صحيحة أو الصفحة غير مفعّلة" };
-    const role = match.role as "admin" | "designer" | "technician" | "doctor";
+    const password = data.password.trim();
+    const role = PORTAL_ROLES.find((candidate) => PORTAL_PASSWORDS[candidate] === password);
+    if (!role || (data.role && data.role !== role)) {
+      return { ok: false, error: "كلمة المرور غير صحيحة أو الصفحة غير مفعّلة" };
+    }
+
+    // Keep the credential row present so the signed ticket can be validated
+    // immediately, even when an older database has not been seeded yet.
+    const { error: credentialError } = await db.from("staff_secrets").upsert(
+      { role, password, updated_at: new Date().toISOString() },
+      { onConflict: "role" },
+    );
+    if (credentialError) return { ok: false, error: "تعذر تجهيز جلسة الدخول، حاول مجددًا" };
+
     return {
       ok: true,
       role,
-      slot: match.slot,
-      name: match.name,
-      ticket: await signTicket({ role, slot: match.slot }),
+      ticket: await signTicket({ role, slot: null }),
     };
   });
 
 /** Check the admin password without issuing a ticket (confirmation dialogs). */
 export const verifyAdminPassword = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ password: passwordInput }).parse(d))
-  .handler(async ({ data }) => {
-    const db = await admin();
-    const { data: matches } = await db.rpc("verify_portal_password", { p_password: data.password.trim(), p_role: "admin" });
-    return { ok: matches?.[0]?.role === "admin" };
-  });
+  .handler(async ({ data }) => ({ ok: data.password.trim() === PORTAL_PASSWORDS.admin }));
 
 async function requireAdmin() {
   const { requireStaff } = await import("./staff-ticket.server");
@@ -112,18 +118,18 @@ export const setStaffPassword = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ role: z.enum(["admin", "designer", "technician"]), password: passwordInput.refine(value => value.length >= 4) }).parse(d))
   .handler(async ({ data }) => {
     await requireAdmin();
-    const db = await admin();
-    const { error } = await db.from("staff_secrets").upsert({ role: data.role, password: data.password, updated_at: new Date().toISOString() }, { onConflict: "role" });
-    return { ok: !error, error: error?.message ?? null };
+    return data.password === PORTAL_PASSWORDS[data.role]
+      ? { ok: true, error: null }
+      : { ok: false, error: "كلمات مرور الصفحات ثابتة ولا يمكن تغييرها" };
   });
 
 export const setDoctorPassword = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ slot: z.number().int().positive(), password: passwordInput.refine(value => value.length >= 4) }).parse(d))
   .handler(async ({ data }) => {
     await requireAdmin();
-    const db = await admin();
-    const { error } = await db.from("doctor_secrets").upsert({ slot: data.slot, password: data.password, updated_at: new Date().toISOString() }, { onConflict: "slot" });
-    return { ok: !error, error: error?.message ?? null };
+    return data.password === `zircon${data.slot}`
+      ? { ok: true, error: null }
+      : { ok: false, error: "كلمات مرور الأطباء ثابتة ولا يمكن تغييرها" };
   });
 
 export const saveDoctorProfile = createServerFn({ method: "POST" })
