@@ -42,9 +42,10 @@ async function key(): Promise<CryptoKey> {
   return crypto.subtle.importKey("raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"]);
 }
 
-export async function signTicket(actor: StaffActor): Promise<string> {
+export async function signTicket(actor: StaffActor, opts?: { open?: boolean }): Promise<string> {
   const now = Date.now();
-  const payload = b64url(enc.encode(JSON.stringify({ r: actor.role, s: actor.slot, i: now, e: now + TICKET_TTL_MS })));
+  const open = !!opts?.open && actor.role !== "admin";
+  const payload = b64url(enc.encode(JSON.stringify({ r: actor.role, s: actor.slot, i: now, e: now + TICKET_TTL_MS, ...(open ? { o: 1 } : {}) })));
   const sig = new Uint8Array(await crypto.subtle.sign("HMAC", await key(), enc.encode(payload)));
   return `${payload}.${b64url(sig)}`;
 }
@@ -57,16 +58,24 @@ export async function verifyTicket(token: string): Promise<StaffActor | null> {
   try {
     const ok = await crypto.subtle.verify("HMAC", await key(), fromB64url(sig), enc.encode(payload));
     if (!ok) return null;
-    const p = JSON.parse(new TextDecoder().decode(fromB64url(payload))) as { r: string; s: number | null; e: number; i?: number };
+    const p = JSON.parse(new TextDecoder().decode(fromB64url(payload))) as { r: string; s: number | null; e: number; i?: number; o?: number };
     if (!ROLES.includes(p.r as StaffRole) || !Number.isFinite(p.e) || p.e <= Date.now()) return null;
     if (p.r === "doctor" && !(Number.isInteger(p.s) && (p.s as number) > 0)) return null;
     const issued = p.i ?? (p.e - TICKET_TTL_MS);
     if (!Number.isFinite(issued) || issued > Date.now() || p.e - issued > TICKET_TTL_MS) return null;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    if (p.o === 1) {
+      if (p.r === "admin") return null;
+      const { readPasswordRequired } = await import("./portal-access.functions");
+      const { openTicketStillValid } = await import("./portal-access");
+      const settings = await readPasswordRequired();
+      if (!openTicketStillValid(settings[p.r as "doctor" | "designer" | "technician"], issued)) return null;
+    } else {
     const credentials = p.r === "doctor"
       ? await supabaseAdmin.from("doctor_secrets").select("updated_at").eq("slot", p.s as number).maybeSingle()
       : await supabaseAdmin.from("staff_secrets").select("updated_at").eq("role", p.r).maybeSingle();
     if (credentials.error || !credentials.data || Date.parse(credentials.data.updated_at) > issued) return null;
+    }
     if (p.r === "doctor") {
       const { data: profile, error } = await supabaseAdmin.from("doctor_profiles").select("active").eq("slot", p.s as number).maybeSingle();
       if (error || !profile?.active) return null;
